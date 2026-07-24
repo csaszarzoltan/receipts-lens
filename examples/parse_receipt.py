@@ -47,7 +47,7 @@ def main(image_path: str) -> None:
     print(f"  total  : {receipt.total}")
     print(f"  tax    : {receipt.tax}")
     print(f"  currency: {receipt.currency}")
-    print(f"  items  :")
+    print("  items  :")
     for item in receipt.items:
         print(f"    - {item.name}: {item.price:.2f}")
 

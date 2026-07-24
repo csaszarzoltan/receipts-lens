@@ -24,6 +24,7 @@ from app.exceptions import InvalidImageError
 class ReceiptItem:
     name: str
     price: float
+    category: str | None = None
 
 
 @dataclass

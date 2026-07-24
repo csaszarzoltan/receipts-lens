@@ -21,9 +21,14 @@ Send an image (file upload, public URL, or batch of either) to `POST /v1/parse-r
 - **Typed exceptions** — `InvalidImageError`, `UnsupportedImageFormatError`, and `CorruptImageError` map to HTTP 400/415/422.
 - **Async processing** — queue long-running OCR jobs with `POST /v1/parse-receipt/async`, poll with `GET /v1/jobs/{job_id}`, and receive a webhook callback on completion.
 - **Batch processing** — parse multiple receipts in one call with `POST /v1/parse-receipts` for file uploads or `image_urls`, plus async batch jobs via `POST /v1/parse-receipts/async`.
+- **URL-based input** — pass a public image URL instead of uploading a file. Works in single, batch, and async modes.
+- **SSRF guard** — URL validation and DNS-resolution checks block requests to private/reserved IP ranges (RFC 1918, link-local, metadata endpoints). Follows redirects safely through the same validation.
+- **Duplicate detection** — `POST /v1/check-duplicates` compares parsed receipts by vendor similarity and total proximity, returning candidate groups with confidence scores.
+- **Configurable resource limits** — `MAX_IMAGE_BYTES` (20 MB) and `URL_FETCH_TIMEOUT` (30 s) cap image downloads (constants in `app/api.py`).
 - **Flexible input** — accepts a multipart `file` upload or an `image_url` form field, in single or batch mode.
 - **FastAPI service** — async endpoint with `/health`, OpenAPI docs, and strict type hints.
-- **Tested** — pytest suite plus `ruff` linting.
+- **Health endpoint** — `GET /health` returns `{"status":"ok"}` for load-balancer probes.
+- **Tested** — 362+ pytest tests plus `ruff` linting.
 
 ---
 
@@ -55,44 +60,153 @@ pip install -e .
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Visit `http://localhost:8000/docs` for the interactive OpenAPI playground.
+The server listens on `http://localhost:8000`. Visit `http://localhost:8000/docs` for the interactive OpenAPI playground.
 
 ---
 
 ## Deployment
 
+### Live instance
+
 ReceiptLens is deployed on Railway at:
 
 **https://receiptslens-production.up.railway.app**
 
-### Deploy to Railway
+Health check: `GET https://receiptslens-production.up.railway.app/health` → `{"status":"ok"}`
 
-Deploy your own instance to Railway in one click:
+Interactive API docs: **https://receiptslens-production.up.railway.app/docs**
+
+---
+
+### Deploy to Railway (primary)
+
+Railway builds from the `infra/Dockerfile` and sets `PORT` automatically.
+
+#### Prerequisites
+
+- A [Railway](https://railway.app) account
+- The [Railway CLI](https://docs.railway.app/develop/cli) (`npm i -g @railway/cli`)
+- Your own fork or clone of the repo
+
+#### One-click deploy
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new?template=https://github.com/csaszarzoltan/receiptslens)
 
-Or via the Railway CLI:
+Clicking the button above creates a new Railway project linked to the upstream repo.
+After deploy completes, Railway assigns a `.railway.app` domain — use `railway domain` to view it.
+
+#### Manual deploy (CLI)
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/csaszarzoltan/receiptslens.git
+cd receiptslens
+
+# 2. Install Railway CLI and log in
 npm i -g @railway/cli
 railway login
-railway link
-railway up
+
+# 3. Create a new project or link to an existing one
+railway init
+# or: railway link
+
+# 4. Set required environment variables (if any — see table below)
+railway variables --set PORT=8000
+
+# 5. Deploy
+railway up --dockerfile-path infra/Dockerfile
+
+# 6. Get the public URL
 railway domain
 ```
+
+Railway automatically:
+- Builds the Docker image using `infra/Dockerfile`
+- Runs `uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}` as the start command
+- Polls `GET /health` for readiness (30 s timeout)
+- Restarts the service on failure (up to 3 retries)
+
+---
+
+### Deploy to Fly.io (alternative)
+
+Fly.io requires a `fly.toml` — one is not shipped with this repo. To deploy manually:
+
+#### Prerequisites
+
+- A [Fly.io](https://fly.io) account
+- The [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/) (`flyctl`)
+
+#### Steps
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/csaszarzoltan/receiptslens.git
+cd receiptslens
+
+# 2. Launch a new Fly app (creates fly.toml interactively)
+flyctl launch --no-deploy
+
+# 3. Set the Dockerfile path (answer "infra/Dockerfile" when prompted)
+#    Or edit fly.toml to add:
+#    [build]
+#      dockerfile = "infra/Dockerfile"
+
+# 4. Set environment variables
+flyctl secrets set PORT=8000
+
+# 5. Deploy
+flyctl deploy
+
+# 6. Open the app
+flyctl open
+```
+
+The Fly.io `Dockerfile` pipeline picks up `infra/Dockerfile` automatically when `flyctl launch` is configured with the correct build section.
+
+---
 
 ### Self-host with Docker
 
 ```bash
+# Build the image (uses the multi-stage infra/Dockerfile)
 docker build -t receiptslens -f infra/Dockerfile .
+
+# Run the container (default port 8000)
 docker run -p 8000:8000 receiptslens
+
+# Override the port if needed
+docker run -p 8080:8080 -e PORT=8080 receiptslens
 ```
+
+The image is based on `python:3.11-slim` and includes Tesseract 5 OCR with the English language pack.
+Image size is approximately 692 MB.
+
+---
 
 ### Environment Variables
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `PORT` | No | `8000` | Server port. Railway sets this automatically; set for local runs. |
+| `PORT` | No | `8000` | Server port for uvicorn. Railway sets this automatically; override for local or custom deployments. |
+
+The following variables are **declared in deployment configs** but not yet wired in the application code.
+They are reserved for future use:
+
+| Variable | Status | Default | Description |
+|---|---|---|---|
+| `CORS_ORIGINS` | Planned | — | Comma-separated allowed CORS origins |
+| `AUTH_TOKEN` | Planned | — | Bearer token for API authentication |
+| `TESSDATA_PREFIX` | Planned | auto-detected | Path to Tesseract data directory |
+
+**Configurable constants** (edit `app/api.py` directly):
+
+| Constant | Default | Description |
+|---|---|---|
+| `MAX_IMAGE_BYTES` | 20,000,000 (20 MB) | Maximum image download size from URLs |
+| `URL_FETCH_TIMEOUT` | 30.0 s | Timeout for remote image fetches |
+
+---
 
 ### Usage against the live API
 
@@ -269,6 +383,21 @@ curl -X POST "http://localhost:8000/v1/parse-receipt/async" \
   -F "webhook_url=https://your-app.com/ocr-callback"
 ```
 
+### Duplicate detection
+
+```bash
+curl -X POST "http://localhost:8000/v1/check-duplicates" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receipts": [
+      {"vendor": "Store A", "total": 42.50, "date": "2025-03-14"},
+      {"vendor": "Store A", "total": 42.50, "date": "2025-03-15"}
+    ]
+  }'
+```
+
+Returns groups of potentially duplicate receipts with similarity scores.
+
 ---
 
 ## Using image_url
@@ -308,16 +437,19 @@ curl -X POST "http://localhost:8000/v1/parse-receipt/async" \
 |---|---|
 | **Connect timeout** | 10 seconds |
 | **Read timeout** | 30 seconds |
-| **Redirects** | Automatically followed |
+| **Redirects** | Automatically followed (max 5) |
 | **Allowed protocols** | `http://` and `https://` (httpx default) |
-| **Maximum inputs** | 1 URL (single endpoint), 1-20 URLs (batch) |
+| **Maximum inputs** | 1 URL (single endpoint), 1–20 URLs (batch) |
 | **Mixed input** | Cannot combine `file` upload + `image_url` in the same request |
+| **SSRF protection** | Blocks private/reserved IPs, metadata endpoints, and localhost hostnames |
 
 ### Error behavior
 
 - **Invalid or unreachable URL** — returns `400 Bad Request` with detail: `Failed to fetch image from URL: <error message>`.
 - **Both `file` and `image_url` provided** — returns `400 Bad Request`: `Provide either 'file' or 'image_url', not both.`
 - **Neither `file` nor `image_url` provided** — returns `422`: `Missing required input: send 'file' or 'image_url'.`
+- **URL returns non-image content-type** — returns `400 Bad Request`: `URL did not return an image`.
+- **Image exceeds max size** — returns `400 Bad Request`: `Image exceeds maximum allowed size`.
 - **Batch: invalid `image_urls` JSON** — returns `422` with JSON decode error details.
 - **Batch: more than 20 URLs** — returns `413 Payload Too Large`.
 
@@ -349,6 +481,8 @@ In batch mode, individual URL failures are returned per-item in the `results` ar
 ```
 
 Batch responses wrap individual results in a top-level `results` array with a `summary` block.
+
+---
 
 ## Tests
 
