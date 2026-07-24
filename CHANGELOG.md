@@ -5,15 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - 2026-07-22
+## [0.5.0] - 2026-07-24
 
-### Deployment
+### Features
 
-- Deployed to Railway: https://receiptslens-production.up.railway.app
-- Added Dockerfile with Tesseract OCR system dependencies (tesseract-ocr, tesseract-ocr-eng)
-- Configured railway.toml with Docker builder, health check, and restart policy
-- Health endpoint (`GET /health`) responds at `/health`
-- OCR pipeline verified end-to-end on live Railway instance
+- **OCR pipeline overhaul** — 7-stage image preprocessing (EXIF rotation, deskew, adaptive threshold via integral image, upscale, contrast, sharpen) for robust real-world receipt scanning.
+- **Magic byte validation** — validates JPEG/PNG/TIFF/BMP/WEBP/GIF headers before processing (SSRF hardening).
+- **Typed exception hierarchy** — `OCRError` → `InvalidImageError`, `UnsupportedImageFormatError`, `CorruptImageError` for precise error handling.
+- **Railway deployment** — production Dockerfile with Tesseract system deps, `railway.toml` config, health check, and restart policy. Live at https://receiptslens-production.up.railway.app.
+- **Cloud deployment config** — production-ready Dockerfile + deployment configuration.
+
+### Fixes
+
+- **CSV formula injection** — `_neutralize_csv()` prefixes `=`, `+`, `-`, `@` characters with a single quote to prevent spreadsheet formula injection in generated reports.
+- **Adaptive threshold O(n²) → O(n)** — replaced nested-loop implementation with integral image (summed area table), cutting 240K-pixel OCR from >20s to <1s.
+- **SSRF guard** — added hostname validation to `validate_image_url` for additional SSRF protection.
+- **PORT expansion** — `startCommand` wrapped in `sh -c` for proper `$PORT` environment variable expansion on Railway.
+
+### Tests
+
+- 4 new test modules: `test_magic_bytes.py` (167 lines), `test_ocr_coverage.py` (436 lines), `test_ocr_exceptions.py` (151 lines), `test_preprocessing.py` (311 lines) — 1065 lines of new test coverage.
+- `test_reports.py` expanded with CSV injection regression tests (718 lines added).
+- Full regression suite: 415 passing, 7 skipped, 0 failed. Ruff clean.
+
+### Docs
+
+- Added `docs/ocr-pipeline.md` architecture documentation.
+- Updated README with library usage and Railway deployment section (live URL, Docker self-host, env vars, usage examples).
+- Added `examples/parse_receipt.py` runnable CLI demo.
 
 ## [0.4.0] - 2026-07-20
 
