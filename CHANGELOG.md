@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-07-25
+
+### Features
+
+- **AI categorization** — `Categorizer` class with GPT-4o-mini prompt-based classification of receipts into categories (groceries, dining, transport, utilities, entertainment, health, shopping, income, other). Consistent label taxonomy with confidence scoring.
+- **Spending analytics** — `AnalyticsService` with spending trends over time, category breakdowns, top merchants report, monthly/yearly comparisons, and spending forecasts.
+- **Budget management** — `BudgetStore` with per-category monthly budget tracking, spending vs. budget comparisons, and remaining budget calculations. Fixed double-counting bug in `_recompute()`.
+- **Alerting system** — `AlertManager` with configurable threshold-based notifications per category. Tracks alert history and supports percentage-based or absolute thresholds.
+- **API integration** — all new modules wired into FastAPI layer (`app/api.py`) with full endpoint coverage.
+
+### Fixes
+
+- **Dependency fix** — added `reportlab>=4.0` to project dependencies for PDF report generation support.
+
+### Tests
+
+- 4 new test modules: `test_categorize.py`, `test_analytics.py`, `test_budgets.py`, `test_alerts.py` — comprehensive coverage for all new features.
+- Full regression suite: 501 passing, 7 skipped, 0 failed. Ruff clean.
+
 ## [0.5.0] - 2026-07-24
 
 ### Features
