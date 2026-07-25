@@ -19,6 +19,10 @@ from app.report_generator import generate_csv, generate_pdf
 from app.reports import receipt_store
 from app.security import fetch_image_bytes
 from app.ssrf_guard import validate_scheme_and_host
+from app.categorizer import Categorizer
+from app.budgets import budget_store
+from app.analytics import budget_analytics, spending_analytics
+from app.alerts import alert_store
 logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(
@@ -882,3 +886,199 @@ def generate_report(body: ReportRequest) -> Any:
                 "Content-Type": "text/csv",
             },
         )
+
+
+# ---------------------------------------------------------------------------
+# Categorization endpoint
+# ---------------------------------------------------------------------------
+
+
+_categorizer = Categorizer()
+
+
+class CategorizeRequest(BaseModel):
+    vendor: str
+    total: float | None = None
+    line_items: list[dict[str, Any]] | None = None
+
+
+@app.post("/api/v1/categorize", response_model=dict)
+def categorize_route(body: CategorizeRequest) -> dict:
+    """Categorize a receipt by vendor name.  Returns category + confidence."""
+    result = _categorizer.categorize(
+        vendor=body.vendor,
+        total=body.total,
+        line_items=body.line_items,
+    )
+    return {
+        "category": result.category,
+        "confidence": result.confidence,
+        "matched_rule": result.matched_rule,
+        "subcategory": result.subcategory,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Budget CRUD endpoints
+# ---------------------------------------------------------------------------
+
+
+class BudgetCreateRequest(BaseModel):
+    category: str
+    amount: float
+    currency: str = "USD"
+    period: str = "monthly"
+    alert_threshold: float = 0.8
+
+
+class BudgetUpdateRequest(BaseModel):
+    category: str | None = None
+    amount: float | None = None
+    currency: str | None = None
+    period: str | None = None
+    alert_threshold: float | None = None
+
+
+@app.post("/api/v1/budgets", response_model=dict)
+def create_budget_route(body: BudgetCreateRequest) -> dict:
+    """Create a new budget definition."""
+    try:
+        record = budget_store.create(
+            category=body.category,
+            amount=body.amount,
+            currency=body.currency,
+            period=body.period,
+            alert_threshold=body.alert_threshold,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return record.to_dict()
+
+
+@app.get("/api/v1/budgets", response_model=dict)
+def list_budgets_route() -> dict:
+    """List all budget definitions with computed spend fields."""
+    records = budget_store.list()
+    return {"budgets": [r.to_dict() for r in records]}
+
+
+@app.get("/api/v1/budgets/{id}", response_model=dict)
+def get_budget_route(id: str) -> dict:
+    """Get a single budget by id."""
+    record = budget_store.get(id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    return record.to_dict()
+
+
+@app.put("/api/v1/budgets/{id}", response_model=dict)
+def update_budget_route(id: str, body: BudgetUpdateRequest) -> dict:
+    """Update fields on an existing budget."""
+    kwargs = {}
+    if body.category is not None:
+        kwargs["category"] = body.category
+    if body.amount is not None:
+        kwargs["amount"] = body.amount
+    if body.currency is not None:
+        kwargs["currency"] = body.currency
+    if body.period is not None:
+        kwargs["period"] = body.period
+    if body.alert_threshold is not None:
+        kwargs["alert_threshold"] = body.alert_threshold
+
+    try:
+        record = budget_store.update(id, **kwargs)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    if record is None:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    return record.to_dict()
+
+
+@app.delete("/api/v1/budgets/{id}", response_model=dict)
+def delete_budget_route(id: str) -> dict:
+    """Delete a budget definition."""
+    deleted = budget_store.delete(id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    return {"status": "deleted", "budget_id": id}
+
+
+# ---------------------------------------------------------------------------
+# Analytics endpoints
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/v1/analytics/spending", response_model=dict)
+def spending_analytics_route(
+    date_from: str,
+    date_to: str,
+    group_by: str = "category",
+    category: str | None = None,
+) -> dict:
+    """Aggregate spending by category/merchant/day/month."""
+    if date_from > date_to:
+        raise HTTPException(
+            status_code=422,
+            detail="date_from must not be after date_to.",
+        )
+    valid_group_bys = {"category", "merchant", "day", "month"}
+    if group_by not in valid_group_bys:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid group_by: {group_by!r}.",
+        )
+    try:
+        result = spending_analytics.spending_overview(
+            date_from=date_from,
+            date_to=date_to,
+            group_by=group_by,
+            category=category,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return result
+
+
+@app.get("/api/v1/analytics/budgets", response_model=dict)
+def budget_analytics_route(period: str | None = None) -> dict:
+    """Compare budget definitions against current spending."""
+    result = budget_analytics.budget_overview(period=period)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Alert endpoints
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/v1/alerts", response_model=dict)
+def list_alerts_route() -> dict:
+    """List active (non-acknowledged) alerts."""
+    alerts = alert_store.list_alerts()
+    return {
+        "alerts": [
+            {
+                "alert_id": a.alert_id,
+                "type": a.type.value if hasattr(a.type, "value") else str(a.type),
+                "severity": a.severity.value if hasattr(a.severity, "value") else str(a.severity),
+                "category": a.category,
+                "message": a.message,
+                "pct_used": a.pct_used,
+                "created_at": a.created_at,
+                "acknowledged": a.acknowledged,
+            }
+            for a in alerts
+        ],
+        "unread_count": alert_store.unread_count(),
+    }
+
+
+@app.post("/api/v1/alerts/{alert_id}/acknowledge", response_model=dict)
+def acknowledge_alert_route(alert_id: str) -> dict:
+    """Mark an alert as acknowledged."""
+    result = alert_store.acknowledge(alert_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"status": "acknowledged", "alert_id": alert_id}
