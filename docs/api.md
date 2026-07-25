@@ -297,6 +297,91 @@ Returns `job_id` immediately. Poll with `GET /v1/jobs/{job_id}`.
 > The same URL fetching contract described above for `/v1/parse-receipt`
 > applies to each URL. Fetching happens in the background job (non-blocking).
 
+### `POST /api/v1/categorize`
+
+AI-powered receipt categorization by vendor name. Uses keyword/regex rules (offline, always available) with optional LLM enrichment when `LLM_API_KEY` is set.
+
+```bash
+curl -X POST http://localhost:8000/api/v1/categorize \
+  -H "Content-Type: application/json" \
+  -d '{"vendor": "Starbucks Coffee", "total": 5.75}'
+```
+
+Response:
+
+```json
+{
+  "category": "Meals & Entertainment",
+  "confidence": "high",
+  "matched_rule": "starbucks",
+  "subcategory": "Coffee Shops"
+}
+```
+
+See [docs/categorization.md](categorization.md) for full details.
+
+### `POST /api/v1/budgets`
+
+Create a new budget definition.
+
+```bash
+curl -X POST http://localhost:8000/api/v1/budgets \
+  -H "Content-Type: application/json" \
+  -d '{"category": "Meals & Entertainment", "amount": 500}'
+```
+
+### `GET /api/v1/budgets`
+
+List all budget definitions with computed spend fields.
+
+### `GET /api/v1/budgets/{id}`
+
+Get a single budget by id.
+
+### `PUT /api/v1/budgets/{id}`
+
+Update an existing budget.
+
+### `DELETE /api/v1/budgets/{id}`
+
+Delete a budget.
+
+### `GET /api/v1/analytics/spending`
+
+Aggregate spending by category, merchant, day, or month.
+
+```bash
+curl "http://localhost:8000/api/v1/analytics/spending?date_from=2026-07-01&date_to=2026-07-31&group_by=category"
+```
+
+### `GET /api/v1/analytics/budgets`
+
+Compare budget definitions against current spending.
+
+```bash
+curl "http://localhost:8000/api/v1/analytics/budgets?period=monthly"
+```
+
+### `GET /api/v1/alerts`
+
+List active (non-acknowledged) alerts.
+
+```bash
+curl http://localhost:8000/api/v1/alerts
+```
+
+### `POST /api/v1/alerts/{alert_id}/acknowledge`
+
+Acknowledge an alert (dismisses it from the active list).
+
+## Environment Variables (v0.6.0)
+
+| Variable | Default | Description |
+|---|---|---|
+| `LLM_API_KEY` | (empty) | API key for LLM categorization enrichment |
+| `LLM_MODEL` | `gpt-4o-mini` | Model name for OpenAI-compatible endpoint |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | Base URL for OpenAI-compatible API |
+
 ## Verified quickstart
 
 ```bash

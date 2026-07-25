@@ -8,6 +8,8 @@
 
 Send an image (file upload, public URL, or batch of either) to `POST /v1/parse-receipt` or `POST /v1/parse-receipts` and get back JSON with `vendor`, `total`, `date`, `tax`, `currency`, and `line_items[]`.
 
+v0.6.0 adds **AI-powered categorization**, **budget management**, **spending analytics**, and an **alert system** — transforming ReceiptLens from a receipt scanner into a complete expense management platform.
+
 ---
 
 ## Features
@@ -28,7 +30,11 @@ Send an image (file upload, public URL, or batch of either) to `POST /v1/parse-r
 - **Flexible input** — accepts a multipart `file` upload or an `image_url` form field, in single or batch mode.
 - **FastAPI service** — async endpoint with `/health`, OpenAPI docs, and strict type hints.
 - **Health endpoint** — `GET /health` returns `{"status":"ok"}` for load-balancer probes.
-- **Tested** — 362+ pytest tests plus `ruff` linting.
+- **AI categorization** — `POST /api/v1/categorize` auto-classifies receipts by vendor name using keyword/regex rules. Optional LLM enrichment via OpenAI-compatible API. See [docs/categorization.md](docs/categorization.md).
+- **Budget management** — full CRUD for per-category monthly budgets with real-time spending tracking. Endpoints at `POST/GET/PUT/DELETE /api/v1/budgets`. See [docs/budgets-and-analytics.md](docs/budgets-and-analytics.md).
+- **Spending analytics** — aggregate spending by category, merchant, day, or month. Compare budgets vs actuals. Endpoints at `GET /api/v1/analytics/spending` and `GET /api/v1/analytics/budgets`.
+- **Alert system** — automatic threshold-based alerts when spending approaches or exceeds budget limits. Also detects unusual spending patterns. Endpoints at `GET /api/v1/alerts` and `POST /api/v1/alerts/{id}/acknowledge`. See [docs/alerts.md](docs/alerts.md).
+- **Tested** — 508+ pytest tests plus `ruff` linting.
 
 ---
 
