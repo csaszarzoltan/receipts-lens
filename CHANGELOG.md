@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Product workflows
+- Added a responsive receipt upload workspace at `/workspace`.
+- Added tenant-scoped receipt history, retry, cancellation, review, and optimistic correction workflows.
+- Added team membership, role checks, and one-time API key creation with digest-only storage.
+- Added accounting connection metadata, mapping validation, export records, and a trust dashboard.
+- Added a SQLite-backed application service with optional persistent storage through `RECEIPTLENS_PRODUCT_DB`.
+- Added end-to-end and negative tests for all six product research requirements.
+
+
+
 ### Homepage
 - Added a responsive, self-contained Hungarian landing page at `GET /`.
 - Added direct Swagger UI, ReDoc and health links, supported-operation summaries and a Windows upload example.

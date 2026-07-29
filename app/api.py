@@ -17,6 +17,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.homepage import render_homepage
 from app.ocr import ConfidenceReceipt, check_duplicates, parse_receipt_with_confidence
+from app.product_api import router as product_router
 from app.report_generator import generate_csv, generate_pdf
 from app.reports import receipt_store
 from app.security import fetch_image_bytes
@@ -102,6 +103,7 @@ class _UnconditionalCorsMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(_UnconditionalCorsMiddleware)
+app.include_router(product_router)
 # ---------------------------------------------------------------------------
 # Configurable limits (plumbed into fetch_image_bytes defaults)
 # ---------------------------------------------------------------------------

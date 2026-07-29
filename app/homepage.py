@@ -70,7 +70,8 @@ def render_homepage(*, name: str, version: str, description: str) -> str:
       <span>Szolgáltatás állapota: működik</span>
     </div>
     <nav class="actions" aria-label="API dokumentáció">
-      <a class="button" href="/docs">Swagger UI megnyitása</a>
+      <a class="button" href="/workspace">Open workspace</a>
+      <a class="button secondary" href="/docs">Swagger UI</a>
       <a class="button secondary" href="/redoc">ReDoc megnyitása</a>
       <a class="button secondary" href="/health">Health check</a>
     </nav>

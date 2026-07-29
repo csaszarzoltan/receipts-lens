@@ -49,6 +49,10 @@ The capabilities specified in `docs/research/REQUIREMENTS_01` through `REQUIREME
 
 See `docs/research/REQUIREMENTS_IMPLEMENTATION_REPORT.md` for deployment boundaries.
 
+## Product workspace and workflows
+
+ReceiptLens now includes a browser-based upload workspace at `/workspace` and tenant-aware APIs for receipt history, review corrections, teams, API keys, accounting connections, exports, and the trust dashboard. See [docs/product-workflows.md](docs/product-workflows.md) for request headers, persistence configuration, endpoints, and deployment security notes.
+
 ## Webes főoldal
 
 A szerver gyökércíme (`http://127.0.0.1:8000/`) egy önálló, reszponzív információs főoldalt jelenít meg. A főoldalon látható a ReceiptLens verziója és állapota, a támogatott műveletek áttekintése, egy PowerShell feltöltési példa, valamint közvetlen hivatkozás a `/docs`, `/redoc` és `/health` oldalakra. A főoldal nem használ JavaScriptet vagy külső webes erőforrást.
