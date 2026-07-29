@@ -27,8 +27,14 @@ class ReceiptStore:
         return receipt_id
 
     def get(self, receipt_id: str) -> Optional[ConfidenceReceipt]:
-        """Retrieve a receipt by id; returns None for unknown ids."""
-        return self._data.get(receipt_id)
+        """Retrieve a receipt by id; return ``None`` for an unknown id."""
+        with self._lock:
+            return self._data.get(receipt_id)
+
+    def list_all(self) -> list[tuple[str, ConfidenceReceipt]]:
+        """Return a stable snapshot of all ``(receipt_id, receipt)`` pairs."""
+        with self._lock:
+            return list(self._data.items())
 
     def list(
         self,

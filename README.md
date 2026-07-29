@@ -38,6 +38,25 @@ v0.6.0 adds **AI-powered categorization**, **budget management**, **spending ana
 
 ---
 
+## Research requirements implementation
+
+The capabilities specified in `docs/research/REQUIREMENTS_01` through `REQUIREMENTS_04` now have executable reference implementations:
+
+- `app/platform.py`: durable tenant data plane, jobs, idempotency and outbox;
+- `app/governance.py`: authentication port, role checks, quota, webhook signatures and audit chain;
+- `app/quality.py`: benchmark, confidence calibration, review and correction provenance;
+- `app/integrations.py`: accounting connector contract, safe CSV export and usage metering.
+
+See `docs/research/REQUIREMENTS_IMPLEMENTATION_REPORT.md` for deployment boundaries.
+
+## Webes főoldal
+
+A szerver gyökércíme (`http://127.0.0.1:8000/`) egy önálló, reszponzív információs főoldalt jelenít meg. A főoldalon látható a ReceiptLens verziója és állapota, a támogatott műveletek áttekintése, egy PowerShell feltöltési példa, valamint közvetlen hivatkozás a `/docs`, `/redoc` és `/health` oldalakra. A főoldal nem használ JavaScriptet vagy külső webes erőforrást.
+
+## Windows quickstart
+
+A részletes magyar Windows telepítési, tesztelési és használati útmutató: [docs/WINDOWS_GUIDE_HU.md](docs/WINDOWS_GUIDE_HU.md).
+
 ## Getting Started
 
 ### Prerequisites

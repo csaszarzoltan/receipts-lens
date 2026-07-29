@@ -10,10 +10,12 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.homepage import render_homepage
 from app.ocr import ConfidenceReceipt, check_duplicates, parse_receipt_with_confidence
 from app.report_generator import generate_csv, generate_pdf
 from app.reports import receipt_store
@@ -32,9 +34,42 @@ app = FastAPI(
 )
 
 
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def homepage() -> HTMLResponse:
+    """Return a human-friendly, self-contained service landing page."""
+    return HTMLResponse(
+        render_homepage(
+            name=app.title,
+            version=app.version,
+            description=app.description or "Receipt OCR API.",
+        )
+    )
+
+
 @app.get("/health")
 def health() -> dict:
+    """Liveness probe: the ASGI process can serve requests."""
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def readiness() -> dict:
+    """Readiness probe for the dependency-free application profile."""
+    return {"status": "ready", "dependencies": {"ocr": "configured"}}
+
+
+@app.get("/api/v1/platform/capabilities")
+def platform_capabilities() -> dict:
+    """Expose the implemented research-requirement capability contract."""
+    return {
+        "schema_version": 1,
+        "requirements": {
+            "data": ["tenant_repository", "job_lease", "idempotency", "outbox"],
+            "security": ["api_key_port", "rbac", "quota", "webhook_hmac", "audit_chain"],
+            "quality": ["benchmark", "calibration", "review", "correction_provenance"],
+            "integrations": ["connector_port", "csv_profile", "usage_meter"],
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -806,23 +841,37 @@ def _resolve_date_range(
     return date_from, date_to
 
 
-@app.post("/api/v1/receipts")
+@app.post("/api/v1/receipts", status_code=201)
 def post_receipt(body: ReceiptCreateRequest) -> dict:
-    """Stub: parse a receipt from URL (placeholder)."""
-    # The test only checks the route exists, not the behaviour.
-    return {"status": "ok", "receipt_id": "placeholder"}
+    """Fetch, parse, and store a receipt image from a validated public URL."""
+    image_bytes = fetch_image_bytes(
+        body.image_url,
+        max_bytes=MAX_IMAGE_BYTES,
+        timeout=URL_FETCH_TIMEOUT,
+    )
+    parsed = parse_receipt_with_confidence(image_bytes)
+    receipt_id = receipt_store.store(parsed)
+    return {"receipt_id": receipt_id, **_render_receipt(parsed)}
 
 
 @app.get("/api/v1/receipts")
 def list_receipts() -> dict:
-    """Stub: list stored receipts (placeholder)."""
-    return {"receipts": []}
+    """List the receipts currently held by the configured receipt store."""
+    return {
+        "receipts": [
+            {"receipt_id": receipt_id, **_render_receipt(receipt)}
+            for receipt_id, receipt in receipt_store.list_all()
+        ]
+    }
 
 
 @app.get("/api/v1/receipts/{receipt_id}")
 def get_receipt(receipt_id: str) -> dict:
-    """Stub: get a single receipt (placeholder)."""
-    return {"receipt_id": receipt_id, "status": "placeholder"}
+    """Get one stored receipt or return HTTP 404 when it does not exist."""
+    receipt = receipt_store.get(receipt_id)
+    if receipt is None:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    return {"receipt_id": receipt_id, **_render_receipt(receipt)}
 
 
 @app.post("/api/v1/reports")

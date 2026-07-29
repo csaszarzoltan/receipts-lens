@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Homepage
+- Added a responsive, self-contained Hungarian landing page at `GET /`.
+- Added direct Swagger UI, ReDoc and health links, supported-operation summaries and a Windows upload example.
+- Added deterministic homepage, navigation and metadata-escaping tests.
+
+
+
+### Research requirements
+- Added a durable tenant-scoped SQLite reference data plane with job leases, idempotency, optimistic locking and transactional outbox.
+- Added authentication, RBAC, quota, signed webhook and tamper-evident audit primitives.
+- Added deterministic OCR benchmark, calibration, review and correction provenance services.
+- Added accounting connector and usage-metering ports plus readiness/capability endpoints.
+
+
+
+### Fixed
+- Replaced placeholder receipt create/list/get endpoints with working in-memory implementations.
+- Made `ReceiptStore.get()` lock-protected and added a stable `list_all()` snapshot API.
+
+### Tests and documentation
+- Added receipt CRUD runtime acceptance tests.
+- Added a tested Hungarian Windows installation and usage guide.
+
 ## [0.6.0] - 2026-07-25
 
 ### Features

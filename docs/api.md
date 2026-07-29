@@ -1,5 +1,11 @@
 # API Reference
 
+# Böngészős kezdőoldal
+
+A `GET /` egy magyar nyelvű, reszponzív szolgáltatási főoldalt ad vissza. A főoldal az alkalmazás nevét és verzióját dinamikusan a FastAPI metadata alapján jeleníti meg, linket ad a Swagger UI és ReDoc dokumentációhoz, valamint rövid feltöltési példát tartalmaz. A route nem része az OpenAPI sémának, mert emberi navigációs felület, nem integrációs API.
+
+
+
 The FastAPI application is exposed as `app.api.app`.
 
 ```bash
@@ -373,6 +379,14 @@ curl http://localhost:8000/api/v1/alerts
 ### `POST /api/v1/alerts/{alert_id}/acknowledge`
 
 Acknowledge an alert (dismisses it from the active list).
+
+## Stored receipt endpoints
+
+- `POST /api/v1/receipts` accepts `{"image_url": "https://..."}`, validates and downloads the image, runs OCR, stores the result, and returns HTTP 201 with `receipt_id` and parsed fields.
+- `GET /api/v1/receipts` lists the current in-memory store.
+- `GET /api/v1/receipts/{receipt_id}` returns one receipt or HTTP 404.
+
+The current store is process-local and is cleared when the server restarts. It is intended for development and demonstration, not durable production storage.
 
 ## Environment Variables (v0.6.0)
 
