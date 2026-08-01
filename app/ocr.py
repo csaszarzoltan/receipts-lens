@@ -15,6 +15,28 @@ import pytesseract
 from app.preprocessing import preprocess_image
 from app.exceptions import InvalidImageError
 
+SUPPORTED_LANGUAGES: tuple[str, ...] = ("eng", "deu", "fra", "spa", "ita", "por")
+
+# Locale-aware decimal separator map
+_LOCALE_DECIMAL_MAP: dict[str, str] = {
+    "eng": ".",
+    "deu": ",",
+    "fra": ",",
+    "spa": ".",
+    "ita": ",",
+    "por": ",",
+}
+
+# Default currency per locale
+_CURRENCY_LOCALE_HINTS: dict[str, str] = {
+    "eng": "USD",
+    "deu": "EUR",
+    "fra": "EUR",
+    "ita": "EUR",
+    "spa": "EUR",
+    "por": "EUR",
+}
+
 # ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
@@ -48,7 +70,7 @@ class ConfidenceReceipt(ParsedReceipt):
 # ---------------------------------------------------------------------------
 
 _CURRENCY_SYMBOLS = (
-    r"(?:[$€£¥₹₽]|USD|EUR|GBP|JPY|INR|RUB|CZK|HUF|RON|BGN|PLN|SEK|NOK|DKK)"
+    r"(?:[$€£¥₹₽]|USD|EUR|GBP|JPY|INR|RUB|CZK|CHF|HUF|RON|BGN|PLN|SEK|NOK|DKK)"
 )
 _AMOUNT = r"(?:\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|\d+[.,]\d{2}|\d+)"
 
@@ -129,10 +151,73 @@ def _extract_merchant(text: str) -> str | None:
     return None
 
 
-def _extract_currency(text: str) -> str | None:
+def detect_language(image_bytes: bytes) -> str:
+    """Auto-detect the primary language of a receipt image.
+
+    Strategy: Run OCR with each supported language, pick the one with
+    highest confidence from Tesseract's image_to_data output.
+    """
+    if not image_bytes:
+        raise ValueError("image_bytes must not be empty")
+    try:
+        image = preprocess_image(image_bytes)
+    except Exception:
+        return "eng"
+    best_lang = "eng"
+    best_conf = -1.0
+    for lang in SUPPORTED_LANGUAGES:
+        try:
+            data = pytesseract.image_to_data(
+                image, lang=lang, config="--oem 3 --psm 6", output_type=pytesseract.Output.DICT
+            )
+            confs = [c for c in data.get("conf", []) if isinstance(c, (int, float)) and c > 0]
+            avg = sum(confs) / len(confs) if confs else 0.0
+            if avg > best_conf:
+                best_conf = avg
+                best_lang = lang
+        except Exception:
+            continue
+    return best_lang
+
+
+def _parse_float_locale(raw: str | None, lang: str = "eng") -> float | None:
+    """Parse a float from locale-specific number format.
+
+    Uses _LOCALE_DECIMAL_MAP to determine decimal/thousands separator.
+    """
+    if not raw:
+        return None
+    import re as _re
+
+    decimal_sep = _LOCALE_DECIMAL_MAP.get(lang, ".")
+    cleaned = raw.strip()
+    # Remove spaces used as thousands separators (e.g. "1 234,56")
+    cleaned = _re.sub(r"\s+", "", cleaned)
+    # Remove everything except digits, dots, commas
+    cleaned = _re.sub(r"[^\d.,]", "", cleaned)
+    if not cleaned:
+        return None
+    if decimal_sep == ",":
+        # Comma is decimal: "1.234,56" -> remove dots, replace comma with dot
+        cleaned = cleaned.replace(".", "").replace(",", ".")
+    else:
+        # Dot is decimal: "1,234.56" -> remove commas
+        cleaned = cleaned.replace(",", "")
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def _extract_currency(text: str, lang: str = "eng") -> str | None:
+    """Extract currency from receipt text with locale-aware fallback.
+    
+    First tries explicit currency symbols/ISO codes in text.
+    Falls back to _CURRENCY_LOCALE_HINTS[lang] if no explicit marker found.
+    """
     m = _CURRENCY_RE.search(text)
     if not m:
-        return None
+        return _CURRENCY_LOCALE_HINTS.get(lang)
     sym = m.group(0)
     mapping = {
         "$": "USD",
@@ -433,20 +518,25 @@ def check_duplicates(receipts: list[dict], *, receipt_batch_size: int = 200) -> 
 # ---------------------------------------------------------------------------
 
 
-def extract_text(image_bytes: bytes) -> str:
-    """Run OCR on image bytes and return the raw recognized text."""
+def extract_text(image_bytes: bytes, *, lang: str = "eng") -> str:
+    """Run OCR on image bytes with specified language."""
     if not image_bytes:
         raise InvalidImageError("image_bytes must not be empty")
+    # Validate language (support combined like "eng+deu"), fallback to eng for invalid
+    lang_codes = lang.split("+") if "+" in lang else [lang]
+    effective_lang = "+".join(c for c in lang_codes if c in SUPPORTED_LANGUAGES)
+    if not effective_lang:
+        effective_lang = "eng"
     try:
         image = preprocess_image(image_bytes)
     except ValueError as exc:
         raise InvalidImageError(str(exc)) from exc
-    return pytesseract.image_to_string(image, config="--oem 3 --psm 6")
+    return pytesseract.image_to_string(image, lang=effective_lang, config="--oem 3 --psm 6")
 
 
-def parse_receipt(image_bytes: bytes) -> ParsedReceipt:
-    """Extract structured receipt data from image bytes."""
-    raw = extract_text(image_bytes)
+def parse_receipt(image_bytes: bytes, *, lang: str | None = None) -> ParsedReceipt:
+    """Extract structured receipt data, optionally with language override."""
+    raw = extract_text(image_bytes, lang=lang or "eng")
     text = _clean_text(raw)
 
     total = _parse_float(_find_first(_TOTAL_RE, text))
@@ -482,9 +572,9 @@ def parse_receipt(image_bytes: bytes) -> ParsedReceipt:
     )
 
 
-def parse_receipt_with_confidence(image_bytes: bytes) -> ConfidenceReceipt:
-    """Extract structured receipt data and per-field confidence scores."""
-    parsed = parse_receipt(image_bytes)
+def parse_receipt_with_confidence(image_bytes: bytes, *, lang: str | None = None) -> ConfidenceReceipt:
+    """Extract structured receipt data + per-field confidence scores."""
+    parsed = parse_receipt(image_bytes, lang=lang)
     confidence = _confidence_from_data(image_bytes)
     return ConfidenceReceipt(
         merchant=parsed.merchant,

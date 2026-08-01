@@ -23,7 +23,8 @@ def test_extract_text_signature():
     func = ocr.extract_text
     sig = inspect.signature(func)
     params = list(sig.parameters)
-    assert params == ["image_bytes"], f"extract_text params changed: {params}"
+    assert "image_bytes" in params, f"extract_text missing image_bytes: {params}"
+    assert "lang" in params, f"extract_text missing lang param: {params}"
     hints = get_type_hints(func)
     assert hints.get("image_bytes") is bytes
 
@@ -37,7 +38,8 @@ def test_parse_receipt_signature():
     func = ocr.parse_receipt
     sig = inspect.signature(func)
     params = list(sig.parameters)
-    assert params == ["image_bytes"], f"parse_receipt params changed: {params}"
+    assert "image_bytes" in params, f"parse_receipt missing image_bytes: {params}"
+    assert "lang" in params, f"parse_receipt missing lang param: {params}"
     hints = get_type_hints(func)
     assert hints.get("image_bytes") is bytes
 
