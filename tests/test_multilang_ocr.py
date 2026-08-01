@@ -137,14 +137,11 @@ class TestExtractTextLang:
         assert isinstance(result, str)
 
     def test_extract_text_with_invalid_lang_raises(self):
-        """RED-phase: lang validation not implemented yet. Should raise ValueError after implementation."""
-        try:
+        """GREEN-phase: lang validation implemented. Should raise ValueError for invalid lang."""
+        with pytest.raises(ValueError):
             with _mock_patch("app.ocr.pytesseract.image_to_string", return_value=""):
                 with _mock_patch("app.ocr.preprocess_image", return_value="fake_img"):
                     ocr.extract_text(SAMPLE_BYTES, lang="xyz")
-            pytest.fail("Expected ValueError for invalid lang (not yet implemented)")
-        except NotImplementedError:
-            pytest.skip("Not implemented yet — RED phase")
 
     def test_extract_text_default_lang_is_eng(self):
         with _mock_patch("app.ocr.pytesseract.image_to_string", return_value="WALMART\nTotal $4.48"):

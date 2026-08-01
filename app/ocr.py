@@ -522,11 +522,12 @@ def extract_text(image_bytes: bytes, *, lang: str = "eng") -> str:
     """Run OCR on image bytes with specified language."""
     if not image_bytes:
         raise InvalidImageError("image_bytes must not be empty")
-    # Validate language (support combined like "eng+deu"), fallback to eng for invalid
+    # Validate language: each code (after splitting by '+') must be in SUPPORTED_LANGUAGES
     lang_codes = lang.split("+") if "+" in lang else [lang]
-    effective_lang = "+".join(c for c in lang_codes if c in SUPPORTED_LANGUAGES)
-    if not effective_lang:
-        effective_lang = "eng"
+    invalid_codes = [c for c in lang_codes if c not in SUPPORTED_LANGUAGES]
+    if invalid_codes:
+        raise ValueError(f"Unsupported language code(s): {', '.join(invalid_codes)}")
+    effective_lang = "+".join(lang_codes)
     try:
         image = preprocess_image(image_bytes)
     except ValueError as exc:

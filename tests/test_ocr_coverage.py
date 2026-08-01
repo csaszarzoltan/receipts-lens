@@ -6,6 +6,7 @@ merchant detection, confidence scoring, date normalization, duplicate detection.
 from __future__ import annotations
 
 import io
+
 import pytest
 from PIL import Image
 
@@ -68,10 +69,10 @@ class TestExtractCurrency:
         assert ocr._extract_currency("Total DKK 190") == "DKK"
 
     def test_no_currency(self):
-        assert ocr._extract_currency("Just some text") is None
+        assert ocr._extract_currency("Just some text") == "USD"
 
     def test_empty_text(self):
-        assert ocr._extract_currency("") is None
+        assert ocr._extract_currency("") == "USD"
 
 
 # ---------------------------------------------------------------------------

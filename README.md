@@ -22,7 +22,10 @@ v1.3.0 improves repeated daily work with precise task deep links and accessible 
 - **Magic byte validation** — rejects non-image files before PIL decode (JPEG, PNG, TIFF, BMP, WEBP, GIF).
 - **Typed exceptions** — `InvalidImageError`, `UnsupportedImageFormatError`, and `CorruptImageError` map to HTTP 400/415/422.
 - **Async processing** — queue long-running OCR jobs with `POST /v1/parse-receipt/async`, poll with `GET /v1/jobs/{job_id}`, and receive a webhook callback on completion.
-- **Batch processing** — parse multiple receipts in one call with `POST /v1/parse-receipts` for file uploads or `image_urls`, plus async batch jobs via `POST /v1/parse-receipts/async`.
+- **Batch processing (API)** — parse multiple receipts in one call with `POST /v1/parse-receipts` for file uploads or `image_urls`, plus async batch jobs via `POST /v1/parse-receipts/async`. Enhanced batch endpoint at `POST /api/v1/receipts/batch` with language selection and parallel workers.
+- **Multi-language OCR** — supports English, German, French, Spanish, Italian, and Portuguese. Locale-aware decimal separators, date formats, and currency defaults. Auto-detection via `detect_language()`. See [docs/multi-language-guide.md](docs/multi-language-guide.md).
+- **Batch processing CLI** — `receipts-lens batch --dir ./receipts --lang deu --export quickbooks` processes a directory of receipt images in parallel with configurable workers. See [CLI Usage](#cli-usage).
+- **Accounting export** — export parsed receipts to QuickBooks, Xero, or generic CSV formats via `GET /api/v1/receipts/export/{format}` or CLI. Column mappings and import instructions in [docs/accounting-export-guide.md](docs/accounting-export-guide.md).
 - **URL-based input** — pass a public image URL instead of uploading a file. Works in single, batch, and async modes.
 - **SSRF guard** — URL validation and DNS-resolution checks block requests to private/reserved IP ranges (RFC 1918, link-local, metadata endpoints). Follows redirects safely through the same validation.
 - **Duplicate detection** — `POST /v1/check-duplicates` compares parsed receipts by vendor similarity and total proximity, returning candidate groups with confidence scores.
@@ -38,7 +41,7 @@ v1.3.0 improves repeated daily work with precise task deep links and accessible 
 - **Precise daily actions** — dashboard tasks deep-link to the exact review receipt, approval, or blocked accounting field instead of opening only a general module.
 - **Accessible consequential actions** — approval decisions, API-key creation, saved-view naming, and retention purge use contextual dialogs with inline validation, focus handling, and described consequences.
 - **Early accounting readiness** — receipt rows show baseline blocked/warning/exportable state and can be filtered before export preparation.
-- **Tested** — 580+ pytest tests; the packaged delivery records the exact passing and skipped counts in `TEST_RESULTS.txt`.
+- **Tested** — 805+ pytest tests across 44 test files; the packaged delivery records the exact passing and skipped counts in `TEST_RESULTS.txt`.
 
 ---
 
@@ -270,6 +273,51 @@ curl https://receiptslens-production.up.railway.app/health
 Browse the interactive API docs at **https://receiptslens-production.up.railway.app/docs**.
 
 ---
+
+## CLI Usage
+
+ReceiptLens ships with a command-line tool for batch processing and export.
+
+```bash
+# Install (already done with `pip install -e .`)
+receipts-lens --help
+```
+
+### Batch process a directory
+
+```bash
+# Process all images in ./receipts with English (default)
+receipts-lens batch --dir ./receipts
+
+# German receipts, export to QuickBooks CSV
+receipts-lens batch --dir ./receipts-de --lang deu --export quickbooks --output results.csv
+
+# 8 parallel workers, recursive subdirectory scan
+receipts-lens batch --dir ./receipts --workers 8 --recursive --verbose
+```
+
+### Export to accounting CSV
+
+```bash
+# Export to QuickBooks format
+receipts-lens export --format quickbooks
+
+# Export to Xero format with date filter
+receipts-lens export --format xero --date-from 2026-01-01 --date-to 2026-06-30
+
+# Show supported languages and formats
+receipts-lens info
+```
+
+| Option         | Default      | Description                                      |
+|----------------|--------------|--------------------------------------------------|
+| `--dir`        | (required)   | Directory of receipt images                      |
+| `--lang`       | `eng`        | Tesseract language code                          |
+| `--workers`    | `4`          | Parallel OCR threads (1–8)                       |
+| `--export`     | `generic`    | Export profile: `generic`, `quickbooks`, `xero`  |
+| `--output`     | `results.csv`| Output CSV file path                             |
+| `--verbose`    | off          | Print progress details                           |
+| `--recursive`  | off          | Scan subdirectories                              |
 
 ## Library Usage
 

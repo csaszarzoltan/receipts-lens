@@ -7,6 +7,18 @@ from fastapi.testclient import TestClient
 from app.api import app
 from app.product_service import Actor, ProductConflict, ProductService
 
+def get_all_paths(app):
+    paths = set()
+    for route in app.routes:
+        if hasattr(route, 'path'):
+            paths.add(route.path)
+        elif type(route).__name__ == '_IncludedRouter' and hasattr(route, 'original_router'):
+            for sub in route.original_router.routes:
+                if hasattr(sub, 'path'):
+                    paths.add(sub.path)
+    return paths
+
+
 
 def parsed(vendor="ACME", total=125.0, currency="USD"):
     return SimpleNamespace(merchant=vendor,date="2026-07-01",total=total,tax=5.0,
@@ -81,7 +93,7 @@ def test_portability_export_is_scoped_and_versioned(svc,admin):
     assert len(export["receipts"])==1
 
 def test_new_routes_are_registered():
-    paths={r.path for r in app.routes}
+    paths = get_all_paths(app)
     assert {"/product/receipts","/product/approval-policies","/product/privacy/export"} <= paths
 
 def test_http_validation_and_not_found():

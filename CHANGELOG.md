@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-01
+
+### Features
+
+- **Multi-language OCR** — language detection via Tesseract script analysis, locale-aware date parsing (DE, FR, ES, IT, HU, EN), locale-sensitive currency extraction with `_CURRENCY_LOCALE_HINTS` fallback, 6 supported languages (eng, deu, fra, spa, ita, hun).
+- **Batch processing** — `BatchProcessor` with `ThreadPoolExecutor` for parallel receipt processing, `BatchJob` model with job lifecycle (pending → running → completed/failed), async batch API endpoint (`POST /api/v1/receipts/batch`), job status polling (`GET /api/v1/receipts/batch/{job_id}`).
+- **Accounting export** — `ReceiptExporter` with `ExportProfile` for QuickBooks, Xero, and Generic CSV formats, column mappings per software, CSV formula injection prevention (`_neutralize_csv()`), export API endpoint (`GET /api/v1/receipts/export/{format}`).
+- **Receipt normalization** — `NormalizedReceipt` Pydantic schema with `normalize_date()`, `normalize_currency()`, `normalize_receipt()` for cross-border expense intelligence.
+- **API v2 endpoints** — batch processing and export endpoints wired into FastAPI with full OpenAPI schemas.
+- **CLI subcommands** — `python -m app.cli batch`, `python -m app.cli export`, `python -m app.cli info` for command-line batch processing and export.
+
+### Fixes
+
+- **SyntaxError in product_service.py** — extracted `rid = row["receipt_id"]` to fix nested f-string quotes breaking Python 3.11.
+- **Test regressions in test_ocr_coverage.py** — updated `test_no_currency` and `test_empty_text` to match locale fallback behavior (returns "USD" instead of None).
+
+### Tests
+
+- 60+ new tests across 6 test modules: `test_multilang_ocr.py`, `test_normalization.py`, `test_batch_processor.py`, `test_export_profiles.py`, `test_api_v2.py`, `test_cli.py`.
+- Full regression suite: 805 passed, 7 skipped, 1 pre-existing TDD stub. 44 test files collected.
+- Ruff: 155 pre-existing violations, 0 new.
+
+### Docs
+
+- Created `docs/multi-language-guide.md` — supported languages, Tesseract setup, accuracy tips per language.
+- Created `docs/accounting-export-guide.md` — QuickBooks/Xero/Generic CSV formats, column mappings, import instructions.
+- Updated `docs/api.md` — batch and export endpoint schemas with request/response examples.
+- Updated `README.md` — multi-language OCR, batch processing, accounting export features added.
+
 ## Unreleased
 
 ### Product workflows

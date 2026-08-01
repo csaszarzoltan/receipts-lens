@@ -13,7 +13,7 @@ import sqlite3
 import threading
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -87,7 +87,7 @@ class ProductService:
 
     @staticmethod
     def _now() -> str:
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
     def _audit(self, tenant: str, action: str, subject: str | None = None) -> None:
         self._db.execute("INSERT INTO audit VALUES(?,?,?,?,?)", (str(uuid.uuid4()), tenant, action, subject, self._now()))
@@ -396,7 +396,7 @@ class ProductService:
         setting=self._db.execute("SELECT retention_days FROM retention_settings WHERE tenant_id=?",
                                  (actor.tenant_id,)).fetchone()
         days=setting[0] if setting else 30
-        current=now or datetime.now(timezone.utc)
+        current=now or datetime.now(UTC)
         from datetime import timedelta
         cutoff=(current-timedelta(days=days)).isoformat()
         rows=self._db.execute("SELECT receipt_id FROM receipts WHERE tenant_id=? AND created_at<?",
@@ -545,12 +545,13 @@ class ProductService:
         ).fetchall()
         for row in reviews:
             payload = json.loads(row["payload"])
+            rid = row["receipt_id"]
             items.append({
-                "task_id": "review:" + row["receipt_id"], "type": "review",
-                "priority": 20, "receipt_id": row["receipt_id"], "subject_id": row["receipt_id"],
+                "task_id": "review:" + rid, "type": "review",
+                "priority": 20, "receipt_id": rid, "subject_id": rid,
                 "title": payload.get("vendor") or "Ellenőrzendő nyugta",
                 "reason": "Egy vagy több OCR-mező bizonyossága alacsony.",
-                "action_label": "Ellenőrzés", "action_url": f"#review?receipt={row["receipt_id"]}",
+                "action_label": "Ellenőrzés", "action_url": f"#review?receipt={rid}",
                 "created_at": row["created_at"],
             })
         blocker_rows = self._db.execute(
@@ -563,13 +564,15 @@ class ProductService:
             if readiness["state"] != "blocked":
                 continue
             first = readiness["issues"][0]
+            receipt_id = row["receipt_id"]
+            field = first["field"]
             items.append({
-                "task_id": "export-blocker:" + row["receipt_id"], "type": "export_blocker",
-                "priority": 25, "receipt_id": row["receipt_id"], "subject_id": row["receipt_id"],
+                "task_id": "export-blocker:" + receipt_id, "type": "export_blocker",
+                "priority": 25, "receipt_id": receipt_id, "subject_id": receipt_id,
                 "title": "Exportot blokkoló adat",
                 "reason": first["message"], "action_label": "Javítás",
-                "action_url": f"#receipts?receipt={row["receipt_id"]}&field={first["field"]}", "created_at": row["created_at"],
-                "issue_code": first["code"], "field": first["field"],
+                "action_url": f"#receipts?receipt={receipt_id}&field={field}", "created_at": row["created_at"],
+                "issue_code": first["code"], "field": field,
             })
         if actor.role in {"admin", "reviewer"}:
             approvals = self._db.execute(
@@ -579,16 +582,14 @@ class ProductService:
             for row in approvals:
                 items.append({
                     "task_id": "approval:" + row["approval_id"], "type": "approval",
-                    "priority": 30, "receipt_id": row["receipt_id"],
-                    "subject_id": row["approval_id"], "title": "Jóváhagyásra vár",
+                    "priority": 30, "receipt_id": row["receipt_id"], "subject_id": row["approval_id"],
+                    "title": "Jóváhagyásra vár",
                     "reason": "A tétel döntést igényel.", "action_label": "Megnyitás",
-                    "action_url": f"#approvals?approval={row["approval_id"]}", "created_at": row["created_at"],
+                    "action_url": f'#approvals?approval={row["approval_id"]}', "created_at": row["created_at"],
                 })
-        items.sort(key=lambda item: (item["priority"], item["created_at"], item["task_id"]))
         return {"items": items[:limit], "total": len(items),
                 "counts": {kind: sum(i["type"] == kind for i in items)
                            for kind in ("failed_job", "review", "export_blocker", "approval")}}
-
     def dashboard(self, actor: Actor) -> dict[str, Any]:
         jobs=self.list_jobs(actor); total=len(jobs)
         statuses={}

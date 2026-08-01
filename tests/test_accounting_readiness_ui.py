@@ -75,6 +75,18 @@ def test_07_currency_ui_supports_dated_manual_rates(env):
 def test_08_dashboard_preferences_are_persisted_by_role():
     # Existing advanced preferences back the visual dashboard editor.
     from app.advanced_workspace import AdvancedWorkspace
+
+def get_all_paths(app):
+    paths = set()
+    for route in app.routes:
+        if hasattr(route, 'path'):
+            paths.add(route.path)
+        elif type(route).__name__ == '_IncludedRouter' and hasattr(route, 'original_router'):
+            for sub in route.original_router.routes:
+                if hasattr(sub, 'path'):
+                    paths.add(sub.path)
+    return paths
+
     service=ProductService(":memory:"); advanced=AdvancedWorkspace(service)
     advanced.save_preferences("a","reviewer",{"dashboard_widgets":["actions","quality"]})
     assert advanced.preferences("a","reviewer")["dashboard_widgets"]==["actions","quality"]
@@ -109,7 +121,7 @@ def test_12_bidirectional_ocr_link_line_editor_and_all_ui_sections_ship():
         assert behavior in js
 
 def test_13_all_accounting_routes_registered():
-    paths={r.path for r in app.routes}
+    paths = get_all_paths(app)
     assert {"/product/receipts/{receipt_id}/line-items","/product/receipts/{receipt_id}/validation",
             "/product/approval-flows","/product/export-preparations","/product/inbound-emails",
             "/product/recurring-expenses","/product/exchange-rates","/product/currency/convert",

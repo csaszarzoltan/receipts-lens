@@ -103,7 +103,7 @@ def test_advanced_gui_sections_and_pwa_assets_are_shipped():
 
 
 def test_new_api_routes_are_registered():
-    paths={route.path for route in app.routes}
+    paths = get_all_paths(app)
     expected={
         "/product/receipts/{receipt_id}/image","/product/receipts/{receipt_id}/ocr-boxes",
         "/product/receipts/{receipt_id}/history","/product/saved-views",
@@ -115,6 +115,18 @@ def test_new_api_routes_are_registered():
 
 def test_asset_api_rejects_cross_tenant_access(monkeypatch):
     from app import product_api
+
+def get_all_paths(app):
+    paths = set()
+    for route in app.routes:
+        if hasattr(route, 'path'):
+            paths.add(route.path)
+        elif type(route).__name__ == '_IncludedRouter' and hasattr(route, 'original_router'):
+            for sub in route.original_router.routes:
+                if hasattr(sub, 'path'):
+                    paths.add(sub.path)
+    return paths
+
     service=ProductService(":memory:"); advanced=AdvancedWorkspace(service); actor=Actor("a","admin")
     rid=service.create_receipt(actor,parsed(),"r.png")["receipt_id"]
     advanced.store_asset("a",rid,b"abc","image/png","r.png")

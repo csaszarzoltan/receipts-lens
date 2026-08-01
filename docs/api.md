@@ -437,3 +437,188 @@ Examples:
 #receipts?receipt=<receipt-id>&field=cost_center
 #approvals?approval=<approval-id>
 ```
+
+## Batch Processing and Export Endpoints (v2)
+
+These endpoints are defined in `app/api_v2.py` and mounted on the `/api/v1` prefix.
+
+### `POST /api/v1/receipts/batch`
+
+Parse multiple receipts in parallel with language selection and configurable workers.
+Accepts multipart `files` uploads or a JSON `image_urls` array.
+
+#### Request parameters (form fields)
+
+| Field         | Type   | Required | Default | Description                                         |
+|---------------|--------|----------|---------|-----------------------------------------------------|
+| `files`       | file[] | No       | --      | Multipart receipt image uploads                     |
+| `image_urls`  | string | No       | --      | JSON array of public image URLs                     |
+| `lang`        | string | No       | `eng`   | Language code: `eng`, `deu`, `fra`, `spa`, `ita`, `por` |
+| `webhook_url` | string | No       | --      | URL to POST results to on completion                |
+| `max_workers` | int    | No       | `4`     | Parallel OCR threads (1--8)                         |
+
+Either `files` or `image_urls` must be provided. Do not send both.
+
+#### Example: file uploads
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/receipts/batch" \
+  -F "files=@receipt1.jpg" \
+  -F "files=@receipt2.jpg" \
+  -F "lang=deu" \
+  -F "max_workers=8"
+```
+
+#### Example: URL array
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/receipts/batch" \
+  -F 'image_urls=["https://example.com/r1.jpg","https://example.com/r2.jpg"]' \
+  -F "lang=fra"
+```
+
+#### Response
+
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "queued",
+  "total": 2
+}
+```
+
+Processing runs in the background. Poll progress with `GET /api/v1/receipts/batch/{job_id}`.
+
+### `GET /api/v1/receipts/batch/{job_id}`
+
+Poll batch processing progress and results.
+
+#### Example
+
+```bash
+curl "http://localhost:8000/api/v1/receipts/batch/550e8400-e29b-41d4-a716-446655440000"
+```
+
+#### Response (in progress)
+
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "processing",
+  "total": 2,
+  "completed": 1,
+  "failed": 0,
+  "progress": 0.5,
+  "results": [
+    {
+      "index": 0,
+      "vendor": "COFFEE SHOP",
+      "total": 12.50,
+      "date": "2026-03-14",
+      "currency": "EUR",
+      "line_items": [{"name": "Latte", "price": 5.50}],
+      "error": null
+    }
+  ],
+  "errors": [],
+  "created_at": "2026-08-01T12:00:00+00:00",
+  "webhook_url": null
+}
+```
+
+#### Response (completed)
+
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "completed",
+  "total": 2,
+  "completed": 2,
+  "failed": 0,
+  "progress": 1.0,
+  "results": [ "..." ],
+  "errors": [],
+  "created_at": "2026-08-01T12:00:00+00:00",
+  "webhook_url": null
+}
+```
+
+#### Response (not found)
+
+```json
+{
+  "job_id": "unknown-id",
+  "status": "not_found",
+  "total": 0,
+  "completed": 0
+}
+```
+
+### `GET /api/v1/receipts/export/{format}`
+
+Export receipts to an accounting-compatible CSV format. Returns `text/csv`.
+
+#### Path parameter
+
+| Parameter | Type   | Values                             |
+|-----------|--------|------------------------------------|
+| `format`  | string | `quickbooks`, `xero`, `generic`    |
+
+#### Query parameters (optional)
+
+| Parameter   | Type   | Description                    |
+|-------------|--------|--------------------------------|
+| `date_from` | string | Start date filter `YYYY-MM-DD` |
+| `date_to`   | string | End date filter `YYYY-MM-DD`   |
+| `category`  | string | Category filter                |
+
+#### Example
+
+```bash
+curl "http://localhost:8000/api/v1/receipts/export/quickbooks" -o export.csv
+
+curl "http://localhost:8000/api/v1/receipts/export/xero?date_from=2026-01-01&date_to=2026-06-30"
+```
+
+#### Response
+
+Returns a CSV file with headers matching the chosen format. See [docs/accounting-export-guide.md](accounting-export-guide.md) for column mappings and import instructions.
+
+```csv
+Date,Transaction Type,Num,Name,Memo,Account,Debit,Credit,Currency
+2026-03-14,,,,,,,12.50,EUR
+```
+
+### `GET /api/v1/receipts/export/formats`
+
+List all available export formats and their column definitions.
+
+#### Example
+
+```bash
+curl "http://localhost:8000/api/v1/receipts/export/formats"
+```
+
+#### Response
+
+```json
+{
+  "formats": [
+    {
+      "name": "quickbooks",
+      "columns": ["Date", "Transaction Type", "Num", "Name", "Memo", "Account", "Debit", "Credit", "Currency"],
+      "delimiter": ","
+    },
+    {
+      "name": "xero",
+      "columns": ["Date", "Contact", "Description", "Quantity", "Unit Price", "Amount", "Tax Rate", "Tax Amount", "Account Code", "Currency Code"],
+      "delimiter": ","
+    },
+    {
+      "name": "generic",
+      "columns": ["Date", "Merchant", "Category", "Description", "Amount", "Currency", "Tax"],
+      "delimiter": ","
+    }
+  ]
+}
+```
