@@ -8,7 +8,7 @@
 
 Send an image (file upload, public URL, or batch of either) to `POST /v1/parse-receipt` or `POST /v1/parse-receipts` and get back JSON with `vendor`, `total`, `date`, `tax`, `currency`, and `line_items[]`.
 
-v0.6.0 adds **AI-powered categorization**, **budget management**, **spending analytics**, and an **alert system** — transforming ReceiptLens from a receipt scanner into a complete expense management platform.
+v1.1.0 adds accounting readiness: line-item editing, validation, approval-flow design, export preparation, email intake, subscriptions, FX, dashboard editing, localization, permission matrix, and private diagnostics. v1.0.0 consolidated the operational and intelligent workspace releases with secure source images, OCR overlays, duplicate review, saved views, notifications, automation rules, history, export runs, preferences, onboarding, and PWA support. v0.8.0 added a complete responsive financial operations workspace with receipt inbox, batch capture, OCR review, approval inbox, reports, integrations, administration, accessibility, and mobile layouts. v0.7.0 added **search, allocation metadata, approvals, retention controls, and portability**. v0.6.0 added **AI-powered categorization**, **budget management**, **spending analytics**, and an **alert system** — transforming ReceiptLens from a receipt scanner into a complete expense management platform.
 
 ---
 
@@ -34,7 +34,8 @@ v0.6.0 adds **AI-powered categorization**, **budget management**, **spending ana
 - **Budget management** — full CRUD for per-category monthly budgets with real-time spending tracking. Endpoints at `POST/GET/PUT/DELETE /api/v1/budgets`. See [docs/budgets-and-analytics.md](docs/budgets-and-analytics.md).
 - **Spending analytics** — aggregate spending by category, merchant, day, or month. Compare budgets vs actuals. Endpoints at `GET /api/v1/analytics/spending` and `GET /api/v1/analytics/budgets`.
 - **Alert system** — automatic threshold-based alerts when spending approaches or exceeds budget limits. Also detects unusual spending patterns. Endpoints at `GET /api/v1/alerts` and `POST /api/v1/alerts/{id}/acknowledge`. See [docs/alerts.md](docs/alerts.md).
-- **Tested** — 508+ pytest tests plus `ruff` linting.
+- **Receipt operations** — tenant-scoped search, tags, projects, cost centers, threshold approvals, retention purge, and versioned portability export.
+- **Tested** — 520+ pytest tests plus `ruff` linting.
 
 ---
 
@@ -51,7 +52,7 @@ See `docs/research/REQUIREMENTS_IMPLEMENTATION_REPORT.md` for deployment boundar
 
 ## Product workspace and workflows
 
-ReceiptLens now includes a browser-based upload workspace at `/workspace` and tenant-aware APIs for receipt history, review corrections, teams, API keys, accounting connections, exports, and the trust dashboard. See [docs/product-workflows.md](docs/product-workflows.md) for request headers, persistence configuration, endpoints, and deployment security notes.
+ReceiptLens now includes a browser-based upload workspace at `/workspace` and tenant-aware APIs for receipt history, review corrections, teams, API keys, accounting connections, exports, and the trust dashboard. See [docs/product-workflows.md](docs/product-workflows.md) and [docs/gui-workspace.md](docs/gui-workspace.md) and [docs/consolidated-v1-workspace.md](docs/consolidated-v1-workspace.md) and [docs/accounting-readiness-v1.1.md](docs/accounting-readiness-v1.1.md) for request headers, persistence configuration, endpoints, and deployment security notes.
 
 ## Webes főoldal
 

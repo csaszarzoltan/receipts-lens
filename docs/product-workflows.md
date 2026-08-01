@@ -53,3 +53,16 @@ Without the variable, the product service uses an in-memory database suitable fo
 - API key secrets are returned only when created; only a SHA-256 digest is stored.
 - Audit events contain identifiers and actions, not receipt bodies or secrets.
 - The existing upload MIME and OCR validation remains active for real requests.
+
+## Market features in v0.7.0
+
+- `GET /product/receipts`: search by `query`, `status`, `tag`, `min_total`, and `max_total`; pagination uses `limit` and `offset`.
+- `PUT /product/receipts/{receipt_id}/metadata`: set up to 20 tags plus optional `project` and `cost_center`.
+- `POST /product/approval-policies`: create an admin-only currency threshold policy.
+- `POST /product/receipts/{receipt_id}/approval`: evaluate a receipt and create a pending approval when required.
+- `POST /product/approvals/{approval_id}/decision`: reviewer/admin approval or rejection with an optional note.
+- `PUT /product/privacy/retention`: set retention from 1 to 3,650 days.
+- `POST /product/privacy/purge`: remove expired tenant data and dependent rows transactionally.
+- `GET /product/privacy/export`: export versioned tenant JSON with receipt metadata and approvals.
+
+All operations are tenant-scoped. Approval policy and retention changes require `admin`; decisions require `admin` or `reviewer`. See `docs/research/MARKET_RESEARCH_2026.md` for the evidence, specifications, roadmap, and validation plan.

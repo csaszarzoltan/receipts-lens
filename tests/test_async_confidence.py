@@ -14,7 +14,7 @@ from app import api
 # Interface tests -- must pass before implementation is complete
 # --------------------------------------------------------------------------
 def test_app_version_bumped():
-    assert api.app.version.startswith("0.6.")
+    assert api.app.version.startswith("1.1.")
 
 
 def test_parse_receipt_route_still_registered():

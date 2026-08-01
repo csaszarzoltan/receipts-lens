@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="ReceiptLens pénzügyi operációs munkafelület">
+  <title>ReceiptLens Workspace</title>
+  <link rel="manifest" href="/assets/manifest.webmanifest">
+  <link rel="stylesheet" href="/assets/workspace.css">
+</head>
+<body>
+<!-- Backward-compatible workspace labels: Upload receipt | Process receipt | /product/receipts/upload -->
+<a class="skip" href="#main">Ugrás a tartalomra</a>
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Fő navigáció">
+    <div class="brand"><span class="logo" aria-hidden="true">R</span><div><strong>ReceiptLens</strong><small>Finance workspace</small></div></div>
+    <nav id="nav">
+      <button data-view="dashboard" class="active"><span>Áttekintés</span></button>
+      <button data-view="receipts"><span>Nyugták</span><b id="receiptCount">0</b></button>
+      <button data-view="upload"><span>Feltöltés</span></button>
+      <button data-view="review"><span>Ellenőrzés</span><b id="reviewCount">0</b></button>
+      <button data-view="approvals"><span>Jóváhagyások</span><b id="approvalCount">0</b></button>
+      <button data-view="duplicates"><span>Duplikátumok</span><b id="duplicateCount">0</b></button>
+      <button data-view="automations"><span>Automatizálás</span></button>
+      <button data-view="accounting"><span>Könyvelési ellenőrzés</span></button>
+      <button data-view="exports"><span>Exportközpont</span></button>
+      <button data-view="inbox"><span>E-mail inbox</span></button>
+      <button data-view="subscriptions"><span>Előfizetések</span></button>
+      <button data-view="reports"><span>Riportok</span></button>
+      <button data-view="integrations"><span>Integrációk</span></button>
+      <button data-view="settings"><span>Beállítások</span></button>
+    </nav>
+    <div class="sidebar-note"><strong>Adatvédelem</strong><span>A képek tartalma nem kerül az auditnaplóba.</span></div>
+  </aside>
+  <div class="main-column">
+    <header class="topbar">
+      <button class="menu" id="menuBtn" aria-label="Menü megnyitása">☰</button>
+      <label class="global-search"><span class="sr-only">Globális keresés</span><input id="globalSearch" type="search" placeholder="Kereskedő, dátum, pénznem…"><kbd>/</kbd></label>
+      <select id="tenant" aria-label="Workspace"><option value="demo">Demo workspace</option></select>
+      <select id="role" aria-label="Szerepkör"><option>admin</option><option>reviewer</option><option>integrator</option></select>
+      <span id="networkState" class="network-state">Online</span><button id="installApp" hidden>Telepítés</button>
+      <button class="icon-btn" id="notificationBtn" aria-label="Értesítések">🔔<span id="notificationCount">0</span></button>
+    </header>
+    <main id="main" tabindex="-1">
+      <section id="dashboard" class="view active" aria-labelledby="dashboardTitle">
+        <div class="page-head"><div><p class="eyebrow">MAI MUNKAFELÜLET</p><h1 id="dashboardTitle">Áttekintés</h1><p>A következő teendők és pénzügyi állapot egy helyen.</p></div><button class="primary" data-go="upload">+ Nyugta feltöltése</button></div>
+        <div class="kpi-grid" id="kpis"></div>
+        <div class="grid two"><article class="card"><div class="card-head"><h2>Következő teendők</h2><button class="text-btn" data-go="review">Megnyitás</button></div><div id="actions" class="action-list"></div></article><article class="card"><div class="card-head"><h2>Költési megoszlás</h2><span class="muted">Aktuális lista</span></div><div id="categoryChart" class="bars"></div></article></div>
+        <div class="grid two"><article class="card"><h2>Feldolgozási minőség</h2><div id="qualityPanel"></div></article><article class="card"><h2>Szolgáltatás és adatvédelem</h2><div id="trustPanel"></div></article></div>
+      </section>
+
+      <section id="receipts" class="view" aria-labelledby="receiptsTitle">
+        <div class="page-head"><div><p class="eyebrow">PÉNZÜGYI INBOX</p><h1 id="receiptsTitle">Nyugták</h1><p>Keress, szűrj, rendelj projekthez és indíts jóváhagyást.</p></div><button class="primary" data-go="upload">+ Feltöltés</button></div>
+        <div class="filterbar">
+          <input id="receiptQuery" type="search" placeholder="Keresés…" aria-label="Nyugta keresés">
+          <select id="statusFilter" aria-label="Állapot"><option value="">Minden állapot</option><option value="needs_review">Ellenőrzendő</option><option value="completed">Kész</option></select>
+          <input id="tagFilter" placeholder="Címke" aria-label="Címke">
+          <input id="minTotal" type="number" min="0" placeholder="Min. összeg" aria-label="Minimális összeg">
+          <input id="maxTotal" type="number" min="0" placeholder="Max. összeg" aria-label="Maximális összeg">
+          <button id="applyFilters">Szűrés</button><button id="clearFilters" class="ghost">Törlés</button>
+        </div>
+        <div class="saved-view-bar"><select id="savedViewSelect" aria-label="Mentett nézet"><option value="">Mentett nézetek</option></select><button id="saveCurrentView">Nézet mentése</button></div>
+        <div class="quick-filters"><button data-status="needs_review">Ellenőrzést igényel</button><button data-missing="project">Nincs projekt</button><button data-high="500">500 felett</button></div>
+        <div class="bulkbar" id="bulkbar" hidden><strong><span id="selectedCount">0</span> kijelölve</strong><input id="bulkTag" placeholder="Címke hozzáadása"><input id="bulkProject" placeholder="Projekt"><button id="bulkApply">Alkalmazás</button><button id="bulkApproval">Jóváhagyás kérése</button></div>
+        <article class="card table-card"><div class="table-wrap"><table><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Összes kijelölése"></th><th>Kereskedő</th><th>Dátum</th><th>Összeg</th><th>Projekt</th><th>Címkék</th><th>Bizonyosság</th><th>Állapot</th><th></th></tr></thead><tbody id="receiptRows"></tbody></table></div><div class="pagination"><span id="pageInfo"></span><button id="prevPage">Előző</button><button id="nextPage">Következő</button></div></article>
+      </section>
+
+      <section id="upload" class="view" aria-labelledby="uploadTitle">
+        <div class="page-head"><div><p class="eyebrow">GYORS RÖGZÍTÉS</p><h1 id="uploadTitle">Nyugták feltöltése</h1><p>Húzd ide a képeket, illeszd be a vágólapról, vagy használd a kamerát.</p></div></div>
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Nyugtaképek kiválasztása"><div class="upload-icon">⇧</div><h2>Húzd ide a nyugtákat</h2><p>PNG, JPEG, WEBP, GIF, BMP vagy TIFF. Több fájl is választható.</p><label class="primary file-label">Fájlok kiválasztása<input id="fileInput" type="file" accept="image/*" multiple capture="environment"></label><small>Vágólapról: Ctrl+V</small></div>
+        <article class="card" id="uploadQueueCard" hidden><div class="card-head"><h2>Feltöltési sor</h2><button id="uploadAll" class="primary">Összes feldolgozása</button></div><div id="uploadQueue"></div></article>
+      </section>
+
+      <section id="review" class="view" aria-labelledby="reviewTitle">
+        <div class="page-head"><div><p class="eyebrow">MINŐSÉGBIZTOSÍTÁS</p><h1 id="reviewTitle">OCR-ellenőrzés</h1><p>Az alacsony bizonyosságú mezők javítása, billentyűzettel is.</p></div><div><button id="previousReview" class="ghost">← Előző</button><button id="nextReview" class="ghost">Következő →</button></div></div>
+        <div id="reviewEmpty" class="empty"><h2>Nincs ellenőrzésre váró nyugta</h2><p>Az alacsony bizonyosságú feldolgozások automatikusan itt jelennek meg.</p></div>
+        <div id="reviewWorkspace" class="review-grid" hidden><article class="card image-panel"><div class="image-toolbar"><button id="zoomOut" aria-label="Kicsinyítés">−</button><span id="zoomValue">100%</span><button id="zoomIn" aria-label="Nagyítás">+</button><button id="rotate" aria-label="Forgatás">↻</button><button id="toggleSource">Eredeti / strukturált</button><button id="showHistory">Előzmények</button></div><div class="receipt-preview" id="receiptPreview"><img id="reviewImage" class="review-source" alt="Eredeti nyugtakép" hidden><div id="ocrOverlay" class="ocr-overlay"></div><div class="paper"><strong id="previewVendor">NYUGTA</strong><hr><div id="previewItems"></div><hr><b id="previewTotal"></b></div></div></article><article class="card form-panel"><div class="confidence-legend"><span class="confidence high">Biztos</span><span class="confidence medium">Ellenőrzendő</span><span class="confidence low">Nem felismerhető</span></div><form id="reviewForm"><input type="hidden" id="reviewId"><input type="hidden" id="reviewVersion"><label>Kereskedő <span id="vendorConfidence"></span><input id="editVendor"></label><div class="form-row"><label>Dátum <span id="dateConfidence"></span><input id="editDate" type="date"></label><label>Pénznem <span id="currencyConfidence"></span><input id="editCurrency" maxlength="3"></label></div><div class="form-row"><label>Végösszeg <span id="totalConfidence"></span><input id="editTotal" type="number" step="0.01"></label><label>Adó <span id="taxConfidence"></span><input id="editTax" type="number" step="0.01"></label></div><label>Projekt<input id="editProject"></label><label>Költséghely<input id="editCostCenter"></label><label>Címkék<input id="editTags" placeholder="utazás, ügyfél"></label><div class="form-actions"><button type="button" id="saveReview" class="ghost">Mentés</button><button type="submit" class="primary">Mentés és következő <kbd>Ctrl+Enter</kbd></button></div></form></article></div>
+      </section>
+
+      <section id="approvals" class="view" aria-labelledby="approvalTitle">
+        <div class="page-head"><div><p class="eyebrow">DÖNTÉSI POSTALÁDA</p><h1 id="approvalTitle">Jóváhagyások</h1><p>Magas értékű és szabályalapú tételek gyors áttekintése.</p></div><button id="newPolicy" class="primary">+ Jóváhagyási szabály</button></div>
+        <div id="approvalList" class="approval-list"></div>
+      </section>
+
+
+      <section id="duplicates" class="view" aria-labelledby="duplicatesTitle">
+        <div class="page-head"><div><p class="eyebrow">ADATMINŐSÉG</p><h1 id="duplicatesTitle">Duplikátum-ellenőrzés</h1><p>Hasonlítsd össze az egyező kereskedővel és összeggel rendelkező nyugtákat.</p></div></div>
+        <div id="duplicateList" class="duplicate-list"></div>
+      </section>
+
+      <section id="automations" class="view" aria-labelledby="automationsTitle">
+        <div class="page-head"><div><p class="eyebrow">SZABÁLYMOTOR</p><h1 id="automationsTitle">Automatizálási szabályok</h1><p>Ismétlődő kategorizálási, projekt- és jóváhagyási lépések automatizálása.</p></div><button id="newRule" class="primary">+ Új szabály</button></div>
+        <div id="ruleList" class="grid two"></div>
+      </section>
+
+      <aside id="notificationPanel" class="notification-panel" aria-label="Értesítési központ" hidden>
+        <div class="card-head"><h2>Értesítések</h2><button id="readAll">Összes olvasott</button></div>
+        <div id="notificationList"></div>
+      </aside>
+
+
+      <section id="accounting" class="view" aria-labelledby="accountingTitle">
+        <div class="page-head"><div><p class="eyebrow">ACCOUNTING READINESS</p><h1 id="accountingTitle">Könyvelési ellenőrzés</h1><p>Tételsorok, adó, összegek és exportkövetelmények ellenőrzése.</p></div></div>
+        <div class="grid two"><article class="card"><h2>Nyugta kiválasztása</h2><select id="accountingReceipt"></select><button id="loadAccounting">Betöltés</button><div id="validationSummary"></div></article><article class="card"><h2>Tételsor-szerkesztő</h2><div class="table-wrap"><table><thead><tr><th>Megnevezés</th><th>Menny.</th><th>Egységár</th><th>Összeg</th><th>Kategória</th><th></th></tr></thead><tbody id="lineItemRows"></tbody></table></div><button id="addLineItem">+ Sor</button><button id="saveLineItems" class="primary">Tételsorok mentése</button><p id="lineTotal"></p></article></div>
+        <article class="card"><h2>OCR mezőkapcsolatok</h2><p>Az OCR boxra kattintva a kapcsolódó mező aktív lesz; a mező fókuszakor a forrásrészlet kiemelhető.</p><div id="fieldLinkMap" class="field-link-map"></div></article>
+      </section>
+
+      <section id="exports" class="view" aria-labelledby="exportsTitle">
+        <div class="page-head"><div><p class="eyebrow">EXPORT READINESS</p><h1 id="exportsTitle">Export-előkészítő</h1><p>Válaszd ki a tételeket, validáld őket, majd csak a megfelelő rekordokat exportáld.</p></div></div>
+        <div class="stepper"><b>1. Tételek</b><b>2. Validáció</b><b>3. Eredmény</b></div><article class="card"><button id="prepareSelectedExport" class="primary">Kijelölt nyugták ellenőrzése</button><div id="exportPreparationResults"></div></article>
+      </section>
+
+      <section id="inbox" class="view" aria-labelledby="inboxTitle">
+        <div class="page-head"><div><p class="eyebrow">DIGITÁLIS NYUGTÁK</p><h1 id="inboxTitle">E-mailes beérkezés</h1><p>A workspace egyedi címe és a feldolgozott mellékletek.</p></div><button id="simulateEmail">Teszt e-mail</button></div><article class="card"><p>Küldési cím: <code id="inboxAddress"></code></p><div id="emailList"></div></article>
+      </section>
+
+      <section id="subscriptions" class="view" aria-labelledby="subscriptionsTitle">
+        <div class="page-head"><div><p class="eyebrow">KÖLTSÉGOPTIMALIZÁLÁS</p><h1 id="subscriptionsTitle">Ismétlődő költségek</h1><p>Felismert előfizetések, évesített költség és árváltozás.</p></div></div><div id="subscriptionCards" class="grid three"></div>
+      </section>
+
+      <section id="reports" class="view" aria-labelledby="reportsTitle">
+        <div class="page-head"><div><p class="eyebrow">ELEMZÉS ÉS EXPORT</p><h1 id="reportsTitle">Riportok</h1><p>Költségtrendek, budgetek és exportálható eredmények.</p></div></div>
+        <div class="grid three"><article class="card stat"><span>Havi költés</span><strong id="monthlySpend">0</strong></article><article class="card stat"><span>Átlagos nyugta</span><strong id="averageSpend">0</strong></article><article class="card stat"><span>Legnagyobb tétel</span><strong id="largestSpend">0</strong></article></div>
+        <div class="grid two"><article class="card"><h2>Kategóriák</h2><div id="reportBars" class="bars"></div></article><article class="card"><h2>Adatportabilitás</h2><p>Töltsd le a workspace nyugtáit, metadata mezőit és jóváhagyási előzményeit verziózott JSON formátumban.</p><button id="downloadExport" class="primary">JSON export letöltése</button><h3>Exportelőzmények</h3><div id="exportHistory"></div></article></div>
+      </section>
+
+      <section id="integrations" class="view" aria-labelledby="integrationsTitle">
+        <div class="page-head"><div><p class="eyebrow">KAPCSOLATOK</p><h1 id="integrationsTitle">Integrációs központ</h1><p>CSV, QuickBooks és Xero kapcsolatok, mezőmappinggel.</p></div><button id="newConnection" class="primary">+ Új kapcsolat</button></div><div id="connectionCards" class="grid three"></div>
+      </section>
+
+      <section id="settings" class="view" aria-labelledby="settingsTitle">
+        <div class="page-head"><div><p class="eyebrow">WORKSPACE ADMIN</p><h1 id="settingsTitle">Beállítások</h1><p>Csapattagok, API-kulcsok, adatmegőrzés és hozzáférés.</p></div></div>
+        <div class="settings-tabs" role="tablist"><button class="active" data-tab="team">Csapat</button><button data-tab="approvalDesigner">Jóváhagyási folyamat</button><button data-tab="permissions">Jogosultságok</button><button data-tab="currency">Pénznem</button><button data-tab="dashboardEditor">Dashboard</button><button data-tab="diagnostics">Diagnosztika</button><button data-tab="keys">API-kulcsok</button><button data-tab="privacy">Adatvédelem</button><button data-tab="preferences">Megjelenés</button></div>
+
+        <div id="approvalDesignerTab" class="settings-panel"><article class="card"><div class="card-head"><h2>Jóváhagyási folyamat tervező</h2><button id="addApprovalStep">+ Lépés</button></div><label>Folyamat neve<input id="approvalFlowName" value="Vállalati költésjóváhagyás"></label><label>Minimum összeg<input id="approvalFlowMin" type="number" value="100"></label><div id="approvalSteps"></div><button id="simulateFlow">Szimuláció</button><button id="saveApprovalFlow" class="primary">Publikálás</button><p id="flowResult"></p></article></div>
+        <div id="permissionsTab" class="settings-panel"><article class="card"><h2>Jogosultsági mátrix</h2><div id="permissionMatrix" class="permission-matrix"></div><button id="savePermissions" class="primary">Jogosultságok mentése</button></article></div>
+        <div id="currencyTab" class="settings-panel"><article class="card"><h2>Árfolyamok</h2><div class="form-row"><label>Alap<input id="rateBase" value="EUR"></label><label>Cél<input id="rateQuote" value="CHF"></label></div><div class="form-row"><label>Árfolyam<input id="rateValue" type="number" step="0.0001" value="0.95"></label><label>Dátum<input id="rateDate" type="date"></label></div><button id="saveRate">Árfolyam mentése</button><hr><div class="form-row"><label>Összeg<input id="convertAmount" type="number" value="100"></label><label>Eredmény<output id="convertResult">–</output></label></div><button id="convertCurrency">Átváltás</button></article></div>
+        <div id="dashboardEditorTab" class="settings-panel"><article class="card"><h2>Dashboard szerkesztő</h2><p>Jelöld ki és rendezd a szerepköröd számára látható widgeteket.</p><div id="widgetEditor" class="widget-editor"><label draggable="true"><input type="checkbox" value="kpis" checked> KPI-k</label><label draggable="true"><input type="checkbox" value="actions" checked> Teendők</label><label draggable="true"><input type="checkbox" value="spending" checked> Költés</label><label draggable="true"><input type="checkbox" value="quality" checked> Minőség</label></div><button id="saveWidgets" class="primary">Elrendezés mentése</button></article></div>
+        <div id="diagnosticsTab" class="settings-panel"><article class="card"><h2>Támogatás és diagnosztika</h2><div id="diagnosticStatus"></div><button id="loadDiagnostics">Állapot frissítése</button><button id="downloadDiagnostics" class="primary">Diagnosztikai ZIP</button><p class="muted">A csomag nem tartalmaz nyugtaképeket, OCR-szöveget, API-kulcsot vagy tokent.</p></article></div>
+
+        <div id="teamTab" class="settings-panel active"><article class="card"><div class="card-head"><h2>Csapattagok</h2><button id="inviteMember">+ Meghívás</button></div><div id="memberList"></div></article></div>
+        <div id="keysTab" class="settings-panel"><article class="card"><div class="card-head"><h2>API-kulcsok</h2><button id="createKey">+ Kulcs létrehozása</button></div><p>A titkos érték csak létrehozáskor jelenik meg.</p><div id="keyResult"></div></article></div>
+        <div id="privacyTab" class="settings-panel"><div class="grid two"><article class="card"><h2>Adatmegőrzés</h2><label>Megőrzési napok<input id="retentionDays" type="number" min="1" max="3650" value="30"></label><div class="form-actions"><button id="saveRetention" class="primary">Szabály mentése</button><button id="purgeNow" class="danger">Lejárt adatok törlése</button></div><p id="retentionResult" class="muted"></p></article><article class="card"><h2>Adatportabilitás</h2><p>A teljes tenantadat exportálása. A művelet auditált, de a tartalom nem kerül az auditnaplóba.</p><button id="privacyExport">Export letöltése</button></article></div></div>
+        <div id="preferencesTab" class="settings-panel"><article class="card"><h2>Felület</h2><label>Nyelv<select id="language"><option value="hu">Magyar</option><option value="en">English</option></select></label><label class="toggle"><input id="compactMode" type="checkbox"> Kompakt táblázat</label><label class="toggle"><input id="highContrast" type="checkbox"> Magas kontraszt</label></article></div>
+      </section>
+    </main>
+  </div>
+</div>
+<div id="onboarding" class="onboarding" hidden><div class="card"><button id="closeOnboarding" class="dialog-close">×</button><p class="eyebrow">ELSŐ LÉPÉSEK</p><h2>Állítsd be a workspace-t</h2><label><input type="checkbox" checked disabled> Workspace létrehozva</label><label><input id="onboardUpload" type="checkbox" disabled> Első nyugta feldolgozva</label><label><input id="onboardMember" type="checkbox" disabled> Csapattag meghívva</label><label><input id="onboardPolicy" type="checkbox" disabled> Jóváhagyási szabály létrehozva</label><button data-go="upload" class="primary">Első nyugta feltöltése</button></div></div>
+<div id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+<dialog id="modal"><form method="dialog"><button class="dialog-close" aria-label="Bezárás">×</button><div id="modalContent"></div></form></dialog>
+<script src="/assets/workspace.js" defer></script>
+</body></html>
