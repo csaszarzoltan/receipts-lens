@@ -162,3 +162,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 19 pytest tests covering API routes, OCR signatures, runtime behavior, and regression cases.
 - `ruff` linting configured and passing.
+
+## 1.1.1 - 2026-08-01
+
+### Added
+- Tenant-scoped, role-aware daily work queue for failed jobs, OCR review, and approvals.
+- Atomic receipt workspace update covering fields, line items, metadata, status, version, job status, and audit.
+- TDD acceptance tests for workflow ordering, transaction rollback, concurrency, and API behavior.
+- Delivery requirements and implementation report.
+
+### Changed
+- Dashboard next actions now use the prioritized work queue.
+- Review save now performs one atomic workspace request instead of separate receipt and metadata requests.
+
+## 1.2.0 - 2026-08-01
+
+### Added
+- Early accounting-readiness state and stable issue details on product receipt queries.
+- Receipt-list filtering by blocked, warning, or exportable state.
+- Export-blocker tasks in the prioritized daily work queue.
+- Accounting-readiness badges and filter controls in the receipt workspace.
+- TDD acceptance tests for readiness state, filtering, API behavior, queue behavior, and UI contracts.
+- Product/UX analysis and full implementation delivery report in `docs/`.
+
+### Changed
+- Receipt filter reset now clears both inputs and select controls.
+- Receipt table now surfaces accounting state before users enter export preparation.
+
+## 1.3.0 - 2026-08-01
+
+### Added
+- Precise work-queue deep links for review receipts, export blockers, and approval tasks.
+- Accessible contextual dialogs for approval decisions, API-key creation, saved-view naming, and retention purge.
+- Inline dialog validation, mandatory rejection reasons, and typed confirmation for irreversible purge.
+- TDD acceptance coverage for deep links and business-action dialog contracts.
+- Updated product analysis, requirements, GUI, API, workflow, accounting-readiness, delivery, and GitHub README documentation.
+
+### Changed
+- Dashboard actions retain complete task URLs and navigate to exact records and fields.
+- Saved views now preserve the accounting-readiness filter.
+- Approval cards can receive programmatic focus after task navigation.
+
+### Removed
+- Browser-native business `prompt()` and `confirm()` flows for approval, API-key, saved-view, and purge actions.

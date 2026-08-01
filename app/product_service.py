@@ -245,13 +245,51 @@ class ProductService:
             self._audit(actor.tenant_id,"export.completed",export_id)
         return {"export_id":export_id,"status":"completed",**result}
 
+    @staticmethod
+    def receipt_readiness(payload: dict[str, Any], status: str,
+                          cost_center: str | None) -> dict[str, Any]:
+        """Return early accounting readiness for list and work-queue visibility."""
+        issues: list[dict[str, str]] = []
+        required = {
+            "vendor": "Add a merchant before export.",
+            "date": "Add a receipt date before export.",
+            "total": "Add a total before export.",
+            "currency": "Add a currency before export.",
+        }
+        for field, message in required.items():
+            if payload.get(field) in (None, ""):
+                issues.append({"code": f"missing_{field}", "field": field,
+                               "severity": "blocker", "message": message})
+        total = payload.get("total")
+        tax = payload.get("tax")
+        if total is not None and float(total) < 0:
+            issues.append({"code": "negative_total", "field": "total",
+                           "severity": "blocker", "message": "Total cannot be negative."})
+        if tax is not None and total is not None and float(tax) > float(total):
+            issues.append({"code": "tax_exceeds_total", "field": "tax",
+                           "severity": "blocker", "message": "Tax cannot exceed total."})
+        if not cost_center:
+            issues.append({"code": "missing_cost_center", "field": "cost_center",
+                           "severity": "blocker", "message": "Select a cost center before export."})
+        if status != "completed":
+            issues.append({"code": "review_incomplete", "field": "status",
+                           "severity": "blocker", "message": "Complete receipt review before export."})
+        blocker_count = sum(issue["severity"] == "blocker" for issue in issues)
+        warning_count = sum(issue["severity"] == "warning" for issue in issues)
+        state = "blocked" if blocker_count else ("warning" if warning_count else "exportable")
+        return {"state": state, "blocker_count": blocker_count,
+                "warning_count": warning_count, "issues": issues}
+
     def search_receipts(self, actor: Actor, query: str | None = None,
                         status: str | None = None, tag: str | None = None,
                         min_total: float | None = None, max_total: float | None = None,
-                        limit: int = 50, offset: int = 0) -> dict[str, Any]:
-        """Search tenant receipts with stable pagination and optional metadata filters."""
+                        limit: int = 50, offset: int = 0,
+                        readiness: str | None = None) -> dict[str, Any]:
+        """Search tenant receipts with stable pagination and early readiness."""
         if not 1 <= limit <= 200 or offset < 0:
             raise ValueError("limit must be 1..200 and offset must be non-negative")
+        if readiness not in {None, "", "blocked", "warning", "exportable"}:
+            raise ValueError("unsupported readiness filter")
         rows = self._db.execute(
             "SELECT r.*,m.tags,m.project,m.cost_center FROM receipts r "
             "LEFT JOIN receipt_metadata m ON m.receipt_id=r.receipt_id "
@@ -263,15 +301,17 @@ class ProductService:
             tags=json.loads(row["tags"] or "[]")
             total=payload.get("total")
             haystack=" ".join(str(payload.get(k) or "") for k in ("vendor","date","currency")).lower()
+            result_readiness = self.receipt_readiness(payload, row["status"], row["cost_center"])
             if query and query.lower() not in haystack: continue
             if status and row["status"] != status: continue
             if tag and tag.lower() not in {str(x).lower() for x in tags}: continue
             if min_total is not None and (total is None or float(total) < min_total): continue
             if max_total is not None and (total is None or float(total) > max_total): continue
+            if readiness and result_readiness["state"] != readiness: continue
             items.append({"receipt_id":row["receipt_id"],"status":row["status"],
                           "version":row["version"],"created_at":row["created_at"],
                           "receipt":payload,"metadata":{"tags":tags,"project":row["project"],
-                          "cost_center":row["cost_center"]}})
+                          "cost_center":row["cost_center"]}, "readiness": result_readiness})
         return {"items":items[offset:offset+limit],"total":len(items),"limit":limit,"offset":offset}
 
     def set_metadata(self, actor: Actor, receipt_id: str, tags: list[str],
@@ -382,6 +422,172 @@ class ProductService:
         self._audit(actor.tenant_id,"portability.exported",actor.tenant_id)
         return {"schema_version":1,"tenant_id":actor.tenant_id,"exported_at":self._now(),
                 "receipts":receipts,"approvals":approvals}
+
+    def update_receipt_workspace(
+        self, actor: Actor, receipt_id: str, expected_version: int,
+        fields: dict[str, Any] | None, line_items: list[dict[str, Any]] | None,
+        metadata: dict[str, Any] | None, complete: bool,
+    ) -> dict[str, Any]:
+        """Atomically update review fields, line items and accounting metadata.
+
+        All validation happens before the transaction so users never receive a
+        partially saved receipt when one section is invalid.
+        """
+        if actor.role not in {"admin", "reviewer"}:
+            raise PermissionError("reviewer role required")
+        allowed = {"vendor", "date", "total", "tax", "currency"}
+        fields = dict(fields or {})
+        if set(fields) - allowed:
+            raise ValueError("unsupported receipt field")
+        if not fields and line_items is None and metadata is None:
+            raise ValueError("at least one workspace change is required")
+
+        clean_items = None
+        if line_items is not None:
+            clean_items = []
+            for index, item in enumerate(line_items):
+                name = str(item.get("name") or "").strip()
+                try:
+                    quantity = float(item.get("quantity", 1))
+                    unit_price = float(item.get("unit_price", item.get("price", 0)))
+                    amount = float(item.get("amount", quantity * unit_price))
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(f"invalid line item at index {index}") from exc
+                if not name or quantity <= 0 or unit_price < 0 or amount < 0:
+                    raise ValueError(f"invalid line item at index {index}")
+                clean_items.append({
+                    "name": name, "quantity": quantity, "unit_price": unit_price,
+                    "amount": round(amount, 2), "tax_rate": item.get("tax_rate"),
+                    "category": item.get("category"),
+                })
+
+        clean_metadata = None
+        if metadata is not None:
+            tags = metadata.get("tags") or []
+            normalized: dict[str, str] = {}
+            for value in tags:
+                cleaned = str(value).strip()
+                if cleaned:
+                    normalized.setdefault(cleaned.lower(), cleaned)
+            tag_values = sorted(normalized.values(), key=str.lower)
+            if len(tag_values) > 20 or any(len(tag) > 40 for tag in tag_values):
+                raise ValueError("at most 20 tags of 40 characters are allowed")
+            clean_metadata = {
+                "tags": tag_values,
+                "project": str(metadata.get("project") or "").strip() or None,
+                "cost_center": str(metadata.get("cost_center") or "").strip() or None,
+            }
+
+        with self._lock, self._db:
+            row = self._db.execute(
+                "SELECT * FROM receipts WHERE tenant_id=? AND receipt_id=?",
+                (actor.tenant_id, receipt_id),
+            ).fetchone()
+            if not row:
+                raise KeyError(receipt_id)
+            if row["version"] != expected_version:
+                raise ProductConflict("stale receipt version")
+            payload = json.loads(row["payload"])
+            payload.update(fields)
+            if clean_items is not None:
+                payload["line_items"] = clean_items
+            status = "completed" if complete else row["status"]
+            version = expected_version + 1
+            self._db.execute(
+                "UPDATE receipts SET payload=?,status=?,version=? WHERE tenant_id=? AND receipt_id=?",
+                (json.dumps(payload, sort_keys=True), status, version, actor.tenant_id, receipt_id),
+            )
+            self._db.execute(
+                "UPDATE jobs SET status=? WHERE tenant_id=? AND receipt_id=?",
+                (status, actor.tenant_id, receipt_id),
+            )
+            if clean_metadata is not None:
+                self._db.execute(
+                    "INSERT OR REPLACE INTO receipt_metadata VALUES(?,?,?,?,?,?)",
+                    (receipt_id, actor.tenant_id, json.dumps(clean_metadata["tags"]),
+                     clean_metadata["project"], clean_metadata["cost_center"], self._now()),
+                )
+            self._audit(actor.tenant_id, "receipt.workspace.updated", receipt_id)
+
+        metadata_row = self._db.execute(
+            "SELECT tags,project,cost_center FROM receipt_metadata WHERE tenant_id=? AND receipt_id=?",
+            (actor.tenant_id, receipt_id),
+        ).fetchone()
+        result_metadata = {
+            "tags": json.loads(metadata_row["tags"]) if metadata_row else [],
+            "project": metadata_row["project"] if metadata_row else None,
+            "cost_center": metadata_row["cost_center"] if metadata_row else None,
+        }
+        return {"receipt_id": receipt_id, "status": status, "version": version,
+                "receipt": payload, "metadata": result_metadata}
+
+    def work_queue(self, actor: Actor, limit: int = 100) -> dict[str, Any]:
+        """Return a deterministic, role-aware queue of actionable daily work."""
+        if not 1 <= limit <= 200:
+            raise ValueError("limit must be 1..200")
+        items: list[dict[str, Any]] = []
+        failed = self._db.execute(
+            "SELECT job_id,receipt_id,error,created_at FROM jobs "
+            "WHERE tenant_id=? AND status='failed'", (actor.tenant_id,),
+        ).fetchall()
+        for row in failed:
+            items.append({
+                "task_id": "failed:" + row["job_id"], "type": "failed_job",
+                "priority": 10, "receipt_id": row["receipt_id"], "subject_id": row["job_id"],
+                "title": "Feldolgozási hiba",
+                "reason": row["error"] or "A nyugta feldolgozása sikertelen.",
+                "action_label": "Újrapróbálás", "action_url": "#upload",
+                "created_at": row["created_at"],
+            })
+        reviews = self._db.execute(
+            "SELECT receipt_id,payload,created_at FROM receipts "
+            "WHERE tenant_id=? AND status='needs_review'", (actor.tenant_id,),
+        ).fetchall()
+        for row in reviews:
+            payload = json.loads(row["payload"])
+            items.append({
+                "task_id": "review:" + row["receipt_id"], "type": "review",
+                "priority": 20, "receipt_id": row["receipt_id"], "subject_id": row["receipt_id"],
+                "title": payload.get("vendor") or "Ellenőrzendő nyugta",
+                "reason": "Egy vagy több OCR-mező bizonyossága alacsony.",
+                "action_label": "Ellenőrzés", "action_url": f"#review?receipt={row["receipt_id"]}",
+                "created_at": row["created_at"],
+            })
+        blocker_rows = self._db.execute(
+            "SELECT r.receipt_id,r.payload,r.status,r.created_at,m.cost_center FROM receipts r "
+            "LEFT JOIN receipt_metadata m ON m.receipt_id=r.receipt_id "
+            "WHERE r.tenant_id=? AND r.status='completed'", (actor.tenant_id,),
+        ).fetchall()
+        for row in blocker_rows:
+            readiness = self.receipt_readiness(json.loads(row["payload"]), row["status"], row["cost_center"])
+            if readiness["state"] != "blocked":
+                continue
+            first = readiness["issues"][0]
+            items.append({
+                "task_id": "export-blocker:" + row["receipt_id"], "type": "export_blocker",
+                "priority": 25, "receipt_id": row["receipt_id"], "subject_id": row["receipt_id"],
+                "title": "Exportot blokkoló adat",
+                "reason": first["message"], "action_label": "Javítás",
+                "action_url": f"#receipts?receipt={row["receipt_id"]}&field={first["field"]}", "created_at": row["created_at"],
+                "issue_code": first["code"], "field": first["field"],
+            })
+        if actor.role in {"admin", "reviewer"}:
+            approvals = self._db.execute(
+                "SELECT approval_id,receipt_id,created_at FROM approvals "
+                "WHERE tenant_id=? AND status='pending'", (actor.tenant_id,),
+            ).fetchall()
+            for row in approvals:
+                items.append({
+                    "task_id": "approval:" + row["approval_id"], "type": "approval",
+                    "priority": 30, "receipt_id": row["receipt_id"],
+                    "subject_id": row["approval_id"], "title": "Jóváhagyásra vár",
+                    "reason": "A tétel döntést igényel.", "action_label": "Megnyitás",
+                    "action_url": f"#approvals?approval={row["approval_id"]}", "created_at": row["created_at"],
+                })
+        items.sort(key=lambda item: (item["priority"], item["created_at"], item["task_id"]))
+        return {"items": items[:limit], "total": len(items),
+                "counts": {kind: sum(i["type"] == kind for i in items)
+                           for kind in ("failed_job", "review", "export_blocker", "approval")}}
 
     def dashboard(self, actor: Actor) -> dict[str, Any]:
         jobs=self.list_jobs(actor); total=len(jobs)

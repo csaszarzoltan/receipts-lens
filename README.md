@@ -8,7 +8,7 @@
 
 Send an image (file upload, public URL, or batch of either) to `POST /v1/parse-receipt` or `POST /v1/parse-receipts` and get back JSON with `vendor`, `total`, `date`, `tax`, `currency`, and `line_items[]`.
 
-v1.1.0 adds accounting readiness: line-item editing, validation, approval-flow design, export preparation, email intake, subscriptions, FX, dashboard editing, localization, permission matrix, and private diagnostics. v1.0.0 consolidated the operational and intelligent workspace releases with secure source images, OCR overlays, duplicate review, saved views, notifications, automation rules, history, export runs, preferences, onboarding, and PWA support. v0.8.0 added a complete responsive financial operations workspace with receipt inbox, batch capture, OCR review, approval inbox, reports, integrations, administration, accessibility, and mobile layouts. v0.7.0 added **search, allocation metadata, approvals, retention controls, and portability**. v0.6.0 added **AI-powered categorization**, **budget management**, **spending analytics**, and an **alert system** — transforming ReceiptLens from a receipt scanner into a complete expense management platform.
+v1.3.0 improves repeated daily work with precise task deep links and accessible contextual dialogs for approvals, API keys, saved views, and irreversible retention purge. v1.2.0 added early accounting-readiness badges, filters, and export-blocker tasks. v1.1.1 added the prioritized work queue and atomic receipt workspace save. v1.1.0 adds accounting readiness: line-item editing, validation, approval-flow design, export preparation, email intake, subscriptions, FX, dashboard editing, localization, permission matrix, and private diagnostics. v1.0.0 consolidated the operational and intelligent workspace releases with secure source images, OCR overlays, duplicate review, saved views, notifications, automation rules, history, export runs, preferences, onboarding, and PWA support. v0.8.0 added a complete responsive financial operations workspace with receipt inbox, batch capture, OCR review, approval inbox, reports, integrations, administration, accessibility, and mobile layouts. v0.7.0 added **search, allocation metadata, approvals, retention controls, and portability**. v0.6.0 added **AI-powered categorization**, **budget management**, **spending analytics**, and an **alert system** — transforming ReceiptLens from a receipt scanner into a complete expense management platform.
 
 ---
 
@@ -35,7 +35,10 @@ v1.1.0 adds accounting readiness: line-item editing, validation, approval-flow d
 - **Spending analytics** — aggregate spending by category, merchant, day, or month. Compare budgets vs actuals. Endpoints at `GET /api/v1/analytics/spending` and `GET /api/v1/analytics/budgets`.
 - **Alert system** — automatic threshold-based alerts when spending approaches or exceeds budget limits. Also detects unusual spending patterns. Endpoints at `GET /api/v1/alerts` and `POST /api/v1/alerts/{id}/acknowledge`. See [docs/alerts.md](docs/alerts.md).
 - **Receipt operations** — tenant-scoped search, tags, projects, cost centers, threshold approvals, retention purge, and versioned portability export.
-- **Tested** — 520+ pytest tests plus `ruff` linting.
+- **Precise daily actions** — dashboard tasks deep-link to the exact review receipt, approval, or blocked accounting field instead of opening only a general module.
+- **Accessible consequential actions** — approval decisions, API-key creation, saved-view naming, and retention purge use contextual dialogs with inline validation, focus handling, and described consequences.
+- **Early accounting readiness** — receipt rows show baseline blocked/warning/exportable state and can be filtered before export preparation.
+- **Tested** — 580+ pytest tests; the packaged delivery records the exact passing and skipped counts in `TEST_RESULTS.txt`.
 
 ---
 
@@ -52,7 +55,7 @@ See `docs/research/REQUIREMENTS_IMPLEMENTATION_REPORT.md` for deployment boundar
 
 ## Product workspace and workflows
 
-ReceiptLens now includes a browser-based upload workspace at `/workspace` and tenant-aware APIs for receipt history, review corrections, teams, API keys, accounting connections, exports, and the trust dashboard. See [docs/product-workflows.md](docs/product-workflows.md) and [docs/gui-workspace.md](docs/gui-workspace.md) and [docs/consolidated-v1-workspace.md](docs/consolidated-v1-workspace.md) and [docs/accounting-readiness-v1.1.md](docs/accounting-readiness-v1.1.md) for request headers, persistence configuration, endpoints, and deployment security notes.
+ReceiptLens now includes a browser-based upload workspace at `/workspace` and tenant-aware APIs for receipt history, review corrections, teams, API keys, accounting connections, exports, and the trust dashboard. See [docs/product-workflows.md](docs/product-workflows.md), [docs/gui-workspace.md](docs/gui-workspace.md), [docs/accounting-readiness-v1.1.md](docs/accounting-readiness-v1.1.md), [docs/NEXT_VERSION_PRODUCT_UX_REQUIREMENTS.md](docs/NEXT_VERSION_PRODUCT_UX_REQUIREMENTS.md), and [docs/IMPLEMENTATION_DELIVERY_REPORT_V1.3.md](docs/IMPLEMENTATION_DELIVERY_REPORT_V1.3.md) for workflows, requirements, delivery scope, persistence, endpoints, and production boundaries.
 
 ## Webes főoldal
 

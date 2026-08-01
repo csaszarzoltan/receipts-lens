@@ -154,6 +154,13 @@ class MetadataRequest(BaseModel):
     project: str | None = None
     cost_center: str | None = None
 
+class WorkspaceUpdateRequest(BaseModel):
+    """One atomic save for the high-frequency receipt review workspace."""
+    fields: dict[str, Any] = {}
+    line_items: list[dict[str, Any]] | None = None
+    metadata: dict[str, Any] | None = None
+    action: str = Field(default="save", pattern="^(save|complete)$")
+
 class ApprovalPolicyRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     threshold: float
@@ -170,9 +177,46 @@ class RetentionRequest(BaseModel):
 def search_receipts(query: str | None = None, status: str | None = None,
                     tag: str | None = None, min_total: float | None = None,
                     max_total: float | None = None, limit: int = 50, offset: int = 0,
+                    readiness: str | None = None,
                     current: Actor = Depends(actor)) -> dict[str, Any]:
-    try: return service.search_receipts(current,query,status,tag,min_total,max_total,limit,offset)
+    try: return service.search_receipts(current,query,status,tag,min_total,max_total,limit,offset,readiness)
     except ValueError as exc: raise HTTPException(422,str(exc)) from exc
+
+@router.get("/product/work-queue")
+def work_queue(limit: int = 100, current: Actor = Depends(actor)) -> dict[str, Any]:
+    """Rank failures, review items and approvals into one daily work queue."""
+    try:
+        return service.work_queue(current, limit)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+@router.patch("/product/receipts/{receipt_id}/workspace")
+def update_receipt_workspace(
+    receipt_id: str, body: WorkspaceUpdateRequest,
+    if_match: int = Header(alias="If-Match"),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    current: Actor = Depends(actor),
+) -> dict[str, Any]:
+    """Atomically save fields, line items and metadata for daily review work."""
+    # The command is already protected by optimistic concurrency. The optional
+    # idempotency header is accepted now so clients can adopt the stable contract.
+    del idempotency_key
+    try:
+        result = service.update_receipt_workspace(
+            current, receipt_id, if_match, body.fields, body.line_items,
+            body.metadata, body.action == "complete",
+        )
+        advanced.record_history(current, receipt_id, "receipt.workspace.updated",
+                                None, {"version": result["version"]})
+        return result
+    except PermissionError as exc:
+        raise HTTPException(403, "Reviewer role required") from exc
+    except KeyError as exc:
+        raise HTTPException(404, "Receipt not found") from exc
+    except ProductConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 @router.put("/product/receipts/{receipt_id}/metadata")
 def update_metadata(receipt_id: str, body: MetadataRequest,
@@ -517,7 +561,7 @@ def update_permissions(body: PermissionRequest,
 @router.get("/product/diagnostics")
 def diagnostics(current: Actor = Depends(actor)) -> dict[str, Any]:
     return {
-        "version": "1.1.0", "database": "ok",
+        "version": "1.3.0", "database": "ok",
         "receipt_count": service.search_receipts(current, limit=1)["total"],
         "failed_jobs": sum(1 for job in service.list_jobs(current) if job["status"] == "failed"),
         "pwa": True, "ocr": "configured",
@@ -527,7 +571,7 @@ def diagnostics(current: Actor = Depends(actor)) -> dict[str, Any]:
 def diagnostic_bundle(current: Actor = Depends(actor)) -> Response:
     if current.role != "admin":
         raise HTTPException(403, "Admin role required")
-    content = accounting.diagnostic_zip(current.tenant_id, "1.1.0")
+    content = accounting.diagnostic_zip(current.tenant_id, "1.3.0")
     return Response(content, media_type="application/zip",
                     headers={"Content-Disposition": "attachment; filename=receiptlens-diagnostics.zip",
                              "Cache-Control": "private, no-store"})

@@ -35,3 +35,16 @@ All data-list endpoints are tenant scoped. Static assets are served from a stric
 ## Test coverage
 
 `tests/test_workspace_gui.py` verifies every GUI area, accessibility/responsive contracts, strict static-asset routing, tenant-scoped supporting APIs, approval context joins, and configured retention on the dashboard. Existing product, API, OCR, security, research, report, and deployment tests remain part of the full regression suite.
+
+## v1.3.0 interaction updates
+
+- Dashboard task buttons preserve the complete task URL instead of stripping record and field context.
+- Review tasks open the requested receipt.
+- Approval tasks scroll and focus the requested decision card.
+- Export-blocker tasks open receipt organization and focus the blocked cost-center or project field when supported.
+- Approval decisions use an accessible modal, and rejection requires an inline-validated reason.
+- API-key creation and saved-view naming use labelled fields and inline errors.
+- Retention purge uses a dedicated irreversible-action dialog with explicit typed confirmation.
+- Saved views now preserve the accounting-readiness filter.
+
+These changes reduce navigation ambiguity and remove browser-native business prompts while retaining the existing static HTML and vanilla JavaScript architecture.

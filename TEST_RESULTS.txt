@@ -1,0 +1,25 @@
+ReceiptLens v1.3.0 validation
+Date: 2026-08-01
+
+TDD red phase:
+- 5 new acceptance tests were created and observed failing before implementation.
+- Failures covered generic task URLs, browser-native business prompts, missing inline dialog validation, and dashboard query-context loss.
+
+New deep-link and accessible-action suite:
+- 5 passed, 0 failed.
+
+Targeted workflow regression:
+- 45 passed, 0 failed.
+
+Full regression suite:
+- 587 tests collected.
+- 580 passed.
+- 7 skipped.
+- 0 failed.
+
+Syntax validation:
+- python -m py_compile app/product_service.py app/product_api.py: PASS
+- node --check app/static/workspace.js: PASS
+
+Known environment note:
+- Ruff is declared as a development dependency but was not installed in this execution environment.

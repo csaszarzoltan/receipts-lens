@@ -66,3 +66,28 @@ Without the variable, the product service uses an in-memory database suitable fo
 - `GET /product/privacy/export`: export versioned tenant JSON with receipt metadata and approvals.
 
 All operations are tenant-scoped. Approval policy and retention changes require `admin`; decisions require `admin` or `reviewer`. See `docs/research/MARKET_RESEARCH_2026.md` for the evidence, specifications, roadmap, and validation plan.
+
+## Daily workflow improvements in v1.3.0
+
+### Precise task links
+
+`GET /product/work-queue` now returns action URLs that preserve the exact work context:
+
+- review: `#review?receipt={receipt_id}`;
+- export blocker: `#receipts?receipt={receipt_id}&field={field}`;
+- approval: `#approvals?approval={approval_id}`.
+
+The workspace consumes the complete action URL, loads the relevant view, selects the identified record, and moves focus to the repair or decision context. Existing hash-only routes remain valid.
+
+### Accessible business-action dialogs
+
+The workspace no longer uses browser `prompt()` or `confirm()` for approval decisions, API-key naming, saved-view naming, or retention purge. Shared dialog behavior now provides:
+
+- explanatory consequence text;
+- initial focus;
+- inline validation through a live error element;
+- required rejection reason;
+- typed `TÖRLÉS` confirmation before irreversible purge;
+- explicit cancel and confirm actions.
+
+The browser's PWA installation prompt remains unchanged because it is a platform installation API, not a ReceiptLens business-action prompt.

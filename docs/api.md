@@ -425,3 +425,15 @@ buf.seek(0)
 sys.stdout.buffer.write(buf.read())
 ")' | python -m json.tool
 ```
+
+## Product work-queue deep links in v1.3.0
+
+`GET /product/work-queue` returns an `action_url` for every actionable item. Values are workspace-local hash URLs and may include query parameters identifying the exact receipt, approval, or blocked field. Clients should preserve the complete value rather than reducing it to a view name.
+
+Examples:
+
+```text
+#review?receipt=<receipt-id>
+#receipts?receipt=<receipt-id>&field=cost_center
+#approvals?approval=<approval-id>
+```

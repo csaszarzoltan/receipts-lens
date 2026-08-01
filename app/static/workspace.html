@@ -53,7 +53,8 @@
         <div class="page-head"><div><p class="eyebrow">PÉNZÜGYI INBOX</p><h1 id="receiptsTitle">Nyugták</h1><p>Keress, szűrj, rendelj projekthez és indíts jóváhagyást.</p></div><button class="primary" data-go="upload">+ Feltöltés</button></div>
         <div class="filterbar">
           <input id="receiptQuery" type="search" placeholder="Keresés…" aria-label="Nyugta keresés">
-          <select id="statusFilter" aria-label="Állapot"><option value="">Minden állapot</option><option value="needs_review">Ellenőrzendő</option><option value="completed">Kész</option></select>
+          <select id="statusFilter" aria-label="Feldolgozási állapot"><option value="">Minden állapot</option><option value="needs_review">Ellenőrzendő</option><option value="completed">Kész</option></select>
+          <select id="readinessFilter" aria-label="Könyvelési állapot"><option value="">Minden könyvelési állapot</option><option value="blocked">Export blokkolva</option><option value="warning">Figyelmeztetés</option><option value="exportable">Exportálható</option></select>
           <input id="tagFilter" placeholder="Címke" aria-label="Címke">
           <input id="minTotal" type="number" min="0" placeholder="Min. összeg" aria-label="Minimális összeg">
           <input id="maxTotal" type="number" min="0" placeholder="Max. összeg" aria-label="Maximális összeg">
@@ -62,7 +63,7 @@
         <div class="saved-view-bar"><select id="savedViewSelect" aria-label="Mentett nézet"><option value="">Mentett nézetek</option></select><button id="saveCurrentView">Nézet mentése</button></div>
         <div class="quick-filters"><button data-status="needs_review">Ellenőrzést igényel</button><button data-missing="project">Nincs projekt</button><button data-high="500">500 felett</button></div>
         <div class="bulkbar" id="bulkbar" hidden><strong><span id="selectedCount">0</span> kijelölve</strong><input id="bulkTag" placeholder="Címke hozzáadása"><input id="bulkProject" placeholder="Projekt"><button id="bulkApply">Alkalmazás</button><button id="bulkApproval">Jóváhagyás kérése</button></div>
-        <article class="card table-card"><div class="table-wrap"><table><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Összes kijelölése"></th><th>Kereskedő</th><th>Dátum</th><th>Összeg</th><th>Projekt</th><th>Címkék</th><th>Bizonyosság</th><th>Állapot</th><th></th></tr></thead><tbody id="receiptRows"></tbody></table></div><div class="pagination"><span id="pageInfo"></span><button id="prevPage">Előző</button><button id="nextPage">Következő</button></div></article>
+        <article class="card table-card"><div class="table-wrap"><table><thead><tr><th><input id="selectAll" type="checkbox" aria-label="Összes kijelölése"></th><th>Kereskedő</th><th>Dátum</th><th>Összeg</th><th>Projekt</th><th>Címkék</th><th>Bizonyosság</th><th>Állapot</th><th>Könyvelési állapot</th><th></th></tr></thead><tbody id="receiptRows"></tbody></table></div><div class="pagination"><span id="pageInfo"></span><button id="prevPage">Előző</button><button id="nextPage">Következő</button></div></article>
       </section>
 
       <section id="upload" class="view" aria-labelledby="uploadTitle">
@@ -148,6 +149,6 @@
 </div>
 <div id="onboarding" class="onboarding" hidden><div class="card"><button id="closeOnboarding" class="dialog-close">×</button><p class="eyebrow">ELSŐ LÉPÉSEK</p><h2>Állítsd be a workspace-t</h2><label><input type="checkbox" checked disabled> Workspace létrehozva</label><label><input id="onboardUpload" type="checkbox" disabled> Első nyugta feldolgozva</label><label><input id="onboardMember" type="checkbox" disabled> Csapattag meghívva</label><label><input id="onboardPolicy" type="checkbox" disabled> Jóváhagyási szabály létrehozva</label><button data-go="upload" class="primary">Első nyugta feltöltése</button></div></div>
 <div id="toastRegion" aria-live="polite" aria-atomic="true"></div>
-<dialog id="modal"><form method="dialog"><button class="dialog-close" aria-label="Bezárás">×</button><div id="modalContent"></div></form></dialog>
+<dialog id="modal" aria-describedby="dialogDescription"><form method="dialog"><button class="dialog-close" aria-label="Bezárás">×</button><div id="modalContent"></div></form></dialog>
 <script src="/assets/workspace.js" defer></script>
 </body></html>
