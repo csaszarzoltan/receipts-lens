@@ -33,6 +33,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _cmd_batch(args)
         elif command == "export":
             return _cmd_export(args)
+        elif command == "forecast":
+            return _cmd_forecast(args)
         elif command == "info":
             return _cmd_info(args)
         else:
@@ -69,6 +71,25 @@ def _build_parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--date-from", default=None, help="Start date filter (YYYY-MM-DD)")
     export_parser.add_argument("--date-to", default=None, help="End date filter (YYYY-MM-DD)")
     export_parser.add_argument("--category", default=None, help="Category filter")
+
+    # forecast subcommand
+    forecast_parser = subparsers.add_parser("forecast", help="Forecast next-period spending")
+    forecast_parser.add_argument(
+        "--period",
+        default="monthly",
+        help="Forecast period (weekly, monthly, yearly; default: monthly)",
+    )
+    forecast_parser.add_argument(
+        "--category",
+        default=None,
+        help="Category filter (default: all categories + overall)",
+    )
+    forecast_parser.add_argument(
+        "--horizon",
+        type=int,
+        default=1,
+        help="Number of periods ahead to forecast (default: 1)",
+    )
 
     # info subcommand
     subparsers.add_parser("info", help="Show supported languages and formats")
@@ -151,6 +172,38 @@ def _cmd_info(args: argparse.Namespace) -> int:
     print("Export formats:", flush=True)
     for name, profile in PROFILES.items():
         print(f"  - {name}: {len(profile.columns)} columns", flush=True)
+    return 0
+
+
+def _cmd_forecast(args: argparse.Namespace) -> int:
+    """Execute the forecast command.
+
+    Delegates to ``app.forecast.ForecastEngine`` and prints a per-category +
+    overall next-period forecast summary to stdout.  Returns 0 on success,
+    2 on failure.
+    """
+    from app.forecast import forecast_engine
+
+    result = forecast_engine.forecast(
+        date_from=None,
+        date_to=None,
+        period=args.period,
+        category=args.category,
+        horizon=args.horizon,
+    )
+    print(
+        f"Forecast for period '{result.get('period', args.period)}' "
+        f"(currency {result.get('currency', 'USD')}):",
+        flush=True,
+    )
+    for entry in result.get("forecasts", []):
+        print(
+            f"  {entry.get('category', '?')}: "
+            f"{entry.get('next_period_total', 0.0):.2f} "
+            f"[{entry.get('confidence_low', 0.0):.2f} - "
+            f"{entry.get('confidence_high', 0.0):.2f}]",
+            flush=True,
+        )
     return 0
 
 
