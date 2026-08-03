@@ -16,6 +16,7 @@ from pydantic import BaseModel, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.homepage import render_homepage
+from app.dashboard import render_forecast_dashboard
 from app.ocr import ConfidenceReceipt, check_duplicates, parse_receipt_with_confidence
 from app.product_api import router as product_router
 from app.report_generator import generate_csv, generate_pdf
@@ -46,6 +47,12 @@ def homepage() -> HTMLResponse:
             description=app.description or "Receipt OCR API.",
         )
     )
+
+
+@app.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
+def forecast_dashboard() -> HTMLResponse:
+    """Return the forecast dashboard: charts, next-month spend, anomalies, budget variance."""
+    return HTMLResponse(render_forecast_dashboard())
 
 
 @app.get("/health")

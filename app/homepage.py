@@ -70,7 +70,8 @@ def render_homepage(*, name: str, version: str, description: str) -> str:
       <span>Szolgáltatás állapota: működik</span>
     </div>
     <nav class="actions" aria-label="API dokumentáció">
-      <a class="button" href="/workspace">Open workspace</a>
+      <a class="button" href="/dashboard">Forecast dashboard</a>
+      <a class="button secondary" href="/workspace">Open workspace</a>
       <a class="button secondary" href="/docs">Swagger UI</a>
       <a class="button secondary" href="/redoc">ReDoc megnyitása</a>
       <a class="button secondary" href="/health">Health check</a>
@@ -86,6 +87,9 @@ def render_homepage(*, name: str, version: str, description: str) -> str:
       kategorizálás és duplikált nyugták ellenőrzése.</p></article>
     <article class="card"><h2>Költségkeretek és analitika</h2><p>Budget CRUD, költési összesítések,
       trendek és küszöbérték-alapú riasztások.</p></article>
+    <article class="card"><h2><a href="/dashboard" style="color:inherit;text-decoration:none">Előrejelzések</a></h2>
+      <p>Következő havi kiadás előrejelzés, anomália-detekció és költségvetési
+      eltérés-projekciók.</p></article>
   </section>
 
   <section class="card" style="margin-top:20px">
