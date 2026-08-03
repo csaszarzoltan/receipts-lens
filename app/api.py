@@ -15,8 +15,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.homepage import render_homepage
 from app.dashboard import render_forecast_dashboard
+from app.homepage import render_homepage
 from app.ocr import ConfidenceReceipt, check_duplicates, parse_receipt_with_confidence
 from app.product_api import router as product_router
 from app.report_generator import generate_csv, generate_pdf
