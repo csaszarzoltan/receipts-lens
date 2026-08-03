@@ -439,6 +439,184 @@ Examples:
 ```
 
 ## Batch Processing and Export Endpoints (v2)
+## Forecast Endpoints
+
+The forecast engine provides next-period spend forecasting, anomaly detection, and budget variance projection. Routes are defined in `app/forecast.py` and mounted under the `/forecasts` prefix.
+
+### `GET /forecasts`
+
+Return next-period spend forecast (overall + per category).
+
+#### Query parameters
+
+| Parameter    | Type   | Default    | Description                                                       |
+|--------------|--------|------------|-------------------------------------------------------------------|
+| `period`     | string | `monthly`  | Aggregation period: `weekly`, `monthly`, `yearly`                 |
+| `category`   | string | `null`     | Filter to one category (omit for all categories + Overall)        |
+| `horizon`    | int    | `1`        | Number of periods ahead to forecast                               |
+| `date_from`  | string | `null`     | Start date filter `YYYY-MM-DD`                                    |
+| `date_to`    | string | `null`     | End date filter `YYYY-MM-DD`                                      |
+
+#### Example
+
+```bash
+curl "http://localhost:8000/forecasts?period=monthly&category=Meals"
+```
+
+#### Response
+
+```json
+{
+  "period": "monthly",
+  "currency": "USD",
+  "forecasts": [
+    {
+      "category": "Meals",
+      "next_period_total": 8.5,
+      "confidence_low": 8.5,
+      "confidence_high": 8.5,
+      "trend": 0.0,
+      "method": "moving_average_trend"
+    }
+  ],
+  "source_range": {
+    "date_from": "2026-01-15",
+    "date_to": "2026-07-04"
+  }
+}
+```
+
+When `category` is omitted, the response includes one entry per category plus an `Overall` entry aggregating all categories.
+
+Each forecast entry contains:
+
+| Field                | Type   | Description                                                              |
+|----------------------|--------|--------------------------------------------------------------------------|
+| `category`           | string | Category name (or `"Overall"`)                                           |
+| `next_period_total`  | float  | Point estimate for next-period spend                                     |
+| `confidence_low`     | float  | Lower 95% confidence bound                                               |
+| `confidence_high`    | float  | Upper 95% confidence bound                                               |
+| `trend`              | float  | Linear trend slope per period (positive = increasing spend)              |
+| `method`             | string | Always `"moving_average_trend"` (trailing MA + least-squares extrapolation) |
+
+### `GET /forecasts/anomalies`
+
+Return detected spending anomalies for the given period.
+
+#### Query parameters
+
+| Parameter    | Type   | Default    | Description                                                       |
+|--------------|--------|------------|-------------------------------------------------------------------|
+| `period`     | string | `monthly`  | Aggregation period (detector always works over monthly buckets)   |
+| `method`     | string | `zscore`   | Scoring method: `zscore` (mean/stddev) or `mad` (median/MAD)     |
+| `threshold`  | float  | `2.0`      | Deviation cutoff — entries with `score >= threshold` are flagged  |
+| `date_from`  | string | `null`     | Start date filter `YYYY-MM-DD`                                    |
+| `date_to`    | string | `null`     | End date filter `YYYY-MM-DD`                                      |
+
+#### Example
+
+```bash
+curl "http://localhost:8000/forecasts/anomalies?method=zscore&threshold=2.0"
+```
+
+#### Response
+
+```json
+{
+  "method": "zscore",
+  "threshold": 2.0,
+  "anomalies": [
+    {
+      "period": "2026-03",
+      "category": "Groceries",
+      "expected": 320.50,
+      "actual": 510.20,
+      "score": 2.45,
+      "flagged": true
+    }
+  ]
+}
+```
+
+Each anomaly entry contains:
+
+| Field      | Type   | Description                                                        |
+|------------|--------|--------------------------------------------------------------------|
+| `period`   | string | Period bucket (e.g. `2026-03` for monthly)                        |
+| `category` | string | Category name                                                      |
+| `expected` | float  | Baseline expected spend (leave-one-out mean for z-score, median for MAD) |
+| `actual`   | float  | Actual spend in that period                                        |
+| `score`    | float  | Deviation score (>= threshold means flagged)                       |
+| `flagged`  | bool   | `true` if `score >= threshold`                                     |
+
+Categories with fewer than 2 periods of data are excluded (no baseline to deviate from).
+
+### `GET /forecasts/budget-variance`
+
+Return projected budget variance with expected overage.
+
+#### Query parameters
+
+| Parameter  | Type   | Default | Description                                                    |
+|------------|--------|---------|----------------------------------------------------------------|
+| `period`   | string | `null`  | Filter to one period: `weekly`, `monthly`, `yearly` (null = all) |
+| `horizon`  | int    | `1`     | Number of periods ahead to project                             |
+
+#### Example
+
+```bash
+curl "http://localhost:8000/forecasts/budget-variance?period=monthly"
+```
+
+#### Response
+
+```json
+{
+  "currency": "USD",
+  "projections": [
+    {
+      "budget_id": "b_abc123",
+      "category": "Meals & Entertainment",
+      "period": "monthly",
+      "budgeted": 500.00,
+      "projected_spend": 620.00,
+      "expected_overage": 120.00,
+      "status": "over_budget"
+    }
+  ]
+}
+```
+
+Each projection entry contains:
+
+| Field               | Type   | Description                                                              |
+|---------------------|--------|--------------------------------------------------------------------------|
+| `budget_id`         | string | Budget identifier (matches `BudgetStore` id)                             |
+| `category`          | string | Budget category                                                          |
+| `period`            | string | Budget period (`weekly`, `monthly`, `yearly`)                            |
+| `budgeted`          | float  | Budget amount                                                            |
+| `projected_spend`   | float  | Projected spend = `spent / fraction_elapsed × horizon`                   |
+| `expected_overage`  | float  | `projected_spend - budgeted` (positive = over budget)                    |
+| `status`            | string | `on_track`, `warning` (>= alert threshold), or `over_budget` (>= 100%)  |
+
+Projections use the same item-category matching as `BudgetStore._recompute` so they agree with the dashboard's spent/remaining figures.
+
+### `GET /dashboard`
+
+Server-rendered forecast dashboard (HTML). No JavaScript or remote assets — follows the same self-contained pattern as `GET /`.
+
+```bash
+curl "http://localhost:8000/dashboard"
+```
+
+Returns an HTML page with:
+- Overall next-month spend summary
+- Per-category forecast cards with confidence bounds and trend
+- Inline SVG bar chart of category forecasts
+- Flagged anomalies table
+- Budget variance table with on_track / warning / over_budget status
+
+## Batch Processing and Export Endpoints (v2)
 
 These endpoints are defined in `app/api_v2.py` and mounted on the `/api/v1` prefix.
 

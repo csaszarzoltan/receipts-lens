@@ -36,6 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Forecast
+- **Forecast engine** — next-period spend forecasting with per-category and overall predictions using trailing moving average + linear trend extrapolation, confidence bounds (±1.96× residual std), and an injectable LLM narrative seam.
+- **Anomaly detection** — flag category-period spend deviations via z-score or MAD (median absolute deviation) with leave-one-out baselines.
+- **Budget variance projection** — project each budget's end-of-period spend from the current period's run rate and report expected overage with on_track / warning / over_budget status.
+- **REST endpoints** — `GET /forecasts` (overall + per-category forecast), `GET /forecasts/anomalies` (detected spending anomalies), `GET /forecasts/budget-variance` (projected budget overage).
+- **Dashboard** — server-rendered forecast dashboard at `GET /dashboard` with inline SVG bar chart, per-category forecast cards, flagged anomalies table, and budget variance table. No JavaScript or remote assets.
+- **CLI** — `receipts-lens forecast --period monthly` outputs next-period spend, confidence bounds, and trend per category.
+- 78 forecast tests added (ForecastEngine, AnomalyDetector, BudgetVarianceProjector, REST routes, CLI). Full suite: 884 passed, 7 skipped, 0 failed.
+
 ### Product workflows
 - Added a responsive receipt upload workspace at `/workspace`.
 - Added tenant-scoped receipt history, retry, cancellation, review, and optimistic correction workflows.

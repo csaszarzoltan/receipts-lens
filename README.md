@@ -37,11 +37,12 @@ v1.3.0 improves repeated daily work with precise task deep links and accessible 
 - **Budget management** — full CRUD for per-category monthly budgets with real-time spending tracking. Endpoints at `POST/GET/PUT/DELETE /api/v1/budgets`. See [docs/budgets-and-analytics.md](docs/budgets-and-analytics.md).
 - **Spending analytics** — aggregate spending by category, merchant, day, or month. Compare budgets vs actuals. Endpoints at `GET /api/v1/analytics/spending` and `GET /api/v1/analytics/budgets`.
 - **Alert system** — automatic threshold-based alerts when spending approaches or exceeds budget limits. Also detects unusual spending patterns. Endpoints at `GET /api/v1/alerts` and `POST /api/v1/alerts/{id}/acknowledge`. See [docs/alerts.md](docs/alerts.md).
+- **Forecast engine** — next-period spend forecasting with per-category and overall predictions, confidence bounds, anomaly detection (z-score / MAD), and budget variance projection. REST endpoints at `GET /forecasts`, `GET /forecasts/anomalies`, `GET /forecasts/budget-variance`. Dashboard at `GET /dashboard`. CLI: `receipts-lens forecast --period monthly`.
 - **Receipt operations** — tenant-scoped search, tags, projects, cost centers, threshold approvals, retention purge, and versioned portability export.
 - **Precise daily actions** — dashboard tasks deep-link to the exact review receipt, approval, or blocked accounting field instead of opening only a general module.
 - **Accessible consequential actions** — approval decisions, API-key creation, saved-view naming, and retention purge use contextual dialogs with inline validation, focus handling, and described consequences.
 - **Early accounting readiness** — receipt rows show baseline blocked/warning/exportable state and can be filtered before export preparation.
-- **Tested** — 805+ pytest tests across 44 test files; the packaged delivery records the exact passing and skipped counts in `TEST_RESULTS.txt`.
+- **Tested** — 884 pytest tests across 45 test files; the packaged delivery records the exact passing and skipped counts in `TEST_RESULTS.txt`.
 
 ---
 
