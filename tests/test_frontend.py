@@ -125,6 +125,7 @@ REQUIRED_API_FUNCTIONS = [
     "getCapabilities",
     "uploadReceipt",
     "searchReceipts",
+    "getReceipt",
     "getReceiptImage",
     "getReceiptBoxes",
     "getReceiptHistory",
@@ -541,6 +542,25 @@ class TestReceiptListBehavior:
             for term in ["Pagination", "pagination", "offset", "limit", "page"]
         )
         assert has_pagination, "Receipts page must support pagination"
+
+
+class TestReceiptDetailBehavior:
+    """Receipt detail loads a single receipt directly (regression for F1)."""
+
+    def test_receipt_detail_page_file_exists(self) -> None:
+        path = FRONTEND / "app/(app)/receipts/[id]/page.tsx"
+        assert path.exists(), "Receipt detail page must exist"
+
+    def test_receipt_detail_uses_direct_get_receipt(self) -> None:
+        content = _read_ts("app/(app)/receipts/[id]/page.tsx")
+        assert "getReceipt(" in content, "Detail page must call getReceipt() API function"
+
+    def test_receipt_detail_does_not_search_full_list(self) -> None:
+        content = _read_ts("app/(app)/receipts/[id]/page.tsx")
+        assert "searchReceipts" not in content, (
+            "Detail page must not fetch the whole list to find one receipt "
+            "(breaks beyond the first 200)"
+        )
 
 
 class TestForecastBehavior:

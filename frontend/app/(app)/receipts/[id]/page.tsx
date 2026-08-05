@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
-import { getReceiptBoxes, getReceiptHistory, getReceiptImage, searchReceipts, updateLineItems, updateMetadata, validateReceipt } from "@/lib/api";
+import { getReceipt, getReceiptBoxes, getReceiptHistory, getReceiptImage, updateLineItems, updateMetadata, validateReceipt } from "@/lib/api";
 import type { HistoryEntry, LineItem, OCRBox, ReceiptItem } from "@/lib/types";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import StatusBadge from "@/components/StatusBadge";
@@ -12,11 +12,7 @@ import { formatDate, formatDateTime, formatMoney } from "@/lib/utils";
 
 function ReceiptDetailContent({ id }: { id: string }) {
   const { data: page, error, isLoading, mutate } = useSWR(`/receipt-detail/${id}`, () =>
-    searchReceipts({ limit: 200 }).then((result) => {
-      const match = result.items.find((item) => item.receipt_id === id);
-      if (!match) throw new Error("Receipt not found");
-      return match;
-    }),
+    getReceipt(id),
   );
   const { data: boxesData } = useSWR(id ? `/boxes/${id}` : null, () => getReceiptBoxes(id));
   const { data: historyData } = useSWR(id ? `/history/${id}` : null, () => getReceiptHistory(id));

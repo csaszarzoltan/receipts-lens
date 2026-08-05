@@ -272,6 +272,12 @@ export async function searchReceipts(
   );
 }
 
+export async function getReceipt(receiptId: string): Promise<ReceiptItem> {
+  return tenantRequest<ReceiptItem>(
+    `/product/receipts/${encodeURIComponent(receiptId)}`,
+  );
+}
+
 export async function getReceiptImage(receiptId: string): Promise<Blob> {
   return binaryRequest(`/product/receipts/${encodeURIComponent(receiptId)}/image`);
 }

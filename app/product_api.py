@@ -182,6 +182,14 @@ def search_receipts(query: str | None = None, status: str | None = None,
     try: return service.search_receipts(current,query,status,tag,min_total,max_total,limit,offset,readiness)
     except ValueError as exc: raise HTTPException(422,str(exc)) from exc
 
+@router.get("/product/receipts/{receipt_id}")
+def get_receipt(receipt_id: str, current: Actor = Depends(actor)) -> dict[str, Any]:
+    """Return a single tenant receipt (same shape as one search item)."""
+    try:
+        return service.get_receipt(current, receipt_id)
+    except KeyError as exc:
+        raise HTTPException(404, "Receipt not found") from exc
+
 @router.get("/product/work-queue")
 def work_queue(limit: int = 100, current: Actor = Depends(actor)) -> dict[str, Any]:
     """Rank failures, review items and approvals into one daily work queue."""

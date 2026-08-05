@@ -314,6 +314,26 @@ class ProductService:
                           "cost_center":row["cost_center"]}, "readiness": result_readiness})
         return {"items":items[offset:offset+limit],"total":len(items),"limit":limit,"offset":offset}
 
+    def get_receipt(self, actor: Actor, receipt_id: str) -> dict[str, Any]:
+        """Return one tenant receipt in the same shape as search_receipts items."""
+        row = self._db.execute(
+            "SELECT r.*,m.tags,m.project,m.cost_center FROM receipts r "
+            "LEFT JOIN receipt_metadata m ON m.receipt_id=r.receipt_id "
+            "WHERE r.tenant_id=? AND r.receipt_id=?", (actor.tenant_id, receipt_id)
+        ).fetchone()
+        if not row: raise KeyError(receipt_id)
+        payload = json.loads(row["payload"])
+        tags = json.loads(row["tags"] or "[]")
+        return {
+            "receipt_id": row["receipt_id"], "status": row["status"],
+            "version": row["version"], "created_at": row["created_at"],
+            "receipt": payload,
+            "metadata": {"tags": tags, "project": row["project"],
+                         "cost_center": row["cost_center"]},
+            "readiness": self.receipt_readiness(payload, row["status"],
+                                                row["cost_center"]),
+        }
+
     def set_metadata(self, actor: Actor, receipt_id: str, tags: list[str],
                      project: str | None, cost_center: str | None) -> dict[str, Any]:
         """Attach normalized tags and allocation metadata to a tenant receipt."""
