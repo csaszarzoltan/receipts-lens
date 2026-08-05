@@ -180,3 +180,65 @@ class TestExportEndpointsBehavior:
                 await export_receipts_endpoint("nonexistent")
         except NotImplementedError:
             pytest.skip("Not implemented yet — RED phase")
+
+
+# ===========================================================================
+# INTEGRATION TESTS — batch/export routes reachable through the real app
+# ===========================================================================
+
+class TestBatchRouterMountedOnApp:
+    """The batch_router must be mounted on the real FastAPI app (regression for
+    documented /api/v1/receipts/export/* endpoints returning 404/405)."""
+
+    def test_export_formats_reachable_through_app(self):
+        from fastapi.testclient import TestClient
+        from app.api import app
+
+        resp = TestClient(app).get("/api/v1/receipts/export/formats")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "formats" in body
+        names = [f["name"] for f in body["formats"]]
+        assert sorted(names) == ["generic", "quickbooks", "xero"]
+
+    def test_export_quickbooks_reachable_through_app(self):
+        from fastapi.testclient import TestClient
+        from app.api import app
+
+        resp = TestClient(app).get("/api/v1/receipts/export/quickbooks")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/csv")
+
+    def test_export_generic_reachable_through_app(self):
+        from fastapi.testclient import TestClient
+        from app.api import app
+
+        resp = TestClient(app).get("/api/v1/receipts/export/generic")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("text/csv")
+
+    def test_batch_post_route_exists_through_app(self):
+        from fastapi.testclient import TestClient
+        from app.api import app
+
+        # Route must exist: 200 (accepted) or 422 (validation) — never 404/405.
+        resp = TestClient(app).post("/api/v1/receipts/batch")
+        assert resp.status_code in (200, 422)
+
+    def test_batch_status_route_exists_through_app(self):
+        from fastapi.testclient import TestClient
+        from app.api import app
+
+        resp = TestClient(app).get("/api/v1/receipts/batch/nonexistent-job")
+        assert resp.status_code in (200, 404)
+
+    def test_batch_routes_present_in_app_route_table(self):
+        # FastAPI >= 0.140 wraps included routers as _IncludedRouter objects
+        # with no .path attribute, so the OpenAPI schema is the reliable check.
+        from app.api import app
+
+        paths = set(app.openapi()["paths"])
+        assert "/api/v1/receipts/batch" in paths
+        assert "/api/v1/receipts/batch/{job_id}" in paths
+        assert "/api/v1/receipts/export/{format}" in paths
+        assert "/api/v1/receipts/export/formats" in paths

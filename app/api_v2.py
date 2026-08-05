@@ -79,26 +79,17 @@ async def batch_job_status(job_id: str) -> dict:
 
 # ---- Export Endpoints ----
 
-@batch_router.get("/receipts/export/{format}")
-async def export_receipts_endpoint(
-    format: str,
-    date_from: str | None = None,
-    date_to: str | None = None,
-    category: str | None = None,
-) -> Response:
-    """Export stored receipts in accounting-compatible CSV format."""
-    from app.export import PROFILES, ReceiptExporter
-
-    if format not in PROFILES:
-        raise ValueError(f"Unknown format: {format!r}. Available: {list(PROFILES.keys())}")
-    exporter = ReceiptExporter(format)
-    csv_str = exporter.export_csv([])
-    return Response(content=csv_str, media_type="text/csv")
-
+# NOTE: the static /receipts/export/formats route MUST be declared before the
+# parameterized /receipts/export/{format} route — Starlette matches routes in
+# registration order, so a late static route would be swallowed by {format}
+# and return a 500 "Unknown format" instead of the formats listing.
 
 @batch_router.get("/receipts/export/formats")
 async def list_export_formats() -> dict:
-    """List available export formats and their column mappings."""
+    """List available export formats and their column mappings.
+
+    GET /api/v1/receipts/export/formats.
+    """
     from app.export import PROFILES
 
     formats = []
@@ -109,3 +100,23 @@ async def list_export_formats() -> dict:
             "delimiter": profile.delimiter,
         })
     return {"formats": formats}
+
+
+@batch_router.get("/receipts/export/{format}")
+async def export_receipts_endpoint(
+    format: str,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    category: str | None = None,
+) -> Response:
+    """Export stored receipts in accounting-compatible CSV format.
+
+    GET /api/v1/receipts/export/{format} — supported formats: quickbooks, xero, generic.
+    """
+    from app.export import PROFILES, ReceiptExporter
+
+    if format not in PROFILES:
+        raise ValueError(f"Unknown format: {format!r}. Available: {list(PROFILES.keys())}")
+    exporter = ReceiptExporter(format)
+    csv_str = exporter.export_csv([])
+    return Response(content=csv_str, media_type="text/csv")

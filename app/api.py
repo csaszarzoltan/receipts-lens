@@ -28,6 +28,7 @@ from app.budgets import budget_store
 from app.analytics import budget_analytics, spending_analytics
 from app.alerts import alert_store
 from app.forecast import forecast_router
+from app.api_v2 import batch_router
 logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(
@@ -113,6 +114,7 @@ class _UnconditionalCorsMiddleware(BaseHTTPMiddleware):
 app.add_middleware(_UnconditionalCorsMiddleware)
 app.include_router(product_router)
 app.include_router(forecast_router)
+app.include_router(batch_router)
 # ---------------------------------------------------------------------------
 # Configurable limits (plumbed into fetch_image_bytes defaults)
 # ---------------------------------------------------------------------------
