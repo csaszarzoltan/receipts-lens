@@ -1,18 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useUpload } from "@/lib/hooks/useUpload";
 import DropZone from "@/components/DropZone";
 import UploadQueue from "@/components/UploadQueue";
 import EmptyState from "@/components/EmptyState";
+import AiScanToggle from "@/components/AiScanToggle";
+import AiResultPanel from "@/components/AiResultPanel";
 
 /**
  * Upload page — drag & drop / camera capture, then the real OCR pipeline
  * (POST /product/receipts/upload) with per-file progress and a preview of
- * the extracted receipt.
+ * the extracted receipt. The "AI Scan" toggle switches the flow to the LLM
+ * vision path (source + ai_result/tesseract_result in the response), and
+ * the result panel renders the extraction with per-field confidence, the
+ * source badge and a friendly fallback notice when Tesseract was used.
  */
 export default function UploadPage() {
-  const { entries, enqueue, clear, remove } = useUpload();
+  const { entries, enqueue, clear, remove, lastAiResult } = useUpload();
+  const [aiScan, setAiScan] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -23,7 +30,9 @@ export default function UploadPage() {
         </p>
       </div>
 
-      <DropZone onFiles={enqueue} />
+      <AiScanToggle checked={aiScan} onChange={setAiScan} />
+
+      <DropZone onFiles={(files) => enqueue(files, { aiScan })} />
 
       {entries.length > 0 ? (
         <section className="space-y-3" aria-label="Upload progress">
@@ -48,6 +57,9 @@ export default function UploadPage() {
           description="Your processed receipts will appear here with their OCR results."
         />
       )}
+
+      {/* AI-mode result panel — extraction source, confidence, fallback notice */}
+      {lastAiResult ? <AiResultPanel result={lastAiResult} /> : null}
 
       <section className="card p-5">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">

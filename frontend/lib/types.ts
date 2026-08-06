@@ -19,6 +19,39 @@ export interface LineItem {
   category?: string | null;
 }
 
+/**
+ * Which extraction pipeline produced a result: the LLM vision path or the
+ * classic Tesseract OCR path.
+ */
+export type OcrSource = "vision" | "tesseract";
+
+/**
+ * One extraction result from the AI-mode flow (the `ai_result` /
+ * `tesseract_result` payloads). Mirrors the backend's ConfidenceReceipt
+ * shape so the UI can render and compare both pipelines on the same image.
+ */
+export interface AiExtraction {
+  merchant: string | null;
+  date: string | null;
+  total: number | null;
+  tax: number | null;
+  currency: string | null;
+  line_items: LineItem[];
+  /** Per-field confidence, e.g. { merchant: 0.97, date: 0.92, total: 0.99 } */
+  confidence: Record<string, number>;
+}
+
+/**
+ * Response of the AI-mode upload (`ai_scan=true`). Always carries the
+ * `source` that produced the primary result; when AI mode is enabled the
+ * response also exposes both pipelines so the user can compare.
+ */
+export interface AiScanUploadResponse extends ReceiptItem {
+  source: OcrSource;
+  ai_result?: AiExtraction;
+  tesseract_result?: AiExtraction;
+}
+
 export interface Receipt {
   vendor: string;
   total: number | null;

@@ -11,6 +11,7 @@
  * so the UI can show real progress.
  */
 import type {
+  AiScanUploadResponse,
   AnomalyResult,
   ApiKeyResult,
   Approval,
@@ -155,11 +156,13 @@ async function binaryRequest(path: string, options: RequestInit = {}): Promise<B
 /**
  * File upload with progress events (XMLHttpRequest-based, matching the
  * architecture spec) — FormData posts to a multipart endpoint.
+ * `formFields` are appended to the FormData payload (e.g. `ai_scan`).
  */
 export function uploadWithProgress<T>(
   path: string,
   file: File,
   onProgress?: (percent: number) => void,
+  formFields?: Record<string, string>,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -193,6 +196,11 @@ export function uploadWithProgress<T>(
     xhr.onerror = () => reject(new ApiError(0, "Network error during upload"));
     const form = new FormData();
     form.append("file", file);
+    if (formFields) {
+      for (const [key, value] of Object.entries(formFields)) {
+        form.append(key, value);
+      }
+    }
     xhr.send(form);
   });
 }
@@ -241,6 +249,23 @@ export async function uploadReceipt(
     "/product/receipts/upload",
     file,
     onProgress,
+  );
+}
+
+/**
+ * AI-mode upload: posts `ai_scan=true` so the backend runs the LLM vision
+ * path (with automatic Tesseract fallback). The response carries `source`
+ * plus, in AI mode, `ai_result` and `tesseract_result` for comparison.
+ */
+export async function uploadReceiptWithAi(
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<AiScanUploadResponse> {
+  return uploadWithProgress<AiScanUploadResponse>(
+    "/product/receipts/upload",
+    file,
+    onProgress,
+    { ai_scan: "true" },
   );
 }
 
