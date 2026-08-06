@@ -70,6 +70,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+### AI Vision OCR
+- **LLM vision extraction** — `VisionOcrProvider` sends the receipt image (base64 data URL, MIME sniffed from magic bytes) to an OpenAI-compatible vision chat-completions endpoint and returns structured receipt JSON; model asked for `merchant` / `date` / `total` / `tax` / `currency` / `line_items` with `temperature: 0.0`.
+- **Automatic Tesseract fallback** — `parse_receipt_with_vision()` returns the same `ConfidenceReceipt` shape as the classic pipeline; the producing path is marked via `confidence["source"]` (`"vision"` | `"tesseract"`). Fallback when disabled / no API key / timeout / API error / non-JSON response (one retry for transient failures: timeout, connection error, HTTP 5xx).
+- **Cost guard** — vision path is OFF by default: requires `VISION_OCR_ENABLED` (1/true/yes/on) AND `LLM_API_KEY`. Config mirrors `app/categorizer.py`: `LLM_API_KEY` / `LLM_BASE_URL` (default `https://api.openai.com/v1`) / `LLM_MODEL` (default `gpt-4o-mini`), plus `VISION_OCR_TIMEOUT` (default 30.0 s).
+- **AI-mode API fields** — `ai_scan=true` form field on `POST /v1/parse-receipt` and `POST /product/receipts/upload` exposes top-level `source` plus `ai_result` / `tesseract_result` payloads (both pipelines on the same image); regular flow unchanged (no breaking changes). Batch/export endpoints intentionally keep the classic path.
+- **Frontend AI Scan** — accessible `AiScanToggle` (role=switch) in the upload flow, `AiResultPanel` with source badge, per-field confidence and friendly Tesseract fallback notice, `uploadReceiptWithAi()` client, and a contract-shaped dev mock behind `NEXT_PUBLIC_USE_MOCK_AI=1`.
+- Only new runtime dependency: `httpx>=0.27` (pinned in `pyproject.toml`).
+
 ### Fixed
 - Replaced placeholder receipt create/list/get endpoints with working in-memory implementations.
 - Made `ReceiptStore.get()` lock-protected and added a stable `list_all()` snapshot API.
@@ -77,6 +85,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests and documentation
 - Added receipt CRUD runtime acceptance tests.
 - Added a tested Hungarian Windows installation and usage guide.
+- 69 new vision-OCR tests: `test_vision_ocr.py` (29, provider + fallback chain), `test_api_vision.py` (9, AI-mode API contract), `test_frontend_ai_scan.py` (31, AI Scan UI interface + behavior). Full suite: 1157 passed, 7 skipped, 0 failed across 50 modules; Ruff 0 new rule-level errors vs the pre-feature baseline.
+- Added `docs/ai-vision-ocr.md` — AI Scan setup (env vars, cost guard), fallback chain, API response shapes, Python library usage, frontend behavior.
+- Updated `README.md` (AI Vision OCR feature, AI Scan getting-started setup, env-var table, docs list) and `docs/api.md` (AI-mode `ai_scan=true` section on `POST /v1/parse-receipt`).
 
 ## [0.6.0] - 2026-07-25
 

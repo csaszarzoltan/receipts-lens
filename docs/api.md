@@ -167,6 +167,54 @@ curl -s -X POST "http://localhost:8000/v1/parse-receipt" | python -m json.tool
 }
 ```
 
+#### AI mode (`ai_scan=true`)
+
+Add the form field `ai_scan=true` to run the LLM vision path first, with
+automatic Tesseract fallback. The response then exposes a top-level `source`
+(`"vision"` | `"tesseract"`) plus `ai_result` / `tesseract_result` payloads,
+each carrying the same receipt/confidence shape as the regular response.
+See [docs/ai-vision-ocr.md](ai-vision-ocr.md) for setup (env vars
+`LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` / `VISION_OCR_ENABLED` /
+`VISION_OCR_TIMEOUT`) and behavior.
+
+```bash
+curl -X POST "http://localhost:8000/v1/parse-receipt" \
+  -F "file=@/path/to/receipt.jpg" \
+  -F "ai_scan=true"
+```
+
+Without `VISION_OCR_ENABLED` / `LLM_API_KEY` the response falls back to
+Tesseract (verified output shape):
+
+```json
+{
+  "source": "tesseract",
+  "tesseract_result": {
+    "vendor": "STORE NAME",
+    "total": 42.50,
+    "date": "2025-03-14",
+    "tax": 3.40,
+    "currency": "USD",
+    "line_items": [
+      { "name": "ITEM", "price": 9.99 }
+    ],
+    "confidence": {
+      "vendor": 0.88,
+      "total": 0.95,
+      "date": 0.80,
+      "tax": 0.70,
+      "currency": 0.99,
+      "line_items": 0.85
+    }
+  }
+}
+```
+
+When the vision path produces the result, `source` is `"vision"` and
+`ai_result` (vision extraction) is present alongside `tesseract_result`
+(classic pipeline on the same image) for comparison. The regular flow (no
+`ai_scan`) never leaks these AI-mode fields.
+
 ### `POST /v1/parse-receipt/async`
 
 Queue an async OCR job and return immediately with a `job_id`.

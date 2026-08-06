@@ -24,6 +24,7 @@ v1.3.0 improves repeated daily work with precise task deep links and accessible 
 - **Async processing** — queue long-running OCR jobs with `POST /v1/parse-receipt/async`, poll with `GET /v1/jobs/{job_id}`, and receive a webhook callback on completion.
 - **Batch processing (API)** — parse multiple receipts in one call with `POST /v1/parse-receipts` for file uploads or `image_urls`, plus async batch jobs via `POST /v1/parse-receipts/async`. Enhanced batch endpoint at `POST /api/v1/receipts/batch` with language selection and parallel workers.
 - **Multi-language OCR** — supports English, German, French, Spanish, Italian, and Portuguese. Locale-aware decimal separators, date formats, and currency defaults. Auto-detection via `detect_language()`. See [docs/multi-language-guide.md](docs/multi-language-guide.md).
+- **AI Vision OCR (AI Scan)** — optional LLM vision extraction for blurry photos, handwritten amounts, and unusual layouts, with automatic Tesseract fallback when the vision path is unavailable or fails. Enabled via `VISION_OCR_ENABLED` + `LLM_API_KEY`; `ai_scan=true` on upload endpoints. See [docs/ai-vision-ocr.md](docs/ai-vision-ocr.md).
 - **Batch processing CLI** — `receipts-lens batch --dir ./receipts --lang deu --export quickbooks` processes a directory of receipt images in parallel with configurable workers. See [CLI Usage](#cli-usage).
 - **Accounting export** — export parsed receipts to QuickBooks, Xero, or generic CSV formats via `GET /api/v1/receipts/export/{format}` or CLI. Column mappings and import instructions in [docs/accounting-export-guide.md](docs/accounting-export-guide.md).
 - **URL-based input** — pass a public image URL instead of uploading a file. Works in single, batch, and async modes.
@@ -42,7 +43,7 @@ v1.3.0 improves repeated daily work with precise task deep links and accessible 
 - **Precise daily actions** — dashboard tasks deep-link to the exact review receipt, approval, or blocked accounting field instead of opening only a general module.
 - **Accessible consequential actions** — approval decisions, API-key creation, saved-view naming, and retention purge use contextual dialogs with inline validation, focus handling, and described consequences.
 - **Early accounting readiness** — receipt rows show baseline blocked/warning/exportable state and can be filtered before export preparation.
-- **Tested** — 884 pytest tests across 45 test files; the packaged delivery records the exact passing and skipped counts in `TEST_RESULTS.txt`.
+- **Tested** — 1164 pytest tests (1157 passed, 7 skipped) across 50 test files; the packaged delivery records the exact passing and skipped counts in `TEST_RESULTS.txt`.
 
 ---
 
@@ -98,6 +99,35 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 The server listens on `http://localhost:8000`. Visit `http://localhost:8000/docs` for the interactive OpenAPI playground.
+
+### AI Scan setup (optional)
+
+AI Scan is **off by default** — it sends receipt images to a paid LLM vision
+endpoint, so enable it explicitly:
+
+```bash
+export LLM_API_KEY="sk-..."
+export LLM_BASE_URL="https://api.openai.com/v1"  # OpenAI-compatible endpoint root (default)
+export LLM_MODEL="gpt-4o-mini"                   # vision-capable model (default)
+export VISION_OCR_ENABLED=1                      # cost guard — required to enable
+export VISION_OCR_TIMEOUT=30.0                   # seconds (default)
+```
+
+Any OpenAI-compatible vision endpoint works (Azure OpenAI, Together,
+OpenRouter, local vLLM/llama.cpp, ...). With the vision path enabled, send
+`ai_scan=true` as a form field to `POST /v1/parse-receipt` or
+`POST /product/receipts/upload`; the response then exposes `source`
+(`"vision"` | `"tesseract"`) plus `ai_result` / `tesseract_result` payloads.
+Without `VISION_OCR_ENABLED` / `LLM_API_KEY`, `ai_scan=true` requests fall
+back to Tesseract (`"source": "tesseract"`) — no API key is required, only
+vision results are. Full guide: [docs/ai-vision-ocr.md](docs/ai-vision-ocr.md).
+
+```bash
+# AI-mode upload with the vision path enabled
+curl -X POST "http://localhost:8000/v1/parse-receipt" \
+  -F "file=@/path/to/receipt.jpg" \
+  -F "ai_scan=true"
+```
 
 ---
 
@@ -226,6 +256,11 @@ Image size is approximately 692 MB.
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `PORT` | No | `8000` | Server port for uvicorn. Railway sets this automatically; override for local or custom deployments. |
+| `LLM_API_KEY` | No | *(empty)* | API key for the OpenAI-compatible endpoint. Used by AI Vision OCR (AI Scan) and AI categorization. |
+| `LLM_BASE_URL` | No | `https://api.openai.com/v1` | Base URL of the OpenAI-compatible API. |
+| `LLM_MODEL` | No | `gpt-4o-mini` | Vision-capable model name used by AI Scan. |
+| `VISION_OCR_ENABLED` | No | *(off)* | Cost guard for AI Vision OCR — set to `1`/`true`/`yes`/`on` to enable the LLM vision path. Without it, `ai_scan=true` requests fall back to Tesseract. |
+| `VISION_OCR_TIMEOUT` | No | `30.0` | Timeout in seconds for vision-LLM requests (float). |
 
 The following variables are **declared in deployment configs** but not yet wired in the application code.
 They are reserved for future use:
@@ -579,6 +614,7 @@ ruff check .
 
 - [API Reference](docs/api.md) — endpoints, URL fetching contract, SSRF protection, error responses
 - [OCR Pipeline](docs/ocr-pipeline.md) — architecture, preprocessing stages, configuration, error handling, tips
+- [AI Vision OCR (AI Scan)](docs/ai-vision-ocr.md) — LLM vision extraction, setup, fallback behavior, API responses
 
 ---
 
