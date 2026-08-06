@@ -1,4 +1,10 @@
-"""REST API v2 — Batch processing and export endpoints."""
+"""REST API v2 — Batch processing and export endpoints.
+
+The AI-mode OCR flow (``ai_scan=true`` on ``POST /v1/parse-receipt`` and
+``POST /product/receipts/upload``) lives in app/api.py and app/product_api.py;
+the batch/export endpoints here intentionally keep the classic Tesseract path
+so their response schemas stay stable.
+"""
 from __future__ import annotations
 
 from datetime import UTC

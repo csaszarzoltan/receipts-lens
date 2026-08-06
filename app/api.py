@@ -18,6 +18,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.dashboard import render_forecast_dashboard
 from app.homepage import render_homepage
 from app.ocr import ConfidenceReceipt, check_duplicates, parse_receipt_with_confidence
+from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_vision
 from app.product_api import router as product_router
 from app.report_generator import generate_csv, generate_pdf
 from app.reports import receipt_store
@@ -184,6 +185,40 @@ def _render_receipt(parsed: ConfidenceReceipt) -> dict:
         ],
         "confidence": parsed.confidence,
     }
+
+
+def _as_bool(value: str | None) -> bool:
+    """Parse a form-field boolean (1/true/yes/on => True)."""
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _render_ai_mode(image_bytes: bytes) -> dict:
+    """AI-mode OCR: vision LLM first, automatic Tesseract fallback.
+
+    The response exposes a top-level ``source`` (``vision`` | ``tesseract``).
+    When the vision path produced the result, ``ai_result`` and
+    ``tesseract_result`` both carry the receipt/confidence shape so the
+    frontend can compare the two pipelines on the same image. When it fell
+    back, only ``tesseract_result`` is present.
+    """
+    try:
+        parsed = parse_receipt_with_vision(image_bytes)
+    except Exception:
+        logger.exception("AI-mode vision OCR failed; using Tesseract fallback")
+        parsed = None
+    if parsed is None:
+        return {
+            "source": SOURCE_TESSERACT,
+            "tesseract_result": _render_receipt(parse_receipt_with_confidence(image_bytes)),
+        }
+    source = str((parsed.confidence or {}).get("source") or SOURCE_TESSERACT)
+    if source == SOURCE_VISION:
+        return {
+            "source": SOURCE_VISION,
+            "ai_result": _render_receipt(parsed),
+            "tesseract_result": _render_receipt(parse_receipt_with_confidence(image_bytes)),
+        }
+    return {"source": SOURCE_TESSERACT, "tesseract_result": _render_receipt(parsed)}
 
 
 def _process_one(item_bytes: bytes) -> dict[str, Any]:
@@ -375,10 +410,17 @@ async def _deliver_webhook(url: str, payload: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def parse_receipt_endpoint(file: bytes) -> dict:
-    """Accept raw image bytes, run OCR, return structured dict."""
+async def parse_receipt_endpoint(file: bytes, ai_scan: bool = False) -> dict:
+    """Accept raw image bytes, run OCR, return structured dict.
+
+    With *ai_scan* the vision-LLM path runs first (with automatic Tesseract
+    fallback) and the response exposes ``source`` plus ``ai_result`` /
+    ``tesseract_result``; without it the classic Tesseract path is used.
+    """
     if not file:
         raise HTTPException(status_code=422, detail="Empty image payload")
+    if ai_scan:
+        return _render_ai_mode(file)
     parsed = parse_receipt_with_confidence(file)
     return _render_receipt(parsed)
 
@@ -387,10 +429,13 @@ async def parse_receipt_endpoint(file: bytes) -> dict:
 async def parse_receipt_route(
     file: UploadFile | None = File(default=None, description="Receipt image file"),
     image_url: str | None = Form(default=None, description="Public URL of a receipt image"),
+    ai_scan: str | None = Form(default=None, description="Enable AI-mode OCR (vision LLM with Tesseract fallback)"),
 ) -> dict:
     """Parse a receipt image returned as structured JSON.
 
     Send either **file** (multipart upload) or **image_url** (form field).
+    With **ai_scan=true** the response exposes ``source`` plus
+    ``ai_result`` / ``tesseract_result`` payloads.
     """
     if file is not None and image_url is not None:
         raise HTTPException(
@@ -409,7 +454,7 @@ async def parse_receipt_route(
         image_bytes = fetch_image_bytes(image_url)  # type: ignore[arg-type]
 
     try:
-        return await parse_receipt_endpoint(image_bytes)
+        return await parse_receipt_endpoint(image_bytes, ai_scan=_as_bool(ai_scan))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - OCR is unpredictable

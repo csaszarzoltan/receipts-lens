@@ -6,14 +6,15 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, Field
 
 from app.accounting_workspace import AccountingWorkspace
 from app.advanced_workspace import AdvancedWorkspace, extract_ocr_boxes
-from app.ocr import parse_receipt_with_confidence
+from app.ocr import ConfidenceReceipt, parse_receipt_with_confidence
 from app.product_service import Actor, ProductConflict, ProductService
+from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_vision
 
 router = APIRouter()
 service = ProductService(os.getenv("RECEIPTLENS_PRODUCT_DB", ":memory:"))
@@ -24,6 +25,28 @@ def actor(x_tenant_id: str = Header(default="demo"), x_role: str = Header(defaul
     if not x_tenant_id.strip(): raise HTTPException(401, "Tenant identity is required")
     if x_role not in {"admin", "reviewer", "integrator"}: raise HTTPException(403, "Unknown role")
     return Actor(x_tenant_id, x_role)
+
+
+def _as_bool(value: str | None) -> bool:
+    """Parse a form-field boolean (1/true/yes/on => True)."""
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _ai_extraction(parsed: ConfidenceReceipt) -> dict[str, Any]:
+    """Render a parsed receipt as the frontend AI-mode extraction payload.
+
+    Mirrors the ``AiExtraction`` contract in frontend/lib/types.ts: the
+    merchant field is keyed ``merchant`` (the stored receipt uses ``vendor``).
+    """
+    return {
+        "merchant": parsed.merchant,
+        "date": parsed.date,
+        "total": parsed.total,
+        "tax": parsed.tax,
+        "currency": parsed.currency,
+        "line_items": [{"name": item.name, "price": item.price} for item in parsed.items],
+        "confidence": dict(parsed.confidence),
+    }
 
 
 class CorrectionRequest(BaseModel):
@@ -62,13 +85,30 @@ def workspace_asset(asset_name: str) -> FileResponse:
 
 
 @router.post("/product/receipts/upload", status_code=201)
-async def upload_receipt(file: UploadFile = File(...), current: Actor = Depends(actor)) -> dict[str, Any]:
+async def upload_receipt(
+    file: UploadFile = File(...),
+    ai_scan: str | None = Form(default=None, description="Enable AI-mode OCR (vision LLM with Tesseract fallback)"),
+    current: Actor = Depends(actor),
+) -> dict[str, Any]:
     if file.content_type and not file.content_type.startswith("image/"): raise HTTPException(415, "An image file is required")
-    data=await file.read()
+    data = await file.read()
     if not data: raise HTTPException(422, "The uploaded file is empty")
-    try: parsed=parse_receipt_with_confidence(data)
-    except Exception as exc: raise HTTPException(422, "Receipt processing failed") from exc
-    result = service.create_receipt(current,parsed,file.filename or "receipt")
+    ai_mode = _as_bool(ai_scan)
+    try:
+        if ai_mode:
+            parsed = parse_receipt_with_vision(data)
+        else:
+            parsed = parse_receipt_with_confidence(data)
+    except Exception as exc:
+        if not ai_mode:
+            raise HTTPException(422, "Receipt processing failed") from exc
+        # Vision path raised unexpectedly; fall back to the classic pipeline so
+        # the user still gets an extraction (frontend shows the friendly notice).
+        try:
+            parsed = parse_receipt_with_confidence(data)
+        except Exception as fallback_exc:
+            raise HTTPException(422, "Receipt processing failed") from fallback_exc
+    result = service.create_receipt(current, parsed, file.filename or "receipt")
     advanced.store_asset(current.tenant_id, result["receipt_id"], data,
                          file.content_type or "application/octet-stream",
                          file.filename or "receipt", extract_ocr_boxes(data))
@@ -79,6 +119,17 @@ async def upload_receipt(file: UploadFile = File(...), current: Actor = Depends(
     if result["status"] == "needs_review":
         advanced.notify(current.tenant_id, "review", "Nyugta ellenőrzést igényel",
                         file.filename or "A feltöltött nyugta", result["receipt_id"])
+    if ai_mode:
+        source = str((parsed.confidence or {}).get("source") or SOURCE_TESSERACT)
+        result["source"] = source
+        if source == SOURCE_VISION:
+            result["ai_result"] = _ai_extraction(parsed)
+            try:
+                result["tesseract_result"] = _ai_extraction(parse_receipt_with_confidence(data))
+            except Exception:  # noqa: BLE001 - comparison OCR is best-effort
+                result["tesseract_result"] = None
+        else:
+            result["tesseract_result"] = _ai_extraction(parsed)
     return result
 
 @router.get("/product/jobs")
