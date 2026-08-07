@@ -303,7 +303,8 @@ class AdvancedWorkspace:
                                                "dashboard_widgets": ["kpis", "actions", "spending", "quality"]}
 
     def save_preferences(self, tenant_id: str, role: str, payload: dict[str, Any]) -> dict[str, Any]:
-        allowed = {"language", "compact", "high_contrast", "dashboard_widgets", "onboarding_done"}
+        allowed = {"language", "compact", "high_contrast", "dashboard_widgets",
+                   "onboarding_done", "email_alerts"}
         clean = {key: value for key, value in payload.items() if key in allowed}
         with self.db:
             self.db.execute("INSERT OR REPLACE INTO user_preferences VALUES(?,?,?,?)",

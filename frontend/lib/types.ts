@@ -341,6 +341,7 @@ export interface Preferences {
   high_contrast: boolean;
   onboarding_done: boolean;
   dashboard_widgets?: string[];
+  email_alerts?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -353,6 +354,43 @@ export interface RecurringExpense {
   occurrences: number;
   price_change: number;
   likely_subscription: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Subscriptions (subscription intelligence layer)
+// ---------------------------------------------------------------------------
+
+export type SubscriptionTrend = "up" | "stable" | "down";
+
+export interface Subscription {
+  id: string;
+  merchant: string;
+  occurrences: number;
+  frequency: "monthly" | "quarterly" | "annual";
+  renewal_date: string;
+  amount: number;
+  monthly_cost: number;
+  annualized: number;
+  trend: SubscriptionTrend;
+  price_increase: boolean;
+  likely_subscription: boolean;
+}
+
+export interface SubscriptionSummary {
+  total: number;
+  monthly_total: number;
+}
+
+export interface SubscriptionListResponse {
+  subscriptions: Subscription[];
+  summary: SubscriptionSummary;
+}
+
+export interface CancelGuide {
+  subscription_id: string;
+  merchant: string;
+  steps: string[];
+  url: string | null;
 }
 
 export interface InboundEmail {

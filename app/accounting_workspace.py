@@ -217,6 +217,9 @@ class AccountingWorkspace:
         for merchant, receipts in groups.items():
             if len(receipts) < 2:
                 continue
+            # Order charges chronologically (payload dates are ISO strings) so
+            # ``price_change`` and the price-increase check compare like-for-like.
+            receipts.sort(key=lambda r: str(r.get("date") or ""))
             amounts = [float(r.get("total") or 0) for r in receipts]
             average = sum(amounts) / len(amounts)
             variance = max(amounts) - min(amounts)
@@ -225,9 +228,22 @@ class AccountingWorkspace:
             likely = variance <= max(1.0, average * .1)
             if feedback:
                 likely = bool(feedback[0])
+            # Most recent charge date drives the renewal computation.  Guard
+            # against legacy payloads that may carry ``None`` or odd formats.
+            last_date = ""
+            for r in reversed(receipts):
+                raw = r.get("date")
+                if raw:
+                    try:
+                        date.fromisoformat(str(raw))
+                        last_date = str(raw)
+                        break
+                    except ValueError:
+                        continue
             result.append({"merchant": merchant, "occurrences": len(receipts),
                            "average_amount": round(average, 2), "annualized": round(average * 12, 2),
-                           "likely_subscription": likely, "price_change": round(amounts[-1] - amounts[0], 2)})
+                           "likely_subscription": likely, "price_change": round(amounts[-1] - amounts[0], 2),
+                           "last_date": last_date, "amounts": [round(a, 2) for a in amounts]})
         return sorted(result, key=lambda x: x["annualized"], reverse=True)
 
     def recurring_feedback(self, tenant: str, merchant: str, is_subscription: bool) -> dict[str, Any]:

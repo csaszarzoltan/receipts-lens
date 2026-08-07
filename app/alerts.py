@@ -13,11 +13,14 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Any
 
 
 class AlertType(str, Enum):
     BUDGET_THRESHOLD = "budget_threshold"
     UNUSUAL_SPENDING = "unusual_spending"
+    SUBSCRIPTION_RENEWAL = "subscription_renewal"
+    PRICE_INCREASE = "price_increase"
 
 
 class AlertSeverity(str, Enum):
@@ -109,6 +112,92 @@ class AlertStore:
         """Number of alerts where acknowledged == False."""
         with self._lock:
             return sum(1 for a in self._data.values() if not a.acknowledged)
+
+    def schedule_renewal_alerts(
+        self,
+        subscriptions: list[dict[str, Any]],
+        *,
+        days_before: int = 3,
+        today: str | None = None,
+    ) -> list[Alert]:
+        """Create ``SUBSCRIPTION_RENEWAL`` alerts for renewals due within *days_before*.
+
+        Parameters
+        ----------
+        subscriptions:
+            Subscription records; each is a dict with at least ``merchant``
+            and ``renewal_date`` (ISO ``YYYY-MM-DD``) keys.
+        days_before:
+            How many days ahead of the renewal to fire the alert (default 3).
+        today:
+            Optional anchor date for deterministic tests; defaults to today.
+
+        Returns
+        -------
+        list[Alert]
+            The newly created renewal alerts.
+        """
+        from datetime import date as _date
+
+        anchor = _date.fromisoformat(today) if today else _date.today()
+        new_alerts: list[Alert] = []
+        for sub in subscriptions:
+            renewal = str(sub.get("renewal_date") or "")
+            try:
+                renewal_date = _date.fromisoformat(renewal)
+            except ValueError:
+                continue
+            days_until = (renewal_date - anchor).days
+            if 0 <= days_until <= days_before:
+                merchant = str(sub.get("merchant") or "Unknown")
+                alert = self.create_alert(
+                    alert_type=AlertType.SUBSCRIPTION_RENEWAL,
+                    severity=AlertSeverity.INFO,
+                    category=merchant,
+                    message=(
+                        f"{merchant} renews on {renewal_date.isoformat()} "
+                        f"({days_until} day{'s' if days_until != 1 else ''} from now)."
+                    ),
+                )
+                new_alerts.append(alert)
+        return new_alerts
+
+    def create_price_increase_alert(
+        self,
+        merchant: str,
+        current_amount: float,
+        previous_amount: float,
+    ) -> Alert:
+        """Create a ``PRICE_INCREASE`` alert for a subscription price change.
+
+        Parameters
+        ----------
+        merchant:
+            Subscription merchant name.
+        current_amount:
+            The most recent (higher) amount charged.
+        previous_amount:
+            The previous amount the subscription charged.
+
+        Returns
+        -------
+        Alert
+            The newly created alert.
+        """
+        pct = (
+            (current_amount / previous_amount - 1.0) * 100.0
+            if previous_amount
+            else 0.0
+        )
+        return self.create_alert(
+            alert_type=AlertType.PRICE_INCREASE,
+            severity=AlertSeverity.WARNING,
+            category=merchant,
+            message=(
+                f"{merchant} subscription price increased by {pct:.1f}% "
+                f"(from ${previous_amount:.2f} to ${current_amount:.2f})."
+            ),
+        )
 
     def evaluate_budgets(self) -> list[Alert]:
         """Check every budget threshold and spending anomaly.

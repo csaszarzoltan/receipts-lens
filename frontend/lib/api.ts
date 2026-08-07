@@ -20,6 +20,7 @@ import type {
   AutomationRule,
   BatchJob,
   BudgetVarianceResult,
+  CancelGuide,
   Connection,
   DashboardData,
   Diagnostics,
@@ -44,6 +45,7 @@ import type {
   RecurringExpense,
   ReviewItem,
   SavedView,
+  SubscriptionListResponse,
   ValidationResult,
   WorkQueueItem,
   WorkspaceVersion,
@@ -868,6 +870,22 @@ export async function submitRecurringFeedback(body: {
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Subscriptions (subscription intelligence layer)
+// ---------------------------------------------------------------------------
+
+export async function getSubscriptions(): Promise<SubscriptionListResponse> {
+  return tenantRequest<SubscriptionListResponse>("/api/v1/subscriptions");
+}
+
+export async function getCancelGuide(
+  subscriptionId: string,
+): Promise<CancelGuide> {
+  return tenantRequest<CancelGuide>(
+    `/api/v1/subscriptions/${encodeURIComponent(subscriptionId)}/cancel-guide`,
+  );
 }
 
 export async function setExchangeRate(body: {
