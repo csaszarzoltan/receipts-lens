@@ -70,6 +70,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+### Subscription alerts
+- **Renewal tracking** — `extract_next_renewal_date()` computes the next renewal from a last-known date and recurrence frequency (monthly / quarterly / annual), rolling forward to the first date on or after today with day-of-month clamping for short months (Jan 31 → Feb 28).
+- **Price-increase detection** — `detect_price_increase()` flags a subscription when the most recent charge exceeds the rolling average of prior charges by more than a configurable threshold (default 10 %).
+- **Cancellation guides** — `CancelGuide` with curated steps + account links for 22 merchant entries across 21 distinct brands (Netflix, Spotify, Disney+, Amazon Prime, Max/HBO Max, Hulu, Audible, YouTube Premium, Microsoft 365, Adobe, ChatGPT, Apple Music/TV+/iCloud+, Dropbox, Google One, Notion, Figma, Canva, Headspace, Crunchyroll) and a generic fallback for unknown merchants.
+- **REST endpoints** — `GET /api/v1/subscriptions` (active subscriptions with renewal date, monthly cost, annualized spend, trend) and `GET /api/v1/subscriptions/{id}/cancel-guide` (merchant-specific steps; deterministic merchant resolution for unresolvable ids, generic fallback otherwise). Mounted via the router in `app/subscriptions_api.py`.
+- **Email notifications** — `send_email_notification()` delivers renewal/price alerts via SMTP when a config dict is provided; delivery additionally requires `RECEIPTLENS_SMTP_ENABLED=1` (env gate — the process never dials out implicitly). No config / no host / gate off → returns `False` silently.
+- **Alert types** — `SUBSCRIPTION_RENEWAL` (info) and `PRICE_INCREASE` (warning) added to `AlertStore`, with `schedule_renewal_alerts()` (fires N days before renewal, default 3) and `create_price_increase_alert()`.
+- **Subscriptions UI** — new Subscriptions page (`frontend/app/(app)/subscriptions/page.tsx`): summary cards (count, monthly total), upcoming renewals within 14 days, price-change cards, full table with trend indicators, cancel-guide modal, and a persisted Email alerts toggle through `PUT /product/preferences` (`email_alerts` key).
+- Only new runtime dependencies: none — implementation uses the existing stdlib + FastAPI stack (all deps already pinned in `pyproject.toml`).
+
 ### AI Vision OCR
 - **LLM vision extraction** — `VisionOcrProvider` sends the receipt image (base64 data URL, MIME sniffed from magic bytes) to an OpenAI-compatible vision chat-completions endpoint and returns structured receipt JSON; model asked for `merchant` / `date` / `total` / `tax` / `currency` / `line_items` with `temperature: 0.0`.
 - **Automatic Tesseract fallback** — `parse_receipt_with_vision()` returns the same `ConfidenceReceipt` shape as the classic pipeline; the producing path is marked via `confidence["source"]` (`"vision"` | `"tesseract"`). Fallback when disabled / no API key / timeout / API error / non-JSON response (one retry for transient failures: timeout, connection error, HTTP 5xx).

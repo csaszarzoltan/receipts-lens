@@ -428,6 +428,78 @@ curl http://localhost:8000/api/v1/alerts
 
 Acknowledge an alert (dismisses it from the active list).
 
+## Subscription endpoints
+
+### `GET /api/v1/subscriptions`
+
+List active subscriptions with next renewal date, monthly cost, and price-change trend. Subscriptions are derived from merchants with at least 2 stored receipts (recurring-expense analysis); the frequency is inferred from the number of occurrences (12+ monthly, 5–11 quarterly, 2–4 annual).
+
+```bash
+curl http://localhost:8000/api/v1/subscriptions
+```
+
+```json
+{
+  "subscriptions": [
+    {
+      "id": "sub-001",
+      "merchant": "Spotify",
+      "occurrences": 6,
+      "frequency": "quarterly",
+      "renewal_date": "2026-11-03",
+      "amount": 10.99,
+      "monthly_cost": 3.66,
+      "annualized": 131.88,
+      "trend": "stable",
+      "price_increase": false,
+      "likely_subscription": true
+    },
+    {
+      "id": "sub-002",
+      "merchant": "Netflix",
+      "occurrences": 6,
+      "frequency": "quarterly",
+      "renewal_date": "2026-09-15",
+      "amount": 12.99,
+      "monthly_cost": 3.5,
+      "annualized": 125.88,
+      "trend": "up",
+      "price_increase": true,
+      "likely_subscription": false
+    }
+  ],
+  "summary": {
+    "total": 2,
+    "monthly_total": 7.16
+  }
+}
+```
+
+### `GET /api/v1/subscriptions/{subscription_id}/cancel-guide`
+
+Return merchant-specific cancellation steps for a subscription's merchant. Curated guides exist for the top streaming/subscription merchants; unknown merchants fall back to a generic guide (`"merchant": "generic"`, `"url": null`).
+
+```bash
+curl http://localhost:8000/api/v1/subscriptions/sub-002/cancel-guide
+```
+
+```json
+{
+  "subscription_id": "sub-002",
+  "merchant": "Netflix",
+  "steps": [
+    "Go to netflix.com/cancelplan and sign in to your account.",
+    "Click 'Finish Cancellation' on the membership page.",
+    "Follow the confirmation prompts (you may be asked for a reason).",
+    "Keep using Netflix until the end of the current billing period.",
+    "Check your email for a cancellation confirmation."
+  ],
+  "url": "https://www.netflix.com/cancelplan"
+}
+```
+
+Both endpoints accept the `x-tenant-id` / `x-role` headers used by the product workspace (defaults: `demo` / `admin`). See [docs/subscription-alerts.md](subscription-alerts.md) for detection rules, the email-alert toggle, and the Python API.
+
 ## Stored receipt endpoints
 
 - `POST /api/v1/receipts` accepts `{"image_url": "https://..."}`, validates and downloads the image, runs OCR, stores the result, and returns HTTP 201 with `receipt_id` and parsed fields.

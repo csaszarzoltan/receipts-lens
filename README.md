@@ -8,7 +8,7 @@
 
 Send an image (file upload, public URL, or batch of either) to `POST /v1/parse-receipt` or `POST /v1/parse-receipts` and get back JSON with `vendor`, `total`, `date`, `tax`, `currency`, and `line_items[]`.
 
-v1.3.0 improves repeated daily work with precise task deep links and accessible contextual dialogs for approvals, API keys, saved views, and irreversible retention purge. v1.2.0 added early accounting-readiness badges, filters, and export-blocker tasks. v1.1.1 added the prioritized work queue and atomic receipt workspace save. v1.1.0 adds accounting readiness: line-item editing, validation, approval-flow design, export preparation, email intake, subscriptions, FX, dashboard editing, localization, permission matrix, and private diagnostics. v1.0.0 consolidated the operational and intelligent workspace releases with secure source images, OCR overlays, duplicate review, saved views, notifications, automation rules, history, export runs, preferences, onboarding, and PWA support. v0.8.0 added a complete responsive financial operations workspace with receipt inbox, batch capture, OCR review, approval inbox, reports, integrations, administration, accessibility, and mobile layouts. v0.7.0 added **search, allocation metadata, approvals, retention controls, and portability**. v0.6.0 added **AI-powered categorization**, **budget management**, **spending analytics**, and an **alert system** — transforming ReceiptLens from a receipt scanner into a complete expense management platform.
+v1.3.0 improves repeated daily work with precise task deep links and accessible contextual dialogs for approvals, API keys, saved views, and irreversible retention purge. v1.2.0 added early accounting-readiness badges, filters, and export-blocker tasks. v1.1.1 added the prioritized work queue and atomic receipt workspace save. v1.1.0 adds accounting readiness: line-item editing, validation, approval-flow design, export preparation, email intake, subscriptions, FX, dashboard editing, localization, permission matrix, and private diagnostics. v1.0.0 consolidated the operational and intelligent workspace releases with secure source images, OCR overlays, duplicate review, saved views, notifications, automation rules, history, export runs, preferences, onboarding, and PWA support. v0.8.0 added a complete responsive financial operations workspace with receipt inbox, batch capture, OCR review, approval inbox, reports, integrations, administration, accessibility, and mobile layouts. v0.7.0 added **search, allocation metadata, approvals, retention controls, and portability**. v0.6.0 added **AI-powered categorization**, **budget management**, **spending analytics**, and an **alert system** — transforming ReceiptLens from a receipt scanner into a complete expense management platform. The subscription intelligence layer (renewal tracking, price-increase detection, cancellation guides, Subscriptions UI) builds on the recurring-expense analysis — see [docs/subscription-alerts.md](docs/subscription-alerts.md).
 
 ---
 
@@ -38,6 +38,7 @@ v1.3.0 improves repeated daily work with precise task deep links and accessible 
 - **Budget management** — full CRUD for per-category monthly budgets with real-time spending tracking. Endpoints at `POST/GET/PUT/DELETE /api/v1/budgets`. See [docs/budgets-and-analytics.md](docs/budgets-and-analytics.md).
 - **Spending analytics** — aggregate spending by category, merchant, day, or month. Compare budgets vs actuals. Endpoints at `GET /api/v1/analytics/spending` and `GET /api/v1/analytics/budgets`.
 - **Alert system** — automatic threshold-based alerts when spending approaches or exceeds budget limits. Also detects unusual spending patterns. Endpoints at `GET /api/v1/alerts` and `POST /api/v1/alerts/{id}/acknowledge`. See [docs/alerts.md](docs/alerts.md).
+- **Subscription alerts** — detects recurring expenses (renewal dates, monthly cost, annualized spend), flags price increases, and provides merchant-specific cancellation guides. Endpoints at `GET /api/v1/subscriptions` and `GET /api/v1/subscriptions/{id}/cancel-guide`, plus a Subscriptions UI with an email-alerts toggle. See [docs/subscription-alerts.md](docs/subscription-alerts.md).
 - **Forecast engine** — next-period spend forecasting with per-category and overall predictions, confidence bounds, anomaly detection (z-score / MAD), and budget variance projection. REST endpoints at `GET /forecasts`, `GET /forecasts/anomalies`, `GET /forecasts/budget-variance`. Dashboard at `GET /dashboard`. CLI: `receipts-lens forecast --period monthly`.
 - **Receipt operations** — tenant-scoped search, tags, projects, cost centers, threshold approvals, retention purge, and versioned portability export.
 - **Precise daily actions** — dashboard tasks deep-link to the exact review receipt, approval, or blocked accounting field instead of opening only a general module.
@@ -261,6 +262,7 @@ Image size is approximately 692 MB.
 | `LLM_MODEL` | No | `gpt-4o-mini` | Vision-capable model name used by AI Scan. |
 | `VISION_OCR_ENABLED` | No | *(off)* | Cost guard for AI Vision OCR — set to `1`/`true`/`yes`/`on` to enable the LLM vision path. Without it, `ai_scan=true` requests fall back to Tesseract. |
 | `VISION_OCR_TIMEOUT` | No | `30.0` | Timeout in seconds for vision-LLM requests (float). |
+| `RECEIPTLENS_SMTP_ENABLED` | No | *(off)* | Set to `1` to allow SMTP delivery of subscription alerts. SMTP connection settings are passed to `send_email_notification()` as a config dict (host / port / user / password / from_addr / to_addr) — see [docs/subscription-alerts.md](docs/subscription-alerts.md). |
 
 The following variables are **declared in deployment configs** but not yet wired in the application code.
 They are reserved for future use:
@@ -615,6 +617,7 @@ ruff check .
 - [API Reference](docs/api.md) — endpoints, URL fetching contract, SSRF protection, error responses
 - [OCR Pipeline](docs/ocr-pipeline.md) — architecture, preprocessing stages, configuration, error handling, tips
 - [AI Vision OCR (AI Scan)](docs/ai-vision-ocr.md) — LLM vision extraction, setup, fallback behavior, API responses
+- [Subscription Alerts](docs/subscription-alerts.md) — renewal detection, price-increase detection, cancellation guides, email alerts, Subscriptions UI
 
 ---
 
