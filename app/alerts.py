@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -49,7 +49,7 @@ class Alert:
         self.category = category
         self.message = message
         self.pct_used = pct_used
-        self.created_at = created_at or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        self.created_at = created_at or datetime.now(UTC).isoformat().replace("+00:00", "Z")
         self.acknowledged = acknowledged
 
 
@@ -137,9 +137,14 @@ class AlertStore:
         list[Alert]
             The newly created renewal alerts.
         """
+        from datetime import UTC, datetime
         from datetime import date as _date
 
-        anchor = _date.fromisoformat(today) if today else _date.today()
+        anchor = (
+            datetime.fromisoformat(today).date()
+            if today
+            else datetime.now(UTC).date()
+        )
         new_alerts: list[Alert] = []
         for sub in subscriptions:
             renewal = str(sub.get("renewal_date") or "")
@@ -272,7 +277,7 @@ class AlertStore:
         from app.reports import receipt_store
 
         new_alerts: list[Alert] = []
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Determine current period dates
         if now.month == 1:
