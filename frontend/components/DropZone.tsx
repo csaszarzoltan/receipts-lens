@@ -76,49 +76,44 @@ export default function DropZone({ onFiles, disabled, label = "Drag & drop a rec
 
   return (
     <div>
-      <div
-        role="button"
-        tabIndex={0}
-        aria-label={label}
-        onClick={() => fileInput.current?.click()}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
+      <div className={cx("relative rounded-xl border-2 border-dashed", dragging ? "border-brand-500 bg-brand-50 dark:bg-brand-950" : "border-slate-300 bg-white hover:border-brand-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800", disabled && "pointer-events-none opacity-50")}>
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label={label}
+          onClick={() => fileInput.current?.click()}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              fileInput.current?.click();
+            }
+          }}
+          onDragOver={(event) => {
             event.preventDefault();
-            fileInput.current?.click();
-          }
-        }}
-        onDragOver={(event) => {
-          event.preventDefault();
-          if (!disabled) setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setDragging(false);
-          if (!disabled) handleFiles(event.dataTransfer.files);
-        }}
-        className={cx(
-          "flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2",
-          dragging
-            ? "border-brand-500 bg-brand-50 dark:bg-brand-950"
-            : "border-slate-300 bg-white hover:border-brand-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800",
-          disabled && "pointer-events-none opacity-50",
-        )}
-      >
-        <span className="text-4xl" aria-hidden="true">🧾</span>
-        <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">{label}</p>
-        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">JPG, PNG or WebP — receipts are processed with OCR</p>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <span className="inline-flex min-h-9 items-center rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white">
+            if (!disabled) setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            if (!disabled) handleFiles(event.dataTransfer.files);
+          }}
+          className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-xl px-6 py-10 text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+        >
+          <span className="text-4xl" aria-hidden="true">🧾</span>
+          <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">{label}</p>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">JPG, PNG or WebP — receipts are processed with OCR</p>
+        </div>
+        {/* Camera capture is a sibling of the dropzone button (not nested) so
+            screen readers see two distinct, non-nested interactive controls. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 flex flex-wrap items-center justify-center gap-2">
+          <span className="pointer-events-auto inline-flex min-h-9 items-center rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white">
             Choose file
           </span>
           <button
             type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              openCamera();
-            }}
-            className="inline-flex min-h-9 items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+            onClick={openCamera}
+            className="pointer-events-auto inline-flex min-h-9 items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             📷 Take a photo
           </button>

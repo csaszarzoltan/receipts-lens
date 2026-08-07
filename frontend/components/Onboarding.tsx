@@ -57,7 +57,7 @@ export default function Onboarding() {
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" aria-hidden="true" />
       <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-card animate-fade-in dark:bg-slate-900">
         {/* Progress indicator */}
-        <div className="flex gap-1 px-6 pt-5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
+        <div className="flex gap-1 px-6 pt-5" role="group" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
           {STEPS.map((item, index) => (
             <div
               key={item.id}

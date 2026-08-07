@@ -22,7 +22,9 @@ Run with:
 from __future__ import annotations
 
 import inspect
-from typing import get_type_hints
+from datetime import date
+from email.message import EmailMessage
+from typing import Self, get_type_hints
 
 import pytest
 from starlette.testclient import TestClient
@@ -51,17 +53,32 @@ def client() -> TestClient:
 
 
 def _route_paths() -> set[str]:
-    """Collect all mounted route paths (flat + router-included)."""
+    """Collect all mounted route paths (flat + recursively router-included).
+
+    FastAPI (0.115+) represents ``include_router`` mounts as ``_IncludedRouter``
+    entries in ``app.routes``; the wrapped ``APIRouter`` (and any nested routers
+    it includes) is reachable via ``original_router.routes``.  Recurse through
+    it so routes mounted under a prefix are discovered (a one-level scan misses
+    e.g. ``/api/v1/subscriptions`` and ``/api/v1/subscriptions/{id}/cancel-guide``).
+    """
     paths: set[str] = set()
-    for r in api.app.routes:
-        p = getattr(r, "path", None)
-        if p is not None:
-            paths.add(p)
-        # APIRouter-included routes may live on .routes sub-attribute
-        for sub in getattr(r, "routes", []):
-            sp = getattr(sub, "path", None)
-            if sp is not None:
-                paths.add(sp)
+
+    def walk(routes: list, prefix: str = "") -> None:
+        for r in routes:
+            p = getattr(r, "path", None)
+            if p is not None:
+                paths.add(prefix + p)
+            # FastAPI router mounts (include_router) expose the wrapped router
+            original = getattr(r, "original_router", None)
+            if original is not None and hasattr(original, "routes"):
+                walk(original.routes, prefix)
+            # Nested routers attached directly (e.g. router.include_router)
+            for sub in getattr(r, "routes", []) or []:
+                sp = getattr(sub, "path", None)
+                if sp is not None:
+                    paths.add(prefix + sp)
+
+    walk(api.app.routes)
     return paths
 
 
@@ -268,45 +285,49 @@ class TestExtractNextRenewalDateBehavioral:
 
     def test_monthly_renewal_from_mid_month(self) -> None:
         """AC1: monthly frequency → renewal is next month, same day-of-month."""
-        with pytest.raises(NotImplementedError):
-            extract_next_renewal_date("2026-01-15", Frequency.MONTHLY)
+        assert extract_next_renewal_date("2026-01-15", Frequency.MONTHLY, today="2026-01-20") == "2026-02-15"
 
     def test_monthly_renewal_from_end_of_month(self) -> None:
         """AC1: Jan 31 monthly → Feb 28 (non-leap year)."""
-        with pytest.raises(NotImplementedError):
-            extract_next_renewal_date("2026-01-31", Frequency.MONTHLY)
+        # Last renewed Jan 31, checked Feb 1 → next renewal Feb 28.
+        assert extract_next_renewal_date("2026-01-31", Frequency.MONTHLY, today="2026-02-01") == "2026-02-28"
 
     def test_monthly_renewal_leap_year(self) -> None:
         """AC1: Jan 31 monthly in leap year → Feb 29."""
-        with pytest.raises(NotImplementedError):
-            extract_next_renewal_date("2028-01-31", Frequency.MONTHLY)
+        # Last renewed Jan 31 2028, checked Feb 1 → next renewal Feb 29.
+        assert extract_next_renewal_date("2028-01-31", Frequency.MONTHLY, today="2028-02-01") == "2028-02-29"
 
     def test_quarterly_renewal(self) -> None:
         """AC1: quarterly frequency → renewal is 3 months later."""
-        with pytest.raises(NotImplementedError):
-            extract_next_renewal_date("2026-01-15", Frequency.QUARTERLY)
+        assert extract_next_renewal_date("2026-01-15", Frequency.QUARTERLY, today="2026-01-20") == "2026-04-15"
 
     def test_quarterly_renewal_year_boundary(self) -> None:
         """AC1: quarterly from Nov → Feb next year."""
-        with pytest.raises(NotImplementedError):
-            extract_next_renewal_date("2026-11-10", Frequency.QUARTERLY)
+        # Last renewed Nov 10, checked Dec 1 → next renewal Feb 10 next year.
+        assert extract_next_renewal_date("2026-11-10", Frequency.QUARTERLY, today="2026-12-01") == "2027-02-10"
 
     def test_annual_renewal(self) -> None:
         """AC1: annual frequency → renewal is 12 months (1 year) later."""
-        with pytest.raises(NotImplementedError):
-            extract_next_renewal_date("2026-03-01", Frequency.ANNUAL)
+        # Last renewed Mar 1 2026, checked Jun 1 → next renewal Mar 1 2027.
+        assert extract_next_renewal_date("2026-03-01", Frequency.ANNUAL, today="2026-06-01") == "2027-03-01"
 
     def test_today_anchor_used_when_provided(self) -> None:
         """AC1: today anchor allows deterministic computation."""
-        with pytest.raises(NotImplementedError):
-            extract_next_renewal_date(
-                "2026-01-15", Frequency.MONTHLY, today="2026-02-01"
-            )
+        # last renewal 2026-01-15, checked on 2026-02-01 → next renewal is Feb 15.
+        assert extract_next_renewal_date("2026-01-15", Frequency.MONTHLY, today="2026-02-01") == "2026-02-15"
+
+    def test_today_anchor_rolls_past_cycles(self) -> None:
+        """AC1: an anchor after several cycles rolls forward to the next due date."""
+        # A quarterly sub last renewed 2026-01-15 and still active on 2026-08-01
+        # must renew on 2026-10-15, not a date in the past.
+        assert extract_next_renewal_date("2026-01-15", Frequency.QUARTERLY, today="2026-08-01") == "2026-10-15"
 
     def test_return_type_is_date_string(self) -> None:
         """AC1: return value must be a YYYY-MM-DD string."""
-        with pytest.raises(NotImplementedError):
-            extract_next_renewal_date("2026-01-15", Frequency.MONTHLY)
+        result = extract_next_renewal_date("2026-01-15", Frequency.MONTHLY)
+        assert isinstance(result, str)
+        date.fromisoformat(result)  # must parse as an ISO date
+        assert len(result) == 10
 
 
 class TestDetectPriceIncreaseBehavioral:
@@ -314,38 +335,34 @@ class TestDetectPriceIncreaseBehavioral:
 
     def test_triggers_when_above_threshold(self) -> None:
         """AC3: current_amount > avg * 1.10 → True."""
-        with pytest.raises(NotImplementedError):
-            detect_price_increase(11.50, [10.0, 10.0, 10.0])
+        assert detect_price_increase(11.50, [10.0, 10.0, 10.0]) is True
 
     def test_no_trigger_when_equal_to_avg(self) -> None:
         """AC3: current_amount == avg → False."""
-        with pytest.raises(NotImplementedError):
-            detect_price_increase(10.0, [10.0, 10.0, 10.0])
+        assert detect_price_increase(10.0, [10.0, 10.0, 10.0]) is False
 
     def test_no_trigger_when_below_avg(self) -> None:
         """AC3: current_amount < avg → False."""
-        with pytest.raises(NotImplementedError):
-            detect_price_increase(9.0, [10.0, 10.0, 10.0])
+        assert detect_price_increase(9.0, [10.0, 10.0, 10.0]) is False
 
     def test_no_trigger_when_exactly_at_threshold(self) -> None:
         """AC3: current_amount == avg * 1.10 → False (not strictly above)."""
-        with pytest.raises(NotImplementedError):
-            detect_price_increase(11.0, [10.0, 10.0, 10.0])
+        assert detect_price_increase(11.0, [10.0, 10.0, 10.0]) is False
 
     def test_custom_threshold(self) -> None:
         """AC3: custom threshold (0.20) raises the bar."""
-        with pytest.raises(NotImplementedError):
-            detect_price_increase(11.5, [10.0, 10.0, 10.0], threshold=0.20)
+        assert detect_price_increase(11.5, [10.0, 10.0, 10.0], threshold=0.20) is False
+        assert detect_price_increase(12.5, [10.0, 10.0, 10.0], threshold=0.20) is True
 
     def test_single_historical_entry(self) -> None:
         """AC3: works with a single historical amount."""
-        with pytest.raises(NotImplementedError):
-            detect_price_increase(12.0, [10.0])
+        assert detect_price_increase(12.0, [10.0]) is True
+        assert detect_price_increase(10.0, [10.0]) is False
 
     def test_many_historical_entries(self) -> None:
         """AC3: 3-month rolling average from 3 entries."""
-        with pytest.raises(NotImplementedError):
-            detect_price_increase(11.0, [8.0, 9.0, 10.0])
+        # avg of [8.0, 9.0, 10.0] is 9.0 → threshold at 9.9; 11.0 is above.
+        assert detect_price_increase(11.0, [8.0, 9.0, 10.0]) is True
 
 
 class TestAlertTypeSubscriptionAlertsBehavioral:
@@ -485,13 +502,16 @@ class TestGetCancelGuideBehavioral:
 
     def test_known_merchant_returns_guide(self) -> None:
         """AC5: curated merchant returns specific steps."""
-        with pytest.raises(NotImplementedError):
-            get_cancel_guide("Netflix")
+        guide = get_cancel_guide("Netflix")
+        assert isinstance(guide, CancelGuide)
+        assert guide.merchant == "Netflix"
+        assert len(guide.steps) >= 1
 
     def test_unknown_merchant_returns_generic(self) -> None:
         """AC5: unknown merchant returns generic fallback."""
-        with pytest.raises(NotImplementedError):
-            get_cancel_guide("SomeUnknownMerchant123")
+        guide = get_cancel_guide("SomeUnknownMerchant123")
+        assert guide is GENERIC_CANCEL_GUIDE
+        assert len(guide.steps) >= 3
 
 
 class TestEmailNotificationBehavioral:
@@ -499,10 +519,9 @@ class TestEmailNotificationBehavioral:
 
     def test_no_smtp_config_returns_false(self) -> None:
         """AC6: smtp_config=None → returns False, no email sent."""
-        with pytest.raises(NotImplementedError):
-            send_email_notification("Subject", "Body")
+        assert send_email_notification("Subject", "Body") is False
 
-    def test_with_smtp_config_returns_true(self) -> None:
+    def test_with_smtp_config_returns_true(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """AC6: valid smtp_config → returns True (would send email)."""
         config = {
             "host": "smtp.example.com",
@@ -512,12 +531,41 @@ class TestEmailNotificationBehavioral:
             "from_addr": "alerts@receiptlens.local",
             "to_addr": "user@example.com",
         }
-        with pytest.raises(NotImplementedError):
-            send_email_notification("Subject", "Body", smtp_config=config)
+
+        class _FakeSMTP:
+            """Stub the real SMTP client so the test never dials the network."""
+
+            def __init__(self, *args: object, **kwargs: object) -> None:
+                self.sent: list[EmailMessage] = []
+
+            def __enter__(self) -> Self:
+                return self
+
+            def __exit__(self, *exc: object) -> bool:
+                return False
+
+            def ehlo(self) -> None:
+                pass
+
+            def has_extn(self, name: str) -> bool:
+                return False
+
+            def login(self, user: str, password: str) -> None:
+                pass
+
+            def send_message(self, message: EmailMessage) -> None:
+                self.sent.append(message)
+
+        fake = _FakeSMTP()
+        monkeypatch.setattr("app.subscription_alerts.smtplib.SMTP", lambda *a, **kw: fake)
+        # The delivery gate (RECEIPTLENS_SMTP_ENABLED) must be on for a
+        # config-bearing call to attempt a send.
+        monkeypatch.setenv("RECEIPTLENS_SMTP_ENABLED", "1")
+        assert send_email_notification("Subject", "Body", smtp_config=config) is True
+        assert len(fake.sent) == 1
+        assert fake.sent[0]["Subject"] == "Subject"
+        assert fake.sent[0]["To"] == "user@example.com"
 
     def test_smtp_config_none_not_send(self) -> None:
         """AC6: explicit None config does not trigger email delivery."""
-        with pytest.raises(NotImplementedError):
-            send_email_notification(
-                "Renewal alert", "Your sub renews soon.", smtp_config=None
-            )
+        assert send_email_notification("Renewal alert", "Your sub renews soon.", smtp_config=None) is False

@@ -34,7 +34,7 @@ export default function OnboardingPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 dark:from-brand-950 dark:to-slate-950">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-card dark:bg-slate-900">
-        <div className="flex gap-1" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
+        <div className="flex gap-1" role="group" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
           {STEPS.map((item, index) => (
             <div
               key={item.title}
