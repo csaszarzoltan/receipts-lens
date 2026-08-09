@@ -143,6 +143,143 @@ Unknown merchants (or unresolvable ids) return the generic guide with
 Both endpoints accept the tenant/role headers used across the product
 workspace (`x-tenant-id` defaults to `demo`, `x-role` to `admin`).
 
+### `GET /api/v1/subscriptions/trend-data`
+
+Return time-series spending data for the dashboard trend chart. Aggregates
+receipt amounts across recurring merchants by period and computes a trend
+direction.
+
+```bash
+curl "http://localhost:8000/api/v1/subscriptions/trend-data?period=monthly"
+```
+
+Response:
+
+```json
+{
+  "monthly": [
+    {"month": "2026-08", "amount": 45.97},
+    {"month": "2026-07", "amount": 41.97}
+  ],
+  "annual_total": 516.50,
+  "trend_direction": "increasing",
+  "avg_monthly": 42.04
+}
+```
+
+| Field | Description |
+|---|---|
+| `monthly` | Time-series entries sorted newest-first (`month` + `amount`) |
+| `annual_total` | Sum of all monthly totals |
+| `trend_direction` | `increasing` / `decreasing` / `stable` (first-half vs second-half comparison) |
+| `avg_monthly` | Average monthly spend across months with data |
+
+Use `period=quarterly` for `YYYY-Q1` … `YYYY-Q4` buckets or `period=annual`
+for yearly aggregation. An empty workspace returns empty arrays and zeroes.
+
+### `GET /api/v1/subscriptions/renewal-timeline`
+
+Return upcoming renewals sorted by date with a countdown of days until each
+renewal.
+
+```bash
+curl "http://localhost:8000/api/v1/subscriptions/renewal-timeline"
+```
+
+Response:
+
+```json
+{
+  "renewals": [
+    {
+      "subscription_id": "sub-001",
+      "merchant": "Netflix",
+      "amount": 15.99,
+      "renewal_date": "2026-08-12",
+      "days_until": 4
+    }
+  ]
+}
+```
+
+Results are sorted by `renewal_date` ascending. The `days_until` field can
+be 0 (renews today) or negative (overdue).
+
+### `POST /api/v1/subscriptions/{id}/email-alert`
+
+Toggle the per-subscription email alert preference. When enabled, the daily
+scheduler includes this subscription in its renewal and price-hike email
+scans.
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/subscriptions/sub-001/email-alert" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}'
+```
+
+```json
+{"subscription_id": "sub-001", "enabled": true}
+```
+
+The subscription id must match the `sub-NNN` pattern; invalid ids return
+`404`. Preferences are stored in-memory (per-process, not across restarts).
+
+### `GET /api/v1/subscriptions/{id}/email-alert`
+
+Read back the current email alert preference. Returns `enabled: false` by
+default.
+
+```bash
+curl "http://localhost:8000/api/v1/subscriptions/sub-001/email-alert"
+```
+
+```json
+{"subscription_id": "sub-001", "enabled": true}
+```
+
+## Daily scheduler
+
+`daily_scheduler()` in `app/subscription_alerts.py` is the proactive engine
+that scans all tracked subscriptions and fires email alerts:
+
+- **Renewal alerts** — when a renewal is within `RENEWAL_ALERT_DAYS` (default
+  7) of today, the scheduler composes an email with the merchant name, renewal
+  date, amount, and the merchant-specific cancellation steps from
+  `get_cancel_guide()`.
+- **Price-hike alerts** — when `detect_price_increase()` returns `True` for a
+  subscription (current amount > rolling average × 1.10), the scheduler
+  composes an email with the percentage increase and old/new amounts.
+- **SMTP delivery** — emails are sent via `send_email_notification()`, which
+  requires both a usable SMTP config dict and `RECEIPTLENS_SMTP_ENABLED=1`.
+  Without either, emails are silently skipped.
+- **Graceful failure** — SMTP errors are caught per-subscription and logged as
+  warnings; a single failure does not abort the scan.
+- **Demo fallback** — when the accounting workspace has no recurring expenses
+  for the tenant, the scheduler falls back to `DEMO_SUBSCRIPTIONS` (3
+  hardcoded entries designed to exercise renewal and price-hike paths).
+
+The scheduler is currently exposed as a Python function (not an HTTP
+endpoint). It is called by the Subscriptions UI's "Check now" action or can
+be invoked from a cron job / CLI wrapper:
+
+```python
+from app.subscription_alerts import daily_scheduler
+
+result = daily_scheduler(
+    smtp_config={
+        "host": "smtp.example.com",
+        "port": 587,
+        "user": "user@example.com",
+        "password": "secret",
+        "from_addr": "alerts@example.com",
+        "to_addr": "me@example.com",
+    },
+    today="2026-08-10",  # optional anchor for testing
+)
+print(result)
+# {"subscriptions_checked": 3, "renewal_emails_sent": 2, "price_emails_sent": 1, "date": "2026-08-10"}
+```
+
 ## Email alerts
 
 Renewal and price-increase notifications can be delivered by email. Delivery
@@ -194,6 +331,7 @@ automatically generated on every request.
 ```python
 from app.subscription_alerts import (
     Frequency,
+    daily_scheduler,
     detect_price_increase,
     extract_next_renewal_date,
     get_cancel_guide,
@@ -217,6 +355,10 @@ guide.to_dict() # -> {"merchant": ..., "steps": [...], "url": ...}
 # Email notification (no SMTP config -> False, no network attempt)
 send_email_notification("Subject", "Body")
 # -> False
+
+# Daily scheduler (runs the full renewal + price-hike scan)
+result = daily_scheduler(today="2026-08-10")
+# -> {"subscriptions_checked": 3, "renewal_emails_sent": 2, "price_emails_sent": 1, "date": "2026-08-10"}
 ```
 
 See [examples/subscriptions.py](../examples/subscriptions.py) for a runnable
@@ -226,17 +368,22 @@ end-to-end example against a live server.
 
 The Subscriptions page (frontend route `subscriptions`) shows:
 
+- **Trend chart** — inline SVG chart of monthly spending over time, with a
+  direction badge (`↑` increasing / `→` stable / `↓` decreasing) showing
+  the overall spending trend.
 - **Summary cards** — active subscription count and total monthly cost.
 - **Upcoming renewals** — subscriptions renewing within 14 days, sorted by
-  date, with a "renews today / tomorrow / in N days" badge.
+  date, with urgency-colored countdown badges ("renews today / tomorrow /
+  in N days").
 - **Price changes** — subscriptions flagged as `price_increase`, with the
   current amount and monthly cost.
 - **All subscriptions table** — merchant, frequency, renewal date, monthly
-  and annualized cost, trend (`↑ up` / `→ stable`), and a **Cancel guide**
-  button that opens the merchant's cancellation steps in a modal (with a link
-  to the merchant account page when available).
-- **Email alerts toggle** — persisted through `PUT /product/preferences`
-  (`email_alerts` key).
+  and annualized cost, trend (`↑ up` / `→ stable`), a **Cancel guide**
+  button (opens merchant cancellation steps in a modal), and an **Email
+  alerts toggle** switch per row.
+- **Email alerts toggle** — per-subscription on/off switch that calls
+  `POST /subscriptions/{id}/email-alert` on change, persisted via
+  `PUT /product/preferences` (`email_alerts` key).
 
 With no receipts uploaded yet the page shows an empty state: *"At least 2
 matching transactions are needed to detect a subscription."*

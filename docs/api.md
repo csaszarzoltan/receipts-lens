@@ -498,7 +498,150 @@ curl http://localhost:8000/api/v1/subscriptions/sub-002/cancel-guide
 }
 ```
 
-Both endpoints accept the `x-tenant-id` / `x-role` headers used by the product workspace (defaults: `demo` / `admin`). See [docs/subscription-alerts.md](subscription-alerts.md) for detection rules, the email-alert toggle, and the Python API.
+### `GET /api/v1/subscriptions/trend-data`
+
+Return time-series spending data for the subscription dashboard trend chart.
+Aggregates receipt amounts across recurring merchants by month (or quarter /
+year) and computes an overall trend direction.
+
+#### Query parameters
+
+| Parameter | Type   | Default    | Description                                                        |
+|-----------|--------|------------|--------------------------------------------------------------------|
+| `period`  | string | `monthly`  | Granularity: `monthly`, `quarterly`, or `annual`                   |
+
+#### Example
+
+```bash
+curl "http://localhost:8000/api/v1/subscriptions/trend-data?period=monthly"
+```
+
+#### Response
+
+```json
+{
+  "monthly": [
+    {"month": "2026-08", "amount": 45.97},
+    {"month": "2026-07", "amount": 41.97},
+    {"month": "2026-06", "amount": 38.98}
+  ],
+  "annual_total": 516.50,
+  "trend_direction": "increasing",
+  "avg_monthly": 42.04
+}
+```
+
+| Field              | Type   | Description                                                          |
+|--------------------|--------|----------------------------------------------------------------------|
+| `monthly`          | array  | Time-series entries sorted newest-first; each has `month` (string) and `amount` (float) |
+| `annual_total`     | float  | Sum of all monthly totals                                            |
+| `trend_direction`  | string | `increasing`, `decreasing`, or `stable` (based on first-half vs second-half comparison) |
+| `avg_monthly`      | float  | Average monthly spend across all months with data                    |
+
+When `period` is `quarterly`, months are grouped into `YYYY-Q1` … `YYYY-Q4`
+buckets. When `annual`, grouped by `YYYY`. An empty workspace returns empty
+arrays and zeroes.
+
+### `GET /api/v1/subscriptions/renewal-timeline`
+
+Return upcoming renewals sorted by renewal date with a countdown of days
+until each renewal. The subscription list is built from the same
+recurring-expense analysis as `GET /subscriptions`.
+
+#### Example
+
+```bash
+curl "http://localhost:8000/api/v1/subscriptions/renewal-timeline"
+```
+
+#### Response
+
+```json
+{
+  "renewals": [
+    {
+      "subscription_id": "sub-001",
+      "merchant": "Netflix",
+      "amount": 15.99,
+      "renewal_date": "2026-08-12",
+      "days_until": 4
+    },
+    {
+      "subscription_id": "sub-002",
+      "merchant": "Spotify",
+      "amount": 10.99,
+      "renewal_date": "2026-09-01",
+      "days_until": 24
+    }
+  ]
+}
+```
+
+| Field              | Type   | Description                                                |
+|--------------------|--------|------------------------------------------------------------|
+| `subscription_id`  | string | Stable per-request id (`sub-001`, `sub-002`, …)            |
+| `merchant`         | string | Vendor name as detected from receipts                      |
+| `amount`           | float  | Most recent charge amount                                  |
+| `renewal_date`     | string | Next renewal date (ISO `YYYY-MM-DD`)                       |
+| `days_until`       | int    | Number of days from today until the renewal date (can be 0 or negative if overdue) |
+
+Results are sorted by `renewal_date` ascending (earliest first).
+
+### `POST /api/v1/subscriptions/{subscription_id}/email-alert`
+
+Toggle the per-subscription email alert preference. When enabled, the
+daily scheduler (`daily_scheduler()` in `app/subscription_alerts.py`)
+includes this subscription in its renewal and price-hike email scans.
+
+The subscription id must match the `sub-NNN` pattern (`sub-001`,
+`sub-002`, …). Invalid ids return `404`.
+
+Preferences are stored in-memory (survive across requests within a
+process, but not across restarts).
+
+#### Request body
+
+```json
+{"enabled": true}
+```
+
+| Field     | Type | Required | Description                     |
+|-----------|------|----------|---------------------------------|
+| `enabled` | bool | Yes      | `true` to enable, `false` to disable |
+
+#### Example
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/subscriptions/sub-001/email-alert" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true}'
+```
+
+#### Response
+
+```json
+{"subscription_id": "sub-001", "enabled": true}
+```
+
+### `GET /api/v1/subscriptions/{subscription_id}/email-alert`
+
+Read back the current email alert preference for a subscription. Returns
+`enabled: false` by default (alerts off unless explicitly toggled on).
+
+```bash
+curl "http://localhost:8000/api/v1/subscriptions/sub-001/email-alert"
+```
+
+```json
+{"subscription_id": "sub-001", "enabled": true}
+```
+
+> Both email-alert endpoints accept the tenant/role headers used across the
+> product workspace (`x-tenant-id` defaults to `demo`, `x-role` to `admin`).
+> The POST endpoint validates the `subscription_id` format and returns `404`
+> for non-matching ids; the GET endpoint does not validate the format.
+
+Both subscription endpoints accept the `x-tenant-id` / `x-role` headers used by the product workspace (defaults: `demo` / `admin`). See [docs/subscription-alerts.md](subscription-alerts.md) for detection rules, the daily scheduler, the email-alert toggle, and the Python API.
 
 ## Stored receipt endpoints
 
