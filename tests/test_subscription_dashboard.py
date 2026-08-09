@@ -19,14 +19,13 @@ Run with:
 from __future__ import annotations
 
 import inspect
-from typing import get_type_hints
+from typing import Self, get_type_hints
 
 import pytest
 from starlette.testclient import TestClient
 
 from app import api
 from app.subscription_alerts import send_email_notification
-
 
 # ============================================================================
 # Fixtures / helpers
@@ -341,7 +340,7 @@ class TestErrorCasesBehavioral:
             def __init__(self, *a: object, **kw: object) -> None:
                 pass
 
-            def __enter__(self) -> _FailingSMTP:
+            def __enter__(self) -> Self:
                 return self
 
             def __exit__(self, *exc: object) -> bool:
