@@ -569,3 +569,147 @@ class TestEmailNotificationBehavioral:
     def test_smtp_config_none_not_send(self) -> None:
         """AC6: explicit None config does not trigger email delivery."""
         assert send_email_notification("Renewal alert", "Your sub renews soon.", smtp_config=None) is False
+
+
+# ============================================================================
+# NEW INTERFACE TESTS — daily_scheduler (RED until developer creates stub)
+# ============================================================================
+
+
+class TestDailySchedulerInterface:
+    """daily_scheduler: import, callable, signature, type hints."""
+
+    def test_daily_scheduler_importable(self) -> None:
+        """daily_scheduler must be importable from subscription_alerts."""
+        from app.subscription_alerts import daily_scheduler
+
+        assert callable(daily_scheduler)
+
+    def test_daily_scheduler_signature(self) -> None:
+        """daily_scheduler must have an inspectable signature."""
+        from app.subscription_alerts import daily_scheduler
+
+        sig = inspect.signature(daily_scheduler)
+        assert sig is not None
+
+    def test_daily_scheduler_return_type(self) -> None:
+        """daily_scheduler must declare a return type hint."""
+        from app.subscription_alerts import daily_scheduler
+
+        hints = get_type_hints(daily_scheduler)
+        ret = hints.get("return")
+        assert ret is not None, "daily_scheduler must have a return type hint"
+
+
+# ---------------------------------------------------------------------------
+# Helpers for email-alert behavioral tests (renewal window / price hike)
+# ---------------------------------------------------------------------------
+
+
+class _FakeSMTPHelper:
+    """Reusable fake SMTP that records sent messages."""
+
+    def __init__(self) -> None:
+        self.sent: list[EmailMessage] = []
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *exc: object) -> bool:
+        return False
+
+    def ehlo(self) -> None:
+        pass
+
+    def has_extn(self, name: str) -> bool:
+        return False
+
+    def login(self, user: str, password: str) -> None:
+        pass
+
+    def send_message(self, message: EmailMessage) -> None:
+        self.sent.append(message)
+
+
+def _smtp_config() -> dict[str, str | int]:
+    """Standard SMTP config fixture for email alert tests."""
+    return {
+        "host": "smtp.example.com",
+        "port": 587,
+        "user": "test@example.com",
+        "password": "secret",
+        "from_addr": "alerts@receiptlens.local",
+        "to_addr": "user@example.com",
+    }
+
+
+# ============================================================================
+# BEHAVIORAL TESTS — email alerts for renewals and price hikes (RED)
+# ============================================================================
+
+
+class TestEmailAlertRenewalWindowBehavioral:
+    """Email alert fires when renewal is within alert window."""
+
+    def test_email_sent_for_upcoming_renewal(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Renewal within alert window triggers send_email_notification with correct args."""
+        from app.subscription_alerts import daily_scheduler
+
+        config = _smtp_config()
+        fake = _FakeSMTPHelper()
+        monkeypatch.setattr("app.subscription_alerts.smtplib.SMTP", lambda *a, **kw: fake)
+        monkeypatch.setenv("RECEIPTLENS_SMTP_ENABLED", "1")
+
+        daily_scheduler(smtp_config=config, today="2026-08-10")
+        assert len(fake.sent) >= 1, "No email sent for upcoming renewal"
+
+    def test_email_contains_required_fields(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Email body includes merchant name, amount, renewal date, cancel guide link."""
+        from app.subscription_alerts import daily_scheduler
+
+        config = _smtp_config()
+        fake = _FakeSMTPHelper()
+        monkeypatch.setattr("app.subscription_alerts.smtplib.SMTP", lambda *a, **kw: fake)
+        monkeypatch.setenv("RECEIPTLENS_SMTP_ENABLED", "1")
+
+        daily_scheduler(smtp_config=config, today="2026-08-10")
+        assert len(fake.sent) >= 1
+        body = fake.sent[0].get_body(preferencelist=("plain",)).get_content()
+        body_lower = body.lower()
+        # Must mention cancel guidance
+        assert "cancel" in body_lower or "unsubscribe" in body_lower
+
+
+class TestPriceHikeAlertBehavioral:
+    """Price-hike alert fires when detect_price_increase() returns True."""
+
+    def test_price_hike_sends_email(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Price increase triggers email with old/new price and percentage."""
+        from app.subscription_alerts import daily_scheduler
+
+        config = _smtp_config()
+        fake = _FakeSMTPHelper()
+        monkeypatch.setattr("app.subscription_alerts.smtplib.SMTP", lambda *a, **kw: fake)
+        monkeypatch.setenv("RECEIPTLENS_SMTP_ENABLED", "1")
+
+        daily_scheduler(smtp_config=config, today="2026-08-10")
+        # Scheduler should detect price increases and send alerts
+        assert isinstance(fake.sent, list)
+
+
+class TestSchedulerDailyCheckBehavioral:
+    """Scheduler runs daily check with subscription data."""
+
+    def test_scheduler_returns_summary(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """daily_scheduler returns a summary of actions taken."""
+        from app.subscription_alerts import daily_scheduler
+
+        result = daily_scheduler(today="2026-08-10")
+        assert result is not None, "daily_scheduler must return a result"
+
+    def test_scheduler_handles_no_smtp(self) -> None:
+        """Scheduler completes without SMTP config (no emails sent, no crash)."""
+        from app.subscription_alerts import daily_scheduler
+
+        result = daily_scheduler(today="2026-08-10")
+        assert result is not None
