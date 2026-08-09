@@ -7,16 +7,27 @@ detection (``AccountingWorkspace.recurring()``):
   date, monthly cost, and price-change trend.
 - ``GET /api/v1/subscriptions/{id}/cancel-guide`` — merchant-specific
   cancellation steps with a generic fallback for unknown merchants.
+- ``GET /api/v1/subscriptions/trend-data`` — time-series spending data
+  for the dashboard trend chart.
+- ``GET /api/v1/subscriptions/renewal-timeline`` — upcoming renewals
+  with countdown (days until renewal).
+- ``POST /api/v1/subscriptions/{id}/email-alert`` — toggle per-subscription
+  email alert preference.
+- ``GET /api/v1/subscriptions/{id}/email-alert`` — read back the
+  email alert preference.
 
 The email-alert toggle preference is persisted through
 ``AdvancedWorkspace.save_preferences()`` so it survives across sessions.
 """
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import re as _re
+from collections import defaultdict
+from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from pydantic import BaseModel
 
 from app.product_api import accounting
 from app.product_service import Actor
@@ -31,6 +42,22 @@ from app.subscription_alerts import (
 router = APIRouter(prefix="/api/v1", tags=["subscriptions"])
 
 RENEWAL_LOOKAHEAD_DAYS = 60
+
+
+# ---------------------------------------------------------------------------
+# In-memory email-alert preferences (survives across requests in a process)
+# ---------------------------------------------------------------------------
+_email_alert_preferences: dict[str, dict[str, bool]] = defaultdict(dict)
+
+
+# ---------------------------------------------------------------------------
+# Request / response models
+# ---------------------------------------------------------------------------
+
+class _EmailAlertRequest(BaseModel):
+    """Body for the email-alert toggle endpoint."""
+
+    enabled: bool
 
 
 def _month_start_iso() -> str:
@@ -128,6 +155,226 @@ def list_subscriptions(current: Actor = Depends(_actor)) -> dict[str, Any]:
         },
     }
 
+
+# ---------------------------------------------------------------------------
+# Trend-data endpoint — dashboard chart data
+# ---------------------------------------------------------------------------
+
+def get_subscription_trend_data(
+    tenant: str = "demo",
+    period: str = "monthly",
+) -> dict[str, Any]:
+    """Aggregate subscription spending into time-series chart data.
+
+    Parameters
+    ----------
+    tenant:
+        Accounting workspace tenant id.
+    period:
+        Granularity: ``monthly`` (default), ``quarterly``, or ``annual``.
+
+    Returns
+    -------
+    dict
+        ``{monthly: [{month, amount}], annual_total, trend_direction, avg_monthly}``
+    """
+    records = accounting.recurring(tenant)
+    if not records:
+        return {
+            "monthly": [],
+            "annual_total": 0.0,
+            "trend_direction": "stable",
+            "avg_monthly": 0.0,
+        }
+
+    # Build per-month spending from receipt amounts and dates.
+    # Each record has ``amounts`` (chronological) and ``last_date``.
+    # We distribute amounts across the months they occurred in.
+    monthly_totals: dict[str, float] = defaultdict(float)
+
+    for record in records:
+        amounts = [float(a) for a in (record.get("amounts") or [])]
+        average = float(record.get("average_amount") or 0.0)
+        last_date = str(record.get("last_date") or "")
+
+        if amounts and last_date:
+            # Distribute amounts backwards from last_date
+            try:
+                anchor = date.fromisoformat(last_date)
+            except (ValueError, TypeError):
+                continue
+            for i, amt in enumerate(reversed(amounts)):
+                # Go back i months from anchor
+                total_months = anchor.year * 12 + (anchor.month - 1) - i
+                year = total_months // 12
+                month = total_months % 12 + 1
+                key = f"{year:04d}-{month:02d}"
+                monthly_totals[key] += amt
+        elif amounts:
+            # Fallback: put everything in the current month
+            key = _today_iso()[:7]
+            monthly_totals[key] += sum(amounts)
+        else:
+            # No individual amounts — use annualised / 12
+            monthly_totals[_today_iso()[:7]] += average
+
+    # Sort by month descending for trend calculation
+    sorted_months = sorted(monthly_totals.keys(), reverse=True)
+
+    # Aggregate by requested period
+    if period == "quarterly":
+        quarterly: dict[str, float] = defaultdict(float)
+        for m in sorted_months:
+            q = (int(m[5:7]) - 1) // 3 + 1
+            quarterly[f"{m[:4]}-Q{q}"] += monthly_totals[m]
+        sorted_months_q = sorted(quarterly.keys(), reverse=True)
+        series = [
+            {"month": k, "amount": round(quarterly[k], 2)}
+            for k in sorted_months_q
+        ]
+    elif period == "annual":
+        annual: dict[str, float] = defaultdict(float)
+        for m in sorted_months:
+            annual[m[:4]] += monthly_totals[m]
+        sorted_months_a = sorted(annual.keys(), reverse=True)
+        series = [
+            {"month": k, "amount": round(annual[k], 2)}
+            for k in sorted_months_a
+        ]
+    else:
+        series = [
+            {"month": k, "amount": round(monthly_totals[k], 2)}
+            for k in sorted_months
+        ]
+
+    total = sum(monthly_totals.values())
+    count = len(monthly_totals) if monthly_totals else 1
+    avg_monthly = total / count
+
+    # Trend direction: compare first half vs second half of monthly data
+    monthly_sorted_asc = sorted(monthly_totals.items())
+    if len(monthly_sorted_asc) >= 2:
+        mid = len(monthly_sorted_asc) // 2
+        first_half = sum(v for _, v in monthly_sorted_asc[:mid]) / max(mid, 1)
+        second_half = sum(v for _, v in monthly_sorted_asc[mid:]) / max(
+            len(monthly_sorted_asc) - mid, 1
+        )
+        delta_pct = (second_half - first_half) / max(first_half, 1)
+        if delta_pct > 0.05:
+            trend_direction = "increasing"
+        elif delta_pct < -0.05:
+            trend_direction = "decreasing"
+        else:
+            trend_direction = "stable"
+    else:
+        trend_direction = "stable"
+
+    return {
+        "monthly": series,
+        "annual_total": round(total, 2),
+        "trend_direction": trend_direction,
+        "avg_monthly": round(avg_monthly, 2),
+    }
+
+
+@router.get("/subscriptions/trend-data")
+def subscription_trend_data(
+    period: str = "monthly",
+    current: Actor = Depends(_actor),
+) -> dict[str, Any]:
+    """Return time-series spending data for the dashboard trend chart."""
+    return get_subscription_trend_data(
+        tenant=current.tenant_id,
+        period=period,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Renewal timeline endpoint — upcoming renewals with countdown
+# ---------------------------------------------------------------------------
+
+@router.get("/subscriptions/renewal-timeline")
+def renewal_timeline(
+    current: Actor = Depends(_actor),
+) -> dict[str, Any]:
+    """Return upcoming renewals sorted by renewal date with countdown."""
+    subscriptions = _build_subscriptions(current.tenant_id)
+    today = datetime.now(UTC).date()
+    items: list[dict[str, Any]] = []
+    for sub in subscriptions:
+        try:
+            renewal = date.fromisoformat(sub["renewal_date"])
+            days_until = (renewal - today).days
+        except (ValueError, KeyError):
+            continue
+        items.append(
+            {
+                "subscription_id": sub["id"],
+                "merchant": sub["merchant"],
+                "amount": sub["amount"],
+                "renewal_date": sub["renewal_date"],
+                "days_until": days_until,
+            }
+        )
+    items.sort(key=lambda x: x["renewal_date"])
+    return {"renewals": items}
+
+
+# ---------------------------------------------------------------------------
+# Email-alert toggle endpoint
+# ---------------------------------------------------------------------------
+
+def toggle_email_alert(
+    subscription_id: str,
+    enabled: bool = True,
+) -> dict[str, Any]:
+    """Toggle the email alert preference for a subscription.
+
+    Parameters
+    ----------
+    subscription_id:
+        The ``sub-NNN`` identifier.
+    enabled:
+        Whether email alerts should be on or off.
+
+    Returns
+    -------
+    dict
+        ``{subscription_id, enabled}``
+    """
+    _email_alert_preferences["demo"][subscription_id] = enabled
+    return {"subscription_id": subscription_id, "enabled": enabled}
+
+
+@router.get("/subscriptions/{subscription_id}/email-alert")
+def get_email_alert(
+    subscription_id: str,
+    current: Actor = Depends(_actor),
+) -> dict[str, Any]:
+    """Read back the email alert preference for a subscription."""
+    enabled = _email_alert_preferences.get(
+        current.tenant_id, {}
+    ).get(subscription_id, False)
+    return {"subscription_id": subscription_id, "enabled": enabled}
+
+
+@router.post("/subscriptions/{subscription_id}/email-alert")
+def post_email_alert(
+    subscription_id: str,
+    body: _EmailAlertRequest,
+    current: Actor = Depends(_actor),
+) -> dict[str, Any]:
+    """Toggle the email alert preference for a subscription."""
+    # Validate subscription ID format — accept sub-NNN pattern
+    if not _re.match(r"^sub-\d{3,}$", subscription_id):
+        raise HTTPException(404, f"Subscription {subscription_id} not found")
+    _email_alert_preferences[current.tenant_id][subscription_id] = body.enabled
+    return {"subscription_id": subscription_id, "enabled": body.enabled}
+
+
+# ---------------------------------------------------------------------------
+# Cancel guide endpoint (existing)
+# ---------------------------------------------------------------------------
 
 def _merchant_from_id(subscription_id: str) -> str:
     """Derive a merchant deterministically from an unresolvable sub id.

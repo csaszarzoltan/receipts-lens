@@ -103,7 +103,94 @@ $('prepareSelectedExport').onclick=async()=>{const ids=state.selected.size?[...s
 async function loadInbox(){try{const d=await api('/product/inbound-emails');$('inboxAddress').textContent=d.address;$('emailList').innerHTML=d.items.map(x=>`<div class="email-row"><span class="status ${x.status==='queued'?'pending':'failed'}">${escapeHtml(x.status)}</span><strong>${escapeHtml(x.subject)}</strong><p>${escapeHtml(x.sender)} · ${x.attachments.length} melléklet</p></div>`).join('')||'<p class="muted">Még nincs beérkezett e-mail.</p>'}catch(e){toast(e.message,'error')}}
 $('simulateEmail').onclick=async()=>{try{await api('/product/inbound-emails',{method:'POST',body:JSON.stringify({sender:'billing@example.com',subject:'Digitális nyugta',attachments:[{filename:'receipt.pdf',content_type:'application/pdf',size:24560}]})});toast('Teszt e-mail feldolgozásra vár');loadInbox()}catch(e){toast(e.message,'error')}};
 
-async function loadSubscriptions(){try{const d=await api('/product/recurring-expenses');$('subscriptionCards').innerHTML=d.items.map(x=>`<article class="card subscription-card"><span class="status ${x.likely_subscription?'completed':'pending'}">${x.likely_subscription?'Előfizetés':'Ellenőrzendő'}</span><h2>${escapeHtml(x.merchant)}</h2><strong>${money(x.annualized)} / év</strong><p>${x.occurrences} előfordulás · árváltozás ${money(x.price_change)}</p><button class="subscription-feedback" data-merchant="${escapeHtml(x.merchant)}" data-value="${!x.likely_subscription}">${x.likely_subscription?'Nem előfizetés':'Előfizetés'}</button></article>`).join('')||'<div class="empty"><h2>Még nincs ismétlődő költség</h2><p>Legalább két azonos kereskedői tranzakció szükséges.</p></div>';$$('.subscription-feedback').forEach(b=>b.onclick=async()=>{await api('/product/recurring-expenses/feedback',{method:'POST',body:JSON.stringify({merchant:b.dataset.merchant,is_subscription:b.dataset.value==='true'})});loadSubscriptions()})}catch(e){toast(e.message,'error')}}
+// Subscription dashboard: trend chart, renewal timeline, email toggle
+async function loadSubscriptions(){
+  try{
+    // Load recurring expenses, trend data, and renewal timeline in parallel
+    const [d,trendData,timelineData]=await Promise.all([
+      api('/product/recurring-expenses'),
+      api('/api/v1/subscriptions/trend-data').catch(()=>null),
+      api('/api/v1/subscriptions/renewal-timeline').catch(()=>null)
+    ]);
+
+    // --- Subscription cards with email toggle ---
+    const subIds={};
+    $('subscriptionCards').innerHTML=d.items.map((x,i)=>{
+      const subId=`sub-${String(i+1).padStart(3,'0')}`;
+      subIds[subId]=x;
+      return `<article class="card subscription-card">
+        <span class="status ${x.likely_subscription?'completed':'pending'}">${x.likely_subscription?'Előfizetés':'Ellenőrzendő'}</span>
+        <h2>${escapeHtml(x.merchant)}</h2>
+        <strong>${money(x.annualized)} / év</strong>
+        <p>${x.occurrences} előfordulás · árváltozás ${money(x.price_change)}</p>
+        <label class="toggle" style="font-size:.85rem">
+          <input type="checkbox" class="email-toggle" data-sub="${subId}"> E-mail értesítés
+        </label>
+        <button class="subscription-feedback" data-merchant="${escapeHtml(x.merchant)}" data-value="${!x.likely_subscription}">${x.likely_subscription?'Nem előfizetés':'Előfizetés'}</button>
+      </article>`;
+    }).join('')||'<div class="empty"><h2>Még nincs ismétlődő költség</h2><p>Legalább két azonos kereskedői tranzakció szükséges.</p></div>';
+
+    // Email toggle handlers
+    $$('.email-toggle').forEach(tog=>{
+      tog.onchange=async()=>{
+        const subId=tog.dataset.sub;
+        try{
+          await api(`/api/v1/subscriptions/${subId}/email-alert`,{method:'POST',body:JSON.stringify({enabled:tog.checked})});
+          toast(tog.checked?'E-mail értesítés bekapcsolva':'E-mail értesítés kikapcsolva');
+        }catch(e){tog.checked=!tog.checked;toast(e.message,'error')}
+      };
+      // Load current state
+      api(`/api/v1/subscriptions/${tog.dataset.sub}/email-alert`).then(r=>{tog.checked=!!r.enabled}).catch(()=>{});
+    });
+
+    // Feedback handlers
+    $$('.subscription-feedback').forEach(b=>b.onclick=async()=>{
+      await api('/product/recurring-expenses/feedback',{method:'POST',body:JSON.stringify({merchant:b.dataset.merchant,is_subscription:b.dataset.value==='true'})});
+      loadSubscriptions();
+    });
+
+    // --- Trend chart (inline SVG) ---
+    if(trendData&&trendData.monthly&&trendData.monthly.length){
+      const months=trendData.monthly.slice().reverse();
+      const max=Math.max(1,...months.map(m=>m.amount));
+      const w=600,h=110,pad=30;
+      const barW=Math.max(4,Math.floor((w-pad*2)/months.length)-2);
+      let svg=`<svg viewBox="0 0 ${w} ${h+pad}" width="100%" height="120" style="display:block">`;
+      months.forEach((m,i)=>{
+        const x=pad+i*(barW+2);
+        const bh=Math.round((m.amount/max)*(h-10));
+        const y=h-bh;
+        svg+=`<rect x="${x}" y="${y}" width="${barW}" height="${bh}" fill="var(--accent,#4f46e5)" rx="2" opacity="0.85"><title>${escapeHtml(m.month)}: ${money(m.amount)}</title></rect>`;
+        if(months.length<=12||i%Math.ceil(months.length/12)===0){
+          svg+=`<text x="${x+barW/2}" y="${h+14}" text-anchor="middle" font-size="9" fill="currentColor">${escapeHtml(m.month.slice(5))}</text>`;
+        }
+      });
+      svg+=`</svg>`;
+      $('trendChartSvg').innerHTML=svg;
+      const td=trendData.trend_direction;
+      const tdLabel={increasing:'📈 Emelkedő',decreasing:'📉 Csökkenő',stable:'➡️ Stabil'}[td]||td;
+      $('trendDirection').textContent=tdLabel;
+      $('trendSummary').innerHTML=`<span class="muted">Évesített: <strong>${money(trendData.annual_total)}</strong> · Átlag/hó: <strong>${money(trendData.avg_monthly)}</strong></span>`;
+    }else{
+      $('trendChartSvg').innerHTML='<p class="muted" style="padding:1rem">Még nincs elegendő adat a trend megjelenítéséhez.</p>';
+    }
+
+    // --- Renewal timeline ---
+    if(timelineData&&timelineData.renewals&&timelineData.renewals.length){
+      $('renewalTimeline').innerHTML=timelineData.renewals.map(r=>{
+        const urgency=r.days_until<=7?'danger':r.days_until<=30?'pending':'';
+        const badge=r.days_until<=0?'Ma':`${r.days_until} nap`;
+        return `<div class="trust-row" style="padding:.5rem 0;border-bottom:1px solid var(--border,#eee)">
+          <span><strong>${escapeHtml(r.merchant)}</strong> <span class="muted">· ${money(r.amount)}</span></span>
+          <span><span class="status ${urgency||'completed'}">${escapeHtml(badge)}</span> <span class="muted">${escapeHtml(r.renewal_date)}</span></span>
+        </div>`;
+      }).join('');
+    }else{
+      $('renewalTimeline').innerHTML='<p class="muted" style="padding:1rem">Nincs közelgő megújítás.</p>';
+    }
+
+  }catch(e){toast(e.message,'error')}
+}
 
 let approvalSteps=[{mode:'serial',roles:['reviewer'],deadline_hours:24}];
 function renderApprovalSteps(){$('approvalSteps').innerHTML=approvalSteps.map((s,i)=>`<div class="card"><strong>${i+1}. lépés</strong><div class="form-row"><label>Mód<select data-step="${i}" data-key="mode"><option ${s.mode==='serial'?'selected':''}>serial</option><option ${s.mode==='parallel'?'selected':''}>parallel</option></select></label><label>Szerepkörök<input data-step="${i}" data-key="roles" value="${escapeHtml(s.roles.join(', '))}"></label></div><button class="remove-step" data-i="${i}">Törlés</button></div>`).join('');$$('.remove-step').forEach(b=>b.onclick=()=>{approvalSteps.splice(Number(b.dataset.i),1);renderApprovalSteps()})}
