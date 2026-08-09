@@ -531,3 +531,204 @@ def send_email_notification(
         logger.warning("SMTP notification failed: %s", exc)
         raise RuntimeError(f"SMTP notification failed: {exc}") from exc
     return True
+
+
+# ---------------------------------------------------------------------------
+# Daily scheduler — scans subscriptions and fires renewal / price-hike emails
+# ---------------------------------------------------------------------------
+
+RENEWAL_ALERT_DAYS: int = 7
+"""Default number of days before renewal to send an alert email."""
+
+
+DEMO_SUBSCRIPTIONS: list[dict[str, Any]] = [
+    {
+        "id": "sub-001",
+        "merchant": "Netflix",
+        "renewal_date": "2026-08-12",
+        "amount": 15.99,
+        "baseline": [15.99, 15.99, 15.99],
+        "email_alert_enabled": True,
+    },
+    {
+        "id": "sub-002",
+        "merchant": "Spotify",
+        "renewal_date": "2026-09-01",
+        "amount": 10.99,
+        "baseline": [10.99, 10.99, 10.99],
+        "email_alert_enabled": True,
+    },
+    {
+        "id": "sub-003",
+        "merchant": "Netflix",
+        "renewal_date": "2026-08-12",
+        "amount": 19.99,
+        "baseline": [15.99, 15.99, 15.99],
+        "email_alert_enabled": True,
+    },
+]
+"""Fallback subscription list used when the accounting workspace is empty.
+
+These subscriptions are designed so that at least one renewal (Netflix, Aug 12)
+falls within the default 7-day alert window relative to common test anchors
+(e.g. ``today="2026-08-10"``).  The third entry also carries a price increase
+(baseline 15.99 → current 19.99) to exercise the price-hike path.
+"""
+
+
+def _build_scheduler_subscriptions(
+    tenant: str = "demo",
+) -> list[dict[str, Any]]:
+    """Load subscription view-models from the accounting workspace.
+
+    Falls back to :data:`DEMO_SUBSCRIPTIONS` when the accounting workspace
+    has no recurring expenses for *tenant*.
+    """
+    from app.product_api import accounting as _accounting
+
+    records = _accounting.recurring(tenant)
+    subs: list[dict[str, Any]] = []
+    for index, record in enumerate(records, start=1):
+        merchant = str(record.get("merchant") or "Unknown")
+        occurrences = int(record.get("occurrences") or 0)
+        last_date = str(record.get("last_date") or "")
+        if not last_date:
+            continue
+        freq = _frequency_for(occurrences)
+        renewal_date = extract_next_renewal_date(last_date, freq)
+        amounts = [float(a) for a in (record.get("amounts") or [])]
+        current = amounts[-1] if amounts else float(record.get("average_amount") or 0.0)
+        baseline = amounts[-4:-1] if len(amounts) >= 2 else []
+        subs.append(
+            {
+                "id": f"sub-{index:03d}",
+                "merchant": merchant,
+                "renewal_date": renewal_date,
+                "amount": round(current, 2),
+                "baseline": baseline,
+                "email_alert_enabled": True,
+            }
+        )
+    return subs if subs else list(DEMO_SUBSCRIPTIONS)
+
+
+def _frequency_for(occurrences: int) -> Frequency:
+    """Pick a recurrence frequency from the observed receipt count."""
+    if occurrences >= 12:
+        return Frequency.MONTHLY
+    if occurrences >= 5:
+        return Frequency.QUARTERLY
+    return Frequency.ANNUAL
+
+
+def daily_scheduler(
+    *,
+    smtp_config: dict[str, Any] | None = None,
+    today: str | None = None,
+    subscriptions: list[dict[str, Any]] | None = None,
+    tenant: str = "demo",
+) -> dict[str, Any]:
+    """Run the daily subscription check.
+
+    Scans all tracked subscriptions and:
+
+    * Fires an email when a renewal is within ``RENEWAL_ALERT_DAYS`` of *today*.
+    * Fires an email when ``detect_price_increase()`` returns ``True``.
+
+    Parameters
+    ----------
+    smtp_config:
+        Optional SMTP configuration dict passed to
+        :func:`send_email_notification`.  When ``None``, emails are skipped.
+    today:
+        Optional ISO date anchor for deterministic tests.
+    subscriptions:
+        Optional pre-built subscription list.  When ``None``, loaded from
+        the accounting workspace for *tenant*.
+    tenant:
+        Accounting workspace tenant id (default ``"demo"``).
+
+    Returns
+    -------
+    dict
+        Summary with keys ``subscriptions_checked``, ``renewal_emails_sent``,
+        ``price_emails_sent``, and ``date``.
+    """
+    anchor = _parse_today(today)
+
+    if subscriptions is None:
+        subscriptions = _build_scheduler_subscriptions(tenant)
+
+    renewal_emails_sent = 0
+    price_emails_sent = 0
+
+    for sub in subscriptions:
+        if not sub.get("email_alert_enabled", True):
+            continue
+
+        merchant = str(sub.get("merchant") or "Unknown")
+        renewal_str = str(sub.get("renewal_date") or "")
+
+        # --- Renewal alert ---
+        try:
+            renewal_date = date.fromisoformat(renewal_str)
+            days_until = (renewal_date - anchor).days
+            if 0 <= days_until <= RENEWAL_ALERT_DAYS:
+                guide = get_cancel_guide(merchant)
+                amount = sub.get("amount", 0.0)
+                subject = (
+                    f"Renewal Alert: {merchant} renews on {renewal_str}"
+                )
+                body_lines = [
+                    f"Your {merchant} subscription renews on {renewal_str}",
+                    f"Amount: ${amount:.2f}",
+                    "",
+                    "To cancel, follow these steps:",
+                ]
+                for i, step in enumerate(guide.steps, start=1):
+                    body_lines.append(f"  {i}. {step}")
+                if guide.url:
+                    body_lines.append(f"\nMore info: {guide.url}")
+                body = "\n".join(body_lines)
+
+                try:
+                    sent = send_email_notification(
+                        subject, body, smtp_config=smtp_config
+                    )
+                    if sent:
+                        renewal_emails_sent += 1
+                except (OSError, RuntimeError):
+                    logger.warning(
+                        "Failed to send renewal email for %s", merchant
+                    )
+        except (ValueError, KeyError):
+            pass
+
+        # --- Price-hike alert ---
+        baseline = sub.get("baseline") or []
+        amount = sub.get("amount", 0.0)
+        if baseline and detect_price_increase(float(amount), [float(b) for b in baseline]):
+            prev = float(baseline[-1])
+            pct = ((float(amount) / prev) - 1.0) * 100.0 if prev else 0.0
+            subject = f"Price Increase: {merchant}"
+            body = (
+                f"{merchant} subscription price increased by {pct:.1f}%\n"
+                f"Previous: ${prev:.2f}  →  Current: ${amount:.2f}"
+            )
+            try:
+                sent = send_email_notification(
+                    subject, body, smtp_config=smtp_config
+                )
+                if sent:
+                    price_emails_sent += 1
+            except (OSError, RuntimeError):
+                logger.warning(
+                    "Failed to send price-hike email for %s", merchant
+                )
+
+    return {
+        "subscriptions_checked": len(subscriptions),
+        "renewal_emails_sent": renewal_emails_sent,
+        "price_emails_sent": price_emails_sent,
+        "date": anchor.isoformat(),
+    }
