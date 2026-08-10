@@ -91,3 +91,11 @@ The workspace no longer uses browser `prompt()` or `confirm()` for approval deci
 - explicit cancel and confirm actions.
 
 The browser's PWA installation prompt remains unchanged because it is a platform installation API, not a ReceiptLens business-action prompt.
+
+## Exception-to-export workflow
+
+Use Review filters to isolate low-confidence receipts, correct data with the current receipt version, then create an export preparation. Preparations are immutable snapshots. Warning receipts require explicit acknowledgement. Reusing an `Idempotency-Key` returns the original export run and never duplicates the CSV artifact.
+
+## Safe automation workflow
+
+Create a draft rule, preview matching receipts, activate the previewed version, and run it over an explicit receipt set. Run items record versions. Rollback preview separates eligible receipts from conflicts created by later edits; rollback changes only eligible receipts.

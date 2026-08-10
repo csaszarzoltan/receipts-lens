@@ -117,9 +117,30 @@ class ProductService:
         rows = self._db.execute("SELECT * FROM jobs WHERE tenant_id=? ORDER BY created_at DESC", (actor.tenant_id,)).fetchall()
         return [dict(r) for r in rows]
 
-    def list_reviews(self, actor: Actor) -> list[dict[str, Any]]:
-        rows = self._db.execute("SELECT * FROM receipts WHERE tenant_id=? AND status='needs_review' ORDER BY created_at", (actor.tenant_id,)).fetchall()
-        return [{"receipt_id": r["receipt_id"], "status": r["status"], "version": r["version"], "receipt": json.loads(r["payload"])} for r in rows]
+    def list_reviews(self, actor: Actor, confidence_field: str | None = None,
+                     confidence_lt: float | None = None, readiness: str | None = None,
+                     sort: str = "created_asc", limit: int = 50, offset: int = 0) -> dict[str, Any]:
+        allowed_fields = {"vendor", "date", "total", "tax", "currency", "line_items"}
+        if confidence_field is not None and confidence_field not in allowed_fields:
+            raise ValueError("unsupported confidence field")
+        if confidence_lt is not None and not 0 <= confidence_lt <= 1:
+            raise ValueError("confidence_lt must be between 0 and 1")
+        if not 1 <= limit <= 200 or offset < 0:
+            raise ValueError("invalid pagination")
+        rows = self._db.execute("SELECT * FROM receipts WHERE tenant_id=? ORDER BY created_at", (actor.tenant_id,)).fetchall()
+        items=[]
+        for row in rows:
+            payload=json.loads(row["payload"]); confidence=payload.get("confidence") or {}
+            value=confidence.get(confidence_field) if confidence_field else None
+            if readiness and row["status"] != readiness: continue
+            if confidence_lt is not None and value is not None and float(value) >= confidence_lt: continue
+            items.append({"receipt_id":row["receipt_id"],"status":row["status"],"readiness":row["status"],
+                          "version":row["version"],"receipt":payload,"lowest_confidence":min([v for v in confidence.values() if isinstance(v,(int,float))],default=None),
+                          "selected_confidence":value,"created_at":row["created_at"]})
+        if sort == "amount_desc": items.sort(key=lambda x: float(x["receipt"].get("total") or 0), reverse=True)
+        elif sort == "confidence_asc": items.sort(key=lambda x: (-1 if x["selected_confidence"] is None else x["selected_confidence"]))
+        elif sort != "created_asc": raise ValueError("unsupported sort")
+        return {"items":items[offset:offset+limit],"total":len(items),"limit":limit,"offset":offset}
 
     def correct(self, actor: Actor, receipt_id: str, changes: dict[str, Any], expected_version: int, complete: bool) -> dict[str, Any]:
         with self._lock, self._db:

@@ -1,16 +1,60 @@
 # ReceiptLens
 
-<p align="center">
-  <img alt="ReceiptLens" src="docs/assets/logo.svg" width="120" />
-</p>
+ReceiptLens is a self-hostable receipt intelligence workspace for small businesses and bookkeepers. It turns receipt images into confidence-scored structured data, guides reviewers to uncertain fields, validates accounting readiness, and produces auditable exports without hiding OCR uncertainty.
 
-**ReceiptLens** extracts structured data from receipt images using Tesseract OCR.
+## What you can do
 
-Send an image (file upload, public URL, or batch of either) to `POST /v1/parse-receipt` or `POST /v1/parse-receipts` and get back JSON with `vendor`, `total`, `date`, `tax`, `currency`, and `line_items[]`.
+- Capture receipts by upload, URL, batch, or simulated inbound email.
+- Review low-confidence fields alongside the original image and OCR source boxes.
+- Correct data with optimistic concurrency and an immutable activity history.
+- Validate mandatory fields, tax, line totals, currency, and export readiness.
+- Create immutable export preparations and replay-safe CSV export commands.
+- Benchmark OCR confidence, publish tenant threshold profiles, and focus the review queue.
+- Preview versioned automation rules, activate them deliberately, record runs, and roll back eligible changes.
+- Run locally with Tesseract, or opt into vision OCR with an OpenAI-compatible endpoint.
 
-v1.3.0 improves repeated daily work with precise task deep links and accessible contextual dialogs for approvals, API keys, saved views, and irreversible retention purge. v1.2.0 added early accounting-readiness badges, filters, and export-blocker tasks. v1.1.1 added the prioritized work queue and atomic receipt workspace save. v1.1.0 adds accounting readiness: line-item editing, validation, approval-flow design, export preparation, email intake, subscriptions, FX, dashboard editing, localization, permission matrix, and private diagnostics. v1.0.0 consolidated the operational and intelligent workspace releases with secure source images, OCR overlays, duplicate review, saved views, notifications, automation rules, history, export runs, preferences, onboarding, and PWA support. v0.8.0 added a complete responsive financial operations workspace with receipt inbox, batch capture, OCR review, approval inbox, reports, integrations, administration, accessibility, and mobile layouts. v0.7.0 added **search, allocation metadata, approvals, retention controls, and portability**. v0.6.0 added **AI-powered categorization**, **budget management**, **spending analytics**, and an **alert system** — transforming ReceiptLens from a receipt scanner into a complete expense management platform. The subscription intelligence layer (renewal tracking, price-increase detection, cancellation guides, Subscriptions UI) builds on the recurring-expense analysis — see [docs/subscription-alerts.md](docs/subscription-alerts.md).
+## Product surfaces
 
----
+The **Next.js workspace** in `frontend/` is the primary user interface. The FastAPI service provides the product API, Swagger documentation, health probes, and the compatibility `/workspace` interface. Tenant and role headers are convenient demo controls, not production authentication.
+
+## Quick start
+
+```bash
+# System dependency: install Tesseract OCR first.
+python -m venv .venv
+. .venv/bin/activate
+pip install -e .
+uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+In a second terminal:
+
+```bash
+cd frontend
+npm ci
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run dev
+```
+
+Open `http://127.0.0.1:3000`. API documentation is available at `http://127.0.0.1:8000/docs`.
+
+## Primary workflow
+
+1. Upload or receive receipt documents.
+2. Open **Review** and filter by readiness, confidence field, threshold, or amount.
+3. Verify extracted values against the source image and correct exceptions.
+4. Complete review, create an export preparation, and resolve blockers.
+5. Acknowledge warnings explicitly and execute an idempotent CSV export.
+6. Inspect receipt history, export runs, quality reports, and reversible automation runs.
+
+## Verification
+
+```bash
+pytest -q
+ruff check app tests
+cd frontend && npm run typecheck && npm run build
+```
+
+See `docs/api.md`, `docs/product-workflows.md`, `docs/accounting-export-guide.md`, and `docs/gui-workspace.md` for focused guidance. See `development-report.md` for the exact evidence from the latest development pass.
 
 ## Features
 

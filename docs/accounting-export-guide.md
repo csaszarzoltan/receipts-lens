@@ -245,3 +245,7 @@ Date,Merchant,Category,Description,Amount,Currency,Tax
 - Normalization: `app/normalization.py:NormalizedReceipt`
 - Accounting connector: `app/integrations.py:CsvAccountingConnector`
 - Tests: `tests/test_export_profiles.py` (36 tests)
+
+## Replay-safe export commands
+
+A preparation validates 1-200 unique receipt IDs and records each current version. Execute it with `POST /product/export-commands`, an `Idempotency-Key`, and all warning receipt IDs acknowledged. A changed receipt makes the preparation stale. Completed reference exports expose a CSV artifact from the run endpoint.

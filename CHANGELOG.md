@@ -264,3 +264,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Browser-native business `prompt()` and `confirm()` flows for approval, API-key, saved-view, and purge actions.
+
+## [1.5.0] - 2026-08-10
+
+### Added
+- Confidence-filtered review queue with deterministic pagination and sorting.
+- Immutable export preparations, tenant-scoped idempotent export commands, run detail, and CSV artifacts.
+- Persisted OCR benchmark reports and versioned confidence threshold profiles.
+- Versioned automation preview, activation, run history, optimistic rollback preview, and rollback.
+- Redacted receipt audit endpoint and nine BDD story regression tests.
+
+### Changed
+- Export preparation now snapshots receipt versions and validation results.
+- Direct async API tests run in minimal CI without an external pytest async plugin.
+- README now provides a concise GitHub product overview and primary workflow.
+
+### Fixed
+- API v2 direct-call defaults and the previously failing async endpoint behavioral tests.
+- Export preparation inserts remain compatible after additive schema migration.
+
+### Tests and documentation
+- Added US-001 through US-009 behavior coverage and updated API/workflow documentation.

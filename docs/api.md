@@ -920,3 +920,15 @@ curl "http://localhost:8000/api/v1/receipts/export/formats"
   ]
 }
 ```
+
+## Review, quality, export, and automation workflow (1.5)
+
+- `GET /product/review-items` accepts `confidence_field`, `confidence_lt`, `readiness`, `sort`, `limit`, and `offset`.
+- `POST /product/export-preparations` snapshots validation and receipt versions.
+- `POST /product/export-commands` requires `Idempotency-Key` and explicit warning receipt acknowledgements.
+- `GET /product/export-runs/{run_id}` and `/artifact` return immutable run metadata and CSV.
+- `GET /product/receipts/{receipt_id}/audit` returns tenant-scoped, redacted activity events.
+- `POST /product/quality/benchmarks/run`, `GET /product/quality/benchmarks/{id}`, `POST /product/quality/confidence-profiles`, and `GET /product/quality/confidence-profiles/active` manage calibration.
+- Versioned automation endpoints support preview, activation, runs, rollback preview, and rollback under `/product/automation-rules` and `/product/automation-runs`.
+
+All product endpoints use `X-Tenant-ID` and `X-Role` demo headers. These headers are not a production identity system.

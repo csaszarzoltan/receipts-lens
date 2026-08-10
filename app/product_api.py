@@ -144,10 +144,16 @@ def retry_job(job_id: str, current: Actor = Depends(actor)) -> dict[str, Any]:
 def cancel_job(job_id: str, current: Actor = Depends(actor)) -> dict[str, Any]:
     try:return service.cancel(current,job_id)
     except KeyError:raise HTTPException(404,"Job not found")
-    except ProductConflict as exc:raise HTTPException(409,str(exc))
+    except ProductConflict as exc:raise HTTPException(409,{"code":"stale_version","message":str(exc)})
 
 @router.get("/product/review-items")
-def reviews(current: Actor = Depends(actor)) -> dict[str, Any]: return {"items":service.list_reviews(current)}
+def reviews(confidence_field: str | None = None, confidence_lt: float | None = None,
+            readiness: str | None = None, sort: str = "created_asc", limit: int = 50,
+            offset: int = 0, current: Actor = Depends(actor)) -> dict[str, Any]:
+    try:
+        return service.list_reviews(current, confidence_field, confidence_lt, readiness, sort, limit, offset)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 @router.patch("/product/review-items/{receipt_id}")
 def correct(receipt_id: str, body: CorrectionRequest, if_match: int = Header(alias="If-Match"), current: Actor = Depends(actor)) -> dict[str, Any]:
@@ -465,6 +471,12 @@ def create_export_run(body: ExportRequest, current: Actor = Depends(actor)) -> d
 
 # ReceiptLens 1.1 accounting-readiness API
 accounting = AccountingWorkspace(service)
+from app.export_workflow import ExportWorkflow
+from app.quality_service import QualityService
+from app.automation_service import AutomationService
+export_workflow = ExportWorkflow(service, accounting)
+quality_service = QualityService(service)
+automation_service = AutomationService(service, advanced)
 
 class LineItemsRequest(BaseModel):
     items: list[dict[str, Any]]
@@ -560,7 +572,8 @@ def list_export_preparations(current: Actor = Depends(actor)) -> dict[str, Any]:
 @router.post("/product/export-preparations", status_code=201)
 def create_export_preparation(body: ExportPreparationRequest,
                               current: Actor = Depends(actor)) -> dict[str, Any]:
-    return accounting.prepare_export(current, body.receipt_ids, body.connection_id)
+    try: return export_workflow.prepare(current, body.receipt_ids, body.connection_id)
+    except ValueError as exc: raise HTTPException(422, str(exc)) from exc
 
 @router.get("/product/inbound-emails")
 def list_inbound_emails(current: Actor = Depends(actor)) -> dict[str, Any]:
@@ -634,3 +647,87 @@ def diagnostic_bundle(current: Actor = Depends(actor)) -> Response:
     return Response(content, media_type="application/zip",
                     headers={"Content-Disposition": "attachment; filename=receiptlens-diagnostics.zip",
                              "Cache-Control": "private, no-store"})
+
+
+class ExportCommandRequest(BaseModel):
+    preparation_id: str
+    acknowledged_warning_receipt_ids: list[str] = []
+class BenchmarkRunRequest(BaseModel):
+    manifest_name: str
+    cases: list[dict[str, Any]]
+class ConfidenceProfileRequest(BaseModel):
+    benchmark_report_id: str
+    thresholds: dict[str, float]
+class AutomationPreviewV2(BaseModel):
+    version: int
+    receipt_ids: list[str] | None = None
+class AutomationActivate(BaseModel):
+    version: int
+    preview_token: str
+class AutomationRunRequest(BaseModel):
+    version: int
+    receipt_ids: list[str]
+class RollbackRequest(BaseModel):
+    eligible_receipt_ids: list[str]
+
+@router.post("/product/export-commands", status_code=201)
+def execute_export_command(body: ExportCommandRequest, idempotency_key: str = Header(alias="Idempotency-Key"), current: Actor = Depends(actor)) -> dict[str, Any]:
+    try:return export_workflow.execute(current,body.preparation_id,body.acknowledged_warning_receipt_ids,idempotency_key)
+    except KeyError as exc:raise HTTPException(404,"Preparation not found") from exc
+    except RuntimeError as exc:raise HTTPException(409,{"code":"stale_preparation","message":str(exc)}) from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+@router.get("/product/export-runs/{run_id}")
+def export_run_detail(run_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return export_workflow.run(current.tenant_id,run_id)
+    except KeyError as exc:raise HTTPException(404,"Export run not found") from exc
+@router.get("/product/export-runs/{run_id}/artifact")
+def export_run_artifact(run_id:str,current:Actor=Depends(actor))->Response:
+    try:return Response(export_workflow.artifact(current.tenant_id,run_id),media_type="text/csv",headers={"Content-Disposition":f"attachment; filename=receiptlens-{run_id}.csv"})
+    except KeyError as exc:raise HTTPException(404,"Export run not found") from exc
+@router.get("/product/receipts/{receipt_id}/audit")
+def receipt_audit(receipt_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    row=service._db.execute("SELECT receipt_id FROM receipts WHERE tenant_id=? AND receipt_id=?",(current.tenant_id,receipt_id)).fetchone()
+    if not row:raise HTTPException(404,"Receipt not found")
+    return {"receipt_id":receipt_id,"events":advanced.history(current.tenant_id,receipt_id)}
+@router.post("/product/quality/benchmarks/run",status_code=201)
+def run_benchmark(body:BenchmarkRunRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return quality_service.evaluate(current,body.manifest_name,body.cases)
+    except PermissionError as exc:raise HTTPException(403,"Admin role required") from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+@router.get("/product/quality/benchmarks/{report_id}")
+def benchmark_report(report_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return quality_service.report(current.tenant_id,report_id)
+    except KeyError as exc:raise HTTPException(404,"Benchmark report not found") from exc
+@router.post("/product/quality/confidence-profiles",status_code=201)
+def publish_profile(body:ConfidenceProfileRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return quality_service.publish(current,body.benchmark_report_id,body.thresholds)
+    except PermissionError as exc:raise HTTPException(403,"Admin role required") from exc
+    except KeyError as exc:raise HTTPException(404,"Benchmark report not found") from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+@router.get("/product/quality/confidence-profiles/active")
+def active_profile(current:Actor=Depends(actor))->dict[str,Any]:return {"profile":quality_service.active(current.tenant_id)}
+@router.post("/product/automation-rules/{rule_id}/preview")
+def preview_rule_version(rule_id:str,body:AutomationPreviewV2,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.preview(current,rule_id,body.version,body.receipt_ids)
+    except KeyError as exc:raise HTTPException(404,"Rule not found") from exc
+@router.post("/product/automation-rules/{rule_id}/activate")
+def activate_rule(rule_id:str,body:AutomationActivate,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.activate(current,rule_id,body.version,body.preview_token)
+    except KeyError as exc:raise HTTPException(404,"Rule not found") from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+@router.post("/product/automation-rules/{rule_id}/runs",status_code=201)
+def run_rule(rule_id:str,body:AutomationRunRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.run(current,rule_id,body.version,body.receipt_ids)
+    except KeyError as exc:raise HTTPException(404,"Rule not found") from exc
+@router.get("/product/automation-runs/{run_id}")
+def automation_run(run_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.detail(current.tenant_id,run_id)
+    except KeyError as exc:raise HTTPException(404,"Run not found") from exc
+@router.post("/product/automation-runs/{run_id}/rollback-preview")
+def rollback_preview(run_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.rollback_preview(current.tenant_id,run_id)
+    except KeyError as exc:raise HTTPException(404,"Run not found") from exc
+@router.post("/product/automation-runs/{run_id}/rollback")
+def rollback_run(run_id:str,body:RollbackRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.rollback(current,run_id,body.eligible_receipt_ids)
+    except KeyError as exc:raise HTTPException(404,"Run not found") from exc

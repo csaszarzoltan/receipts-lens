@@ -175,7 +175,7 @@ class AccountingWorkspace:
         pid = str(uuid.uuid4())
         status = "ready" if valid and not blocked else ("partial" if valid else "blocked")
         with self.db:
-            self.db.execute("INSERT INTO export_preparations VALUES(?,?,?,?,?,?,?,?,?)",
+            self.db.execute("INSERT INTO export_preparations(preparation_id,tenant_id,connection_id,receipt_ids,valid_ids,blocked,warnings,status,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
                             (pid, actor.tenant_id, connection_id, json.dumps(receipt_ids),
                              json.dumps(valid), json.dumps(blocked), json.dumps(warnings), status, self.now()))
         return {"preparation_id": pid, "status": status, "requested": len(receipt_ids),
