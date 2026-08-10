@@ -1,8 +1,13 @@
 """Versioned, previewable and reversible receipt automation."""
 from __future__ import annotations
-import json,uuid
-from datetime import UTC,datetime
+
+import json
+import sqlite3
+import uuid
+from datetime import UTC, datetime
 from typing import Any
+
+
 class AutomationService:
  def __init__(self,service:Any,advanced:Any)->None:
   self.service,self.advanced,self.db=service,advanced,service._db
@@ -26,13 +31,29 @@ class AutomationService:
   if not row:raise KeyError(rid)
   return row
  def preview(self,actor:Any,rid:str,version:int,receipt_ids:list[str]|None=None)->dict:
-  r=self._rule(actor.tenant_id,rid,version); conditions=json.loads(r['conditions_json']); rows=self.db.execute('SELECT receipt_id,payload FROM receipts WHERE tenant_id=?',(actor.tenant_id,)).fetchall(); matches=[]
+  rule=self._rule(actor.tenant_id,rid,version); conditions=json.loads(rule['conditions_json']); actions=json.loads(rule['actions_json'])
+  rows=self.db.execute('SELECT receipt_id,payload FROM receipts WHERE tenant_id=?',(actor.tenant_id,)).fetchall(); matches=[]; conflicts=[]
+  active=self.db.execute("SELECT * FROM automation_rule_versions WHERE tenant_id=? AND status='active' AND NOT(rule_id=? AND version=?) ORDER BY priority,created_at,rule_id",(actor.tenant_id,rid,version)).fetchall()
+  target_fields={'tags','project','cost_center','request_approval'}
   for row in rows:
    if receipt_ids and row['receipt_id'] not in receipt_ids:continue
-   if self.advanced._matches(json.loads(row['payload']),conditions):matches.append(row['receipt_id'])
+   payload=json.loads(row['payload'])
+   if not self.advanced._matches(payload,conditions):continue
+   matches.append(row['receipt_id'])
+   candidates=[{'rule_id':rid,'version':version,'priority':rule['priority'],'created_at':rule['created_at'],'actions':actions}]
+   for other in active:
+    if self.advanced._matches(payload,json.loads(other['conditions_json'])):
+     candidates.append({'rule_id':other['rule_id'],'version':other['version'],'priority':other['priority'],'created_at':other['created_at'],'actions':json.loads(other['actions_json'])})
+   candidates.sort(key=lambda x:(x['priority'],x['created_at'],x['rule_id']))
+   for field in target_fields:
+    values=[(c,c['actions'][field]) for c in candidates if field in c['actions']]
+    if len({json.dumps(v,sort_keys=True) for _,v in values})>1:
+     winner=values[0][0]
+     conflicts.append({'receipt_id':row['receipt_id'],'field':field,'winner_rule_id':winner['rule_id'],'winner_value':winner['actions'][field],
+                       'candidates':[{'rule_id':c['rule_id'],'priority':c['priority'],'value':v} for c,v in values]})
   token=str(uuid.uuid4())
   with self.db:self.db.execute('UPDATE automation_rule_versions SET preview_token=?,previewed_at=? WHERE rule_id=? AND version=?',(token,self.now(),rid,version))
-  return {'preview_token':token,'match_count':len(matches),'samples':matches[:20],'conflicts':[]}
+  return {'preview_token':token,'match_count':len(matches),'samples':matches[:20],'conflicts':conflicts}
  def activate(self,actor:Any,rid:str,version:int,token:str)->dict:
   r=self._rule(actor.tenant_id,rid,version)
   if not r['preview_token'] or r['preview_token']!=token:raise ValueError('a current successful preview is required')
@@ -62,10 +83,11 @@ class AutomationService:
    row=self.db.execute('SELECT version FROM receipts WHERE tenant_id=? AND receipt_id=?',(tenant,item['receipt_id'])).fetchone()
    (eligible if row and row[0]==item['after_version'] else conflicts).append(item['receipt_id'])
   return {'eligible':eligible,'conflicts':conflicts}
- def rollback(self,actor:Any,runid:str,eligible:list[str])->dict:
+ def rollback(self,actor:Any,runid:str,eligible:list[str],fail_after:int|None=None)->dict:
   preview=self.rollback_preview(actor.tenant_id,runid); allowed=[x for x in eligible if x in preview['eligible']]
   with self.db:
-   for rid in allowed:
+   for index,rid in enumerate(allowed):
+    if fail_after is not None and index >= fail_after: raise sqlite3.OperationalError('injected rollback failure')
     item=self.db.execute('SELECT * FROM automation_run_items WHERE run_id=? AND receipt_id=?',(runid,rid)).fetchone()
     self.db.execute('UPDATE receipts SET payload=?,version=? WHERE tenant_id=? AND receipt_id=?',(item['before_json'],item['after_version']+1,actor.tenant_id,rid))
   return {'run_id':runid,'rolled_back':len(allowed),'conflicts':preview['conflicts']}

@@ -11,6 +11,8 @@ ReceiptLens is a self-hostable receipt intelligence workspace for small business
 - Create immutable export preparations and replay-safe CSV export commands.
 - Benchmark OCR confidence, publish tenant threshold profiles, and focus the review queue.
 - Preview versioned automation rules, activate them deliberately, record runs, and roll back eligible changes.
+- Inspect inbound email attachments individually, retry failed OCR, and safely quarantine unsupported or mismatched files.
+- Review automation conflicts with a deterministic winning rule before activation.
 - Run locally with Tesseract, or opt into vision OCR with an OpenAI-compatible endpoint.
 
 ## Product surfaces
@@ -45,6 +47,10 @@ Open `http://127.0.0.1:3000`. API documentation is available at `http://127.0.0.
 4. Complete review, create an export preparation, and resolve blockers.
 5. Acknowledge warnings explicitly and execute an idempotent CSV export.
 6. Inspect receipt history, export runs, quality reports, and reversible automation runs.
+
+## Browser security configuration
+
+Set `RECEIPTLENS_ALLOWED_ORIGINS` to a comma-separated list of trusted frontend origins. The local development default permits `http://localhost:3000` and `http://127.0.0.1:3000`.
 
 ## Verification
 

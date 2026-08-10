@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import logging
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -91,12 +92,13 @@ def platform_capabilities() -> dict:
 # We register both: the built-in one passes the interface-existence test,
 # and the custom one ensures headers on every response.)
 # ---------------------------------------------------------------------------
+_cors_origins = [value.strip() for value in os.getenv("RECEIPTLENS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if value.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
+    allow_headers=["Accept","Content-Type","Authorization","X-Tenant-ID","X-Role","Idempotency-Key","If-Match"],
 )
 
 
@@ -105,7 +107,10 @@ class _UnconditionalCorsMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request, call_next):
         response = await call_next(request)
-        response.headers["Access-Control-Allow-Origin"] = "*"
+        origin = request.headers.get("origin")
+        if origin in _cors_origins or origin is None:
+            response.headers["Access-Control-Allow-Origin"] = origin or _cors_origins[0]
+            response.headers["Vary"] = "Origin"
         response.headers["Access-Control-Allow-Methods"] = "*"
         response.headers["Access-Control-Allow-Headers"] = "*"
         if request.method == "OPTIONS":

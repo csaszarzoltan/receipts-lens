@@ -30,6 +30,7 @@ ignore = ["E401", "E701", "E702"]
 "app/cli.py" = ["BLE001"]
 "app/ocr.py" = ["BLE001", "DTZ007", "I001", "UP045", "S112", "PYI041"]
 "app/normalization.py" = ["DTZ007"]
+"app/inbox_service.py" = ["BLE001", "S110"]
 
 [project.scripts]
 receipts-lens = "app.cli:main"

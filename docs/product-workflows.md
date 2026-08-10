@@ -99,3 +99,11 @@ Use Review filters to isolate low-confidence receipts, correct data with the cur
 ## Safe automation workflow
 
 Create a draft rule, preview matching receipts, activate the previewed version, and run it over an explicit receipt set. Run items record versions. Rollback preview separates eligible receipts from conflicts created by later edits; rollback changes only eligible receipts.
+
+## Attachment-level Inbox recovery
+
+Each inbound attachment is validated independently. Valid receipt images complete, unsupported or mismatched files are quarantined, PDF files explicitly report unavailable processing, and OCR failures remain retryable. The email becomes completed, partial, failed, quarantined, or processing based on its children.
+
+## Automation conflicts and rollback
+
+Preview compares matching active rules at the target-field level. Lower numeric priority wins; ties use creation time and then rule ID. Rollback preflight excludes later-edited receipts, and execution is a single SQLite transaction so injected failures persist no partial reversal.

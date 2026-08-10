@@ -1,8 +1,12 @@
 """Persisted confidence calibration and benchmark metrics."""
 from __future__ import annotations
-import json, uuid
+
+import json
+import uuid
 from datetime import UTC, datetime
 from typing import Any
+
+
 class QualityService:
  def __init__(self,service:Any)->None:
   self.db=service._db

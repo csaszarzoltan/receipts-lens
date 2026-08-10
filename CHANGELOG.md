@@ -285,3 +285,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests and documentation
 - Added US-001 through US-009 behavior coverage and updated API/workflow documentation.
+
+## [1.6.0] - 2026-08-10
+
+### Added
+- Durable inbound-email attachment records with persisted bytes, SHA-256, sanitized names, MIME/magic validation, quarantine, retries, and derived parent status.
+- Field-level automation conflict detection with deterministic priority, creation-time, and rule-ID tie breaking.
+- Export run, quality calibration, automation preview/history/rollback, and detailed Inbox Next.js screens.
+- Cross-tenant and atomic rollback regression tests.
+
+### Security
+- Replaced wildcard credentialed CORS with `RECEIPTLENS_ALLOWED_ORIGINS`; localhost origins remain the development default.
+- Preserved CSV formula neutralization and tenant-scoped lookup behavior.
+
+### Verification
+- Full Python regression and changed-module coverage completed; frontend type-check, production build, and backend startup passed.
+- Browser E2E/screenshots, Hermes gates, full-repository Ruff cleanup, and git push remain environment/repository blockers documented in `development-report.md`.

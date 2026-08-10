@@ -932,3 +932,11 @@ curl "http://localhost:8000/api/v1/receipts/export/formats"
 - Versioned automation endpoints support preview, activation, runs, rollback preview, and rollback under `/product/automation-rules` and `/product/automation-runs`.
 
 All product endpoints use `X-Tenant-ID` and `X-Role` demo headers. These headers are not a production identity system.
+
+## Inbound attachment and automation completion (1.6)
+
+Inbound email attachment payloads may include `content_base64`. The service stores validated bytes, detected MIME type, SHA-256, sanitized filename, status, attempt count, receipt link, and a sanitized error code. Use `GET /product/inbound-emails/{email_id}` for details and `POST /product/inbound-emails/{email_id}/attachments/{attachment_id}/retry` for failed attachments. Quarantined attachments cannot be retried.
+
+Versioned rule preview now returns `conflicts`, including receipt, target field, candidate values, priorities, winning rule, and winning value. Rule runs are listed at `GET /product/automation-rules/{rule_id}/runs`.
+
+Configure browser origins with the comma-separated `RECEIPTLENS_ALLOWED_ORIGINS` environment variable. Wildcard credentialed origins are not supported.

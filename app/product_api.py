@@ -474,9 +474,11 @@ accounting = AccountingWorkspace(service)
 from app.export_workflow import ExportWorkflow
 from app.quality_service import QualityService
 from app.automation_service import AutomationService
+from app.inbox_service import InboxService
 export_workflow = ExportWorkflow(service, accounting)
 quality_service = QualityService(service)
 automation_service = AutomationService(service, advanced)
+inbox_service = InboxService(service)
 
 class LineItemsRequest(BaseModel):
     items: list[dict[str, Any]]
@@ -577,14 +579,25 @@ def create_export_preparation(body: ExportPreparationRequest,
 
 @router.get("/product/inbound-emails")
 def list_inbound_emails(current: Actor = Depends(actor)) -> dict[str, Any]:
-    return {"items": accounting.emails(current.tenant_id),
+    return {"items": inbox_service.list(current.tenant_id),
             "address": f"receipts+{current.tenant_id}@receiptlens.local"}
 
 @router.post("/product/inbound-emails", status_code=201)
 def receive_inbound_email(body: InboundEmailRequest,
                           current: Actor = Depends(actor)) -> dict[str, Any]:
-    return accounting.receive_email(current.tenant_id, body.sender, body.subject,
-                                    body.attachments)
+    try: return inbox_service.receive(current.tenant_id, body.sender, body.subject, body.attachments)
+    except ValueError as exc: raise HTTPException(422, str(exc)) from exc
+
+
+@router.get("/product/inbound-emails/{email_id}")
+def inbound_email_detail(email_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return inbox_service.get(current.tenant_id,email_id)
+    except KeyError as exc:raise HTTPException(404,"Email not found") from exc
+@router.post("/product/inbound-emails/{email_id}/attachments/{attachment_id}/retry")
+def retry_inbound_attachment(email_id:str,attachment_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return inbox_service.retry(current.tenant_id,email_id,attachment_id)
+    except KeyError as exc:raise HTTPException(404,"Attachment not found") from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
 
 @router.get("/product/recurring-expenses")
 def recurring_expenses(current: Actor = Depends(actor)) -> dict[str, Any]:
@@ -719,6 +732,12 @@ def activate_rule(rule_id:str,body:AutomationActivate,current:Actor=Depends(acto
 def run_rule(rule_id:str,body:AutomationRunRequest,current:Actor=Depends(actor))->dict[str,Any]:
     try:return automation_service.run(current,rule_id,body.version,body.receipt_ids)
     except KeyError as exc:raise HTTPException(404,"Rule not found") from exc
+@router.get("/product/automation-rules/{rule_id}/runs")
+def automation_rule_runs(rule_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try: automation_service._rule(current.tenant_id,rule_id)
+    except KeyError as exc: raise HTTPException(404,"Rule not found") from exc
+    rows=service._db.execute("SELECT run_id,status,summary_json,created_at,completed_at FROM automation_runs WHERE tenant_id=? AND rule_id=? ORDER BY created_at DESC",(current.tenant_id,rule_id)).fetchall()
+    return {"items":[{"run_id":r["run_id"],"status":r["status"],"summary":json.loads(r["summary_json"]),"created_at":r["created_at"],"completed_at":r["completed_at"]} for r in rows]}
 @router.get("/product/automation-runs/{run_id}")
 def automation_run(run_id:str,current:Actor=Depends(actor))->dict[str,Any]:
     try:return automation_service.detail(current.tenant_id,run_id)
