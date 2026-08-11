@@ -1,12 +1,14 @@
 """Tenant-scoped QuickBooks OAuth state, credentials, health and mappings."""
 from __future__ import annotations
-import hashlib,json,secrets,uuid
+import hashlib,json,os,secrets,uuid
 from datetime import UTC,datetime,timedelta
 from typing import Any
 from urllib.parse import urlencode
 class ConnectionService:
- def __init__(self,service:Any,credentials:Any):
+ def __init__(self,service:Any,credentials:Any,*,client_id:str|None=None,redirect_uri:str|None=None):
   self.db,self.credentials=service._db,credentials
+  self.client_id=client_id or os.getenv('RECEIPTLENS_QBO_CLIENT_ID','')
+  self.redirect_uri=redirect_uri or os.getenv('RECEIPTLENS_QBO_REDIRECT_URI','/product/connections/quickbooks/oauth/callback')
   with self.db:
    self.db.executescript('''CREATE TABLE IF NOT EXISTS oauth_states(state_hash TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,return_path TEXT NOT NULL,expires_at TEXT NOT NULL,used_at TEXT);CREATE TABLE IF NOT EXISTS provider_connections(connection_id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,provider TEXT NOT NULL,provider_company_id TEXT NOT NULL,provider_company_name TEXT NOT NULL,health TEXT NOT NULL,reauthorization_required INTEGER NOT NULL,created_at TEXT NOT NULL,last_tested_at TEXT);CREATE TABLE IF NOT EXISTS provider_credentials(connection_id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,token_ciphertext TEXT NOT NULL,expires_at TEXT NOT NULL,updated_at TEXT NOT NULL);CREATE TABLE IF NOT EXISTS connection_mapping_versions(mapping_id TEXT PRIMARY KEY,connection_id TEXT NOT NULL,tenant_id TEXT NOT NULL,version INTEGER NOT NULL,payload_json TEXT NOT NULL,snapshot_hash TEXT NOT NULL,valid INTEGER NOT NULL,created_at TEXT NOT NULL,UNIQUE(connection_id,version));''')
  @staticmethod
@@ -16,7 +18,7 @@ class ConnectionService:
   if return_path!='/integrations':raise ValueError('return path not allowed')
   state=secrets.token_urlsafe(32);h=hashlib.sha256(state.encode()).hexdigest();exp=self.now()+timedelta(minutes=10)
   with self.db:self.db.execute('INSERT INTO oauth_states VALUES(?,?,?,?,NULL)',(h,actor.tenant_id,return_path,exp.isoformat()))
-  q=urlencode({'client_id':'configured','response_type':'code','scope':'com.intuit.quickbooks.accounting','redirect_uri':'/product/connections/quickbooks/oauth/callback','state':state,'code_challenge_method':'S256'})
+  q=urlencode({'client_id':self.client_id or 'configured','response_type':'code','scope':'com.intuit.quickbooks.accounting','redirect_uri':self.redirect_uri,'state':state,'code_challenge_method':'S256'})
   return {'authorization_url':'https://appcenter.intuit.com/connect/oauth2?'+q,'state':state,'state_expires_at':exp.isoformat()}
  def complete_oauth(self,actor,state,code,realm,tokens):
   h=hashlib.sha256(state.encode()).hexdigest();row=self.db.execute('SELECT * FROM oauth_states WHERE state_hash=? AND tenant_id=?',(h,actor.tenant_id)).fetchone()
