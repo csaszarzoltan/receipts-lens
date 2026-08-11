@@ -70,10 +70,11 @@ async def batch_parse_receipts(
 
     job.total = len(items)
     processor = BatchProcessor(max_workers=max_workers)
-    # Fire and forget — process in background
+    # Fire and forget — process in background, REUSING the pre-allocated job_id
+    # so the caller can poll the same id (BUG-005 fix: job stayed queued forever).
     import asyncio
 
-    asyncio.create_task(processor.process_batch(items, lang=lang, webhook_url=webhook_url))
+    asyncio.create_task(processor.process_batch(items, lang=lang, webhook_url=webhook_url, job_id=job_id))
 
     return {"job_id": job_id, "status": "queued", "total": len(items)}
 

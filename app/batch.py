@@ -79,6 +79,7 @@ class BatchProcessor:
         *,
         lang: str | None = None,
         webhook_url: str | None = None,
+        job_id: str | None = None,
     ) -> BatchJob:
         """Process a batch of receipt images in parallel.
 
@@ -90,6 +91,10 @@ class BatchProcessor:
             Language override (None = auto-detect per receipt).
         webhook_url:
             Optional POST callback on completion.
+        job_id:
+            Optional pre-allocated job id. When provided, the job is updated
+            in-place so callers that already created a job (api_v2) can poll
+            the SAME id. When omitted, a fresh id is generated.
 
         Returns
         -------
@@ -101,15 +106,30 @@ class BatchProcessor:
 
         from app.ocr import parse_receipt
 
-        job_id = str(uuid.uuid4())
-        job = BatchJob(
-            job_id=job_id,
-            status="processing",
-            total=len(items),
-            created_at=datetime.now(UTC).isoformat(),
-            webhook_url=webhook_url,
-        )
-        _batch_jobs[job_id] = job
+        if job_id is not None:
+            job = _batch_jobs.get(job_id)
+            if job is None:
+                job = BatchJob(
+                    job_id=job_id,
+                    status="processing",
+                    total=len(items),
+                    created_at=datetime.now(UTC).isoformat(),
+                    webhook_url=webhook_url,
+                )
+                _batch_jobs[job_id] = job
+            else:
+                job.status = "processing"
+                job.total = len(items)
+        else:
+            job_id = str(uuid.uuid4())
+            job = BatchJob(
+                job_id=job_id,
+                status="processing",
+                total=len(items),
+                created_at=datetime.now(UTC).isoformat(),
+                webhook_url=webhook_url,
+            )
+            _batch_jobs[job_id] = job
 
         def _process_one(idx: int, item: bytes | str) -> dict[str, Any]:
             try:

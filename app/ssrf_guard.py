@@ -160,11 +160,12 @@ def _build_validated_request(parsed: urllib.parse.ParseResult) -> httpx.Request:
         raise ValueError("url host missing")
     if _is_blocked_host(parsed.hostname):
         raise ValueError(f"blocked redirect host: {parsed.hostname}")
-    addresses = validate_resolved_ips(parsed.hostname)
-    host = addresses[0]
-    if ":" in host and not host.startswith("["):
-        host = f"[{host}]"
-    netloc = f"{host}:{parsed.port}" if parsed.port else host
+    # SSRF safety: validate the resolved IPs (rejects reserved/private ranges)
+    # but KEEP the hostname in the request URL. Replacing the host with its IP
+    # breaks TLS SNI/cert verification for hosts that resolve to IPv6 first
+    # (BUG-002: "certificate verify failed: IP address mismatch").
+    validate_resolved_ips(parsed.hostname)
+    netloc = f"{parsed.hostname}:{parsed.port}" if parsed.port else parsed.hostname
     target = parsed._replace(netloc=netloc)
     return httpx.Request(method="GET", url=urllib.parse.urlunparse(target))
 

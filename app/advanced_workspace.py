@@ -326,4 +326,26 @@ class AdvancedWorkspace:
     def exports(self, tenant_id: str) -> list[dict[str, Any]]:
         rows = self.db.execute("SELECT * FROM export_runs WHERE tenant_id=? "
                                "ORDER BY created_at DESC", (tenant_id,)).fetchall()
-        return [{**dict(row), "errors": json.loads(row["errors"])} for row in rows]
+        legacy = [{**dict(row), "errors": json.loads(row["errors"])} for row in rows]
+        # BUG-004 fix: the export-workflow writes to export_commands (not export_runs).
+        # Surface those runs too so the list is not empty after a workflow export.
+        wf_rows = self.db.execute(
+            "SELECT run_id, tenant_id, response_json, created_at FROM export_commands "
+            "WHERE tenant_id=? ORDER BY created_at DESC", (tenant_id,)).fetchall()
+        workflow = []
+        for row in wf_rows:
+            try:
+                resp = json.loads(row["response_json"])
+            except Exception:
+                resp = {}
+            workflow.append({
+                "run_id": row["run_id"],
+                "tenant_id": row["tenant_id"],
+                "format": "quickbooks",
+                "status": resp.get("status", "unknown"),
+                "requested": resp.get("requested", 0),
+                "exported": resp.get("exported", 0),
+                "errors": [],
+                "created_at": row["created_at"],
+            })
+        return legacy + workflow
