@@ -206,8 +206,8 @@ def preprocess_image(image_bytes: bytes, *, deskew: bool = True) -> Image.Image:
     1. Decode bytes → PIL Image
     2. Auto-rotate via EXIF orientation tag
     3. Convert to grayscale
-    4. Deskew (optional, enabled by default)
-    5. Upscale 1.5× (LANCZOS)
+    4. Deskew (adaptive: skipped on very large images, long edge > 2000px)
+    5. Scale: upscale small images 1.5×, downsample large images to ≤2200px
     6. Adaptive thresholding for noisy receipts
     7. Contrast enhancement (2.0×)
     8. Sharpen
@@ -244,8 +244,13 @@ def preprocess_image(image_bytes: bytes, *, deskew: bool = True) -> Image.Image:
     # 2. Grayscale
     image = image.convert("L")
 
-    # 3. Deskew
-    if deskew:
+    # 3. Deskew — adaptive: skip on very large images.
+    # Large images (long edge > _DESKEW_MAX_LONG_EDGE) are usually scans and
+    # already straight; deskew there costs 8s+ for nothing (BUG-009 perf).
+    # Phone photos (smaller) keep deskew for skew correction.
+    _DESKEW_MAX_LONG_EDGE = 2000
+    _apply_deskew = deskew and max(image.width, image.height) <= _DESKEW_MAX_LONG_EDGE
+    if _apply_deskew:
         image = _deskew(image)
 
     # 4. Scale: upscale small images 1.5× (helps Tesseract), but DOWNSAMPLE
