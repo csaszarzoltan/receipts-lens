@@ -238,8 +238,9 @@ def _extract_currency(text: str, lang: str = "eng") -> str | None:
     if code == "JPY":
         # Find the amount near this symbol. JPY amounts are integers (no cents)
         # and usually 3+ digits. A decimal amount next to '¥' => misread '$'.
+        # Careful: '1,000' is a thousands separator, NOT decimals.
         for line in text.splitlines():
-            if "¥" in line and re.search(r"\d+[.,]\d{2}", line):
+            if "¥" in line and re.search(r"\d+\.\d{2}|\d+,\d{2}(?!\d)", line):
                 return "USD"
     return code
 
