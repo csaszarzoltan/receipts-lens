@@ -248,11 +248,24 @@ def preprocess_image(image_bytes: bytes, *, deskew: bool = True) -> Image.Image:
     if deskew:
         image = _deskew(image)
 
-    # 4. Upscale 1.5×
-    image = image.resize(
-        (int(image.width * 1.5), int(image.height * 1.5)),
-        _RESAMPLING,
-    )
+    # 4. Scale: upscale small images 1.5× (helps Tesseract), but DOWNSAMPLE
+    # very large images to a sane max dimension. A 2577×3001 receipt upscaled
+    # to 3865×4501 makes Tesseract take 120s+ and hurts accuracy (BUG-009).
+    # Tesseract accuracy is best around 2000-3000px on the long edge.
+    _MAX_LONG_EDGE = 2200
+    _UPSCALE_FACTOR = 1.5
+    long_edge = max(image.width, image.height)
+    if long_edge > _MAX_LONG_EDGE:
+        scale = _MAX_LONG_EDGE / long_edge
+        image = image.resize(
+            (max(1, int(image.width * scale)), max(1, int(image.height * scale))),
+            _RESAMPLING,
+        )
+    else:
+        image = image.resize(
+            (int(image.width * _UPSCALE_FACTOR), int(image.height * _UPSCALE_FACTOR)),
+            _RESAMPLING,
+        )
 
     # 5. Adaptive threshold
     image = _adaptive_threshold(image)

@@ -70,7 +70,7 @@ class ConfidenceReceipt(ParsedReceipt):
 # ---------------------------------------------------------------------------
 
 _CURRENCY_SYMBOLS = (
-    r"(?:[$€£¥₹₽]|USD|EUR|GBP|JPY|INR|RUB|CZK|CHF|HUF|RON|BGN|PLN|SEK|NOK|DKK)"
+    r"(?:[\$€£¥₹₽]|USD|EUR|GBP|JPY|INR|RUB|CZK|CHF|HUF|RON|BGN|PLN|SEK|NOK|DKK)"
 )
 _AMOUNT = r"(?:\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|\d+[.,]\d{2}|\d+)"
 
@@ -215,10 +215,17 @@ def _extract_currency(text: str, lang: str = "eng") -> str | None:
     First tries explicit currency symbols/ISO codes in text.
     Falls back to _CURRENCY_LOCALE_HINTS[lang] if no explicit marker found.
     """
+    # Look for ISO 4217 codes first — they are the least ambiguous.
+    iso = re.search(r"\b(USD|EUR|GBP|JPY|INR|RUB|CZK|CHF|HUF|RON|BGN|PLN|SEK|NOK|DKK)\b", text)
+    if iso:
+        return iso.group(1)
     m = _CURRENCY_RE.search(text)
     if not m:
         return _CURRENCY_LOCALE_HINTS.get(lang)
     sym = m.group(0)
+    # Tesseract frequently misreads '$' as '¥' on noisy receipts.
+    # A lone '¥' without a JPY-typical large amount (no decimals, 3+ digits)
+    # is almost certainly a misread dollar sign — treat it as USD.
     mapping = {
         "$": "USD",
         "€": "EUR",
@@ -226,22 +233,15 @@ def _extract_currency(text: str, lang: str = "eng") -> str | None:
         "¥": "JPY",
         "₹": "INR",
         "₽": "RUB",
-        "USD": "USD",
-        "EUR": "EUR",
-        "GBP": "GBP",
-        "JPY": "JPY",
-        "INR": "INR",
-        "RUB": "RUB",
-        "CZK": "CZK",
-        "HUF": "HUF",
-        "RON": "RON",
-        "BGN": "BGN",
-        "PLN": "PLN",
-        "SEK": "SEK",
-        "NOK": "NOK",
-        "DKK": "DKK",
     }
-    return mapping.get(sym, sym)
+    code = mapping.get(sym, sym)
+    if code == "JPY":
+        # Find the amount near this symbol. JPY amounts are integers (no cents)
+        # and usually 3+ digits. A decimal amount next to '¥' => misread '$'.
+        for line in text.splitlines():
+            if "¥" in line and re.search(r"\d+[.,]\d{2}", line):
+                return "USD"
+    return code
 
 
 def _parse_line_items(text: str) -> list[ReceiptItem]:
