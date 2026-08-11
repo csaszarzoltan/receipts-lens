@@ -40,6 +40,7 @@ import type {
   PagedReceipts,
   PermissionMatrix,
   Preferences,
+  ProviderConnection,
   Receipt,
   ReceiptItem,
   RecurringExpense,
@@ -592,6 +593,40 @@ export async function testConnection(connectionId: string): Promise<Record<strin
     { method: "POST" },
   );
 }
+
+// --- QuickBooks Online connected workflow (OAuth lifecycle) ----------------
+
+export async function getProviderConnections(): Promise<{ items: ProviderConnection[] }> {
+  return tenantRequest<{ items: ProviderConnection[] }>("/product/provider-connections");
+}
+
+export async function getProviderConnection(connectionId: string): Promise<ProviderConnection> {
+  return tenantRequest<ProviderConnection>(
+    `/product/provider-connections/${encodeURIComponent(connectionId)}`,
+  );
+}
+
+export async function refreshProviderConnection(connectionId: string): Promise<{ status: string }> {
+  return tenantRequest<{ status: string }>(
+    `/product/connections/${encodeURIComponent(connectionId)}/refresh`,
+    { method: "POST" },
+  );
+}
+
+export async function disconnectProviderConnection(connectionId: string): Promise<Record<string, unknown>> {
+  return tenantRequest<Record<string, unknown>>(
+    `/product/connections/${encodeURIComponent(connectionId)}/disconnect`,
+    { method: "POST" },
+  );
+}
+
+export async function startQuickBooksOAuth(): Promise<{ authorization_url: string; state_expires_at: string }> {
+  return tenantRequest<{ authorization_url: string; state_expires_at: string }>(
+    "/product/connections/quickbooks/oauth/start",
+    { method: "POST", body: JSON.stringify({ return_path: "/integrations" }) },
+  );
+}
+
 
 // ---------------------------------------------------------------------------
 // Exports

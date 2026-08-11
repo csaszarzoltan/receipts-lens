@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, Field
 
@@ -471,10 +471,11 @@ def create_export_run(body: ExportRequest, current: Actor = Depends(actor)) -> d
 
 # ReceiptLens 1.1 accounting-readiness API
 accounting = AccountingWorkspace(service)
-from app.export_workflow import ExportWorkflow
-from app.quality_service import QualityService
 from app.automation_service import AutomationService
+from app.export_workflow import ExportWorkflow
 from app.inbox_service import InboxService
+from app.quality_service import QualityService
+
 export_workflow = ExportWorkflow(service, accounting)
 quality_service = QualityService(service)
 automation_service = AutomationService(service, advanced)
@@ -752,16 +753,23 @@ def rollback_run(run_id:str,body:RollbackRequest,current:Actor=Depends(actor))->
     except KeyError as exc:raise HTTPException(404,"Run not found") from exc
 
 # QuickBooks connected-workflow completion API
-from app.credential_store import CredentialStore
-from app.connection_service import ConnectionService
 from app.accounting_projection import AccountingProjectionService
-import base64
+from app.connection_service import ConnectionService
+from app.credential_store import CredentialStore
+from app.intuit_oauth import OAuthConfigError
+
 
 def _credential_store():
-    try: return CredentialStore()
-    except ValueError as exc: raise HTTPException(503, {'code':'credential_store_unavailable','message':str(exc)}) from exc
+    try:
+        return CredentialStore()
+    except ValueError as exc:
+        raise HTTPException(503, {'code': 'credential_store_unavailable', 'message': str(exc)}) from exc
 
-def _connections(): return ConnectionService(service, _credential_store())
+
+def _connections():
+    return ConnectionService(service, _credential_store())
+
+
 projection_service = AccountingProjectionService(service)
 
 class OAuthStartRequest(BaseModel):
@@ -772,13 +780,54 @@ class MappingBody(BaseModel):
 class ProjectionRefreshBody(BaseModel):
     reporting_currency: str
 
-@router.post('/product/connections/quickbooks/oauth/start',status_code=201)
-def qbo_oauth_start(body:OAuthStartRequest,current:Actor=Depends(actor)):
+@router.post('/product/connections/quickbooks/oauth/start', status_code=201)
+def qbo_oauth_start(body: OAuthStartRequest, current: Actor = Depends(actor)):
     try:
-        result=_connections().start_oauth(current,body.return_path)
-        return {'authorization_url':result['authorization_url'],'state_expires_at':result['state_expires_at']}
-    except PermissionError as exc: raise HTTPException(403,'Admin role required') from exc
-    except ValueError as exc: raise HTTPException(422,str(exc)) from exc
+        result = _connections().start_oauth(current, body.return_path)
+        return {'authorization_url': result['authorization_url'], 'state_expires_at': result['state_expires_at']}
+    except PermissionError as exc:
+        raise HTTPException(403, 'Admin role required') from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.api_route('/product/connections/quickbooks/oauth/callback', methods=['GET', 'POST'], status_code=201, name='qbo_oauth_callback')
+def qbo_oauth_callback(state: str = Query(min_length=8), code: str = Query(min_length=1), realmId: str = Query(default='', alias='realmId')):
+    """Complete a live QuickBooks Online OAuth flow from Intuit's redirect.
+
+    Intuit redirects the browser back to this route with ``state``, ``code``
+    and ``realmId``. The tenant is derived from the single-use state token;
+    the authorization code is exchanged for tokens at Intuit's fixed token
+    endpoint and stored encrypted. No credential material is ever returned
+    in the response.
+    """
+    if not realmId:
+        raise HTTPException(422, {'code': 'realm_required', 'message': 'realmId is required'})
+    try:
+        cs = _connections()
+        cs.validate_state_token(state)
+        cs.complete_live_oauth(state, code, realmId)
+    except ValueError as exc:
+        raise HTTPException(422, {'code': str(exc), 'message': 'Invalid or expired OAuth state'}) from exc
+    except OAuthConfigError as exc:
+        raise HTTPException(502, {'code': 'oauth_exchange_failed', 'message': str(exc)}) from exc
+    return {'status': 'connected', 'redirect': '/integrations'}
+
+
+@router.post('/product/connections/{connection_id}/refresh')
+def refresh_provider_connection(connection_id: str, current: Actor = Depends(actor)):
+    """Rotate an expiring access token via Intuit's refresh flow."""
+    try:
+        _, refreshed = _connections().refresh_if_needed(current, connection_id)
+    except KeyError as exc:
+        raise HTTPException(404, 'Connection not found') from exc
+    except (ValueError, OAuthConfigError) as exc:
+        # A failed Intuit refresh (invalid/expired refresh token) or a missing
+        # refresh token both mean the user must re-authorize. The service has
+        # already flipped the connection to reauthorization_required.
+        raise HTTPException(409, {'code': 'reauthorization_required', 'message': str(exc)}) from exc
+    return {'status': 'refreshed' if refreshed else 'not_needed'}
+
 
 @router.post('/product/provider-mappings/validate')
 def validate_provider_mapping(body:MappingBody,current:Actor=Depends(actor)):

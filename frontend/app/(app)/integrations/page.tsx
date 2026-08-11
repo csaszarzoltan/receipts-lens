@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import useSWR from "swr";
-import { createConnection, getConnections, testConnection, tenantRequest } from "@/lib/api";
-import type { Connection } from "@/lib/types";
+import { createConnection, getProviderConnections, startQuickBooksOAuth, testConnection } from "@/lib/api";
+import type { Connection, ProviderConnection } from "@/lib/types";
 import EmptyState from "@/components/EmptyState";
 import Modal from "@/components/Modal";
 import { SkeletonCard } from "@/components/Skeleton";
@@ -15,9 +16,9 @@ const PROVIDERS = [
 ];
 
 export default function IntegrationsPage() {
-  const { data, error, isLoading, mutate } = useSWR<{ items: Connection[] }>(
-    "/product/connections",
-    getConnections,
+  const { data, error, isLoading, mutate } = useSWR<{ items: ProviderConnection[] }>(
+    "/product/provider-connections",
+    getProviderConnections,
   );
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -47,7 +48,7 @@ export default function IntegrationsPage() {
   async function connectQuickBooks() {
     setQboBusy(true); setQboError("");
     try {
-      const result = await tenantRequest<{authorization_url:string}>("/product/connections/quickbooks/oauth/start", {method:"POST", body:JSON.stringify({return_path:"/integrations"})});
+      const result = await startQuickBooksOAuth();
       window.location.assign(result.authorization_url);
     } catch (error) { setQboError(error instanceof Error ? error.message : "Could not start QuickBooks connection"); }
     finally { setQboBusy(false); }
@@ -91,15 +92,26 @@ export default function IntegrationsPage() {
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Integrations">
           {connections.map((connection) => (
             <li key={connection.connection_id} className="card p-5">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl" aria-hidden="true">
-                  {PROVIDERS.find((p) => p.value === connection.provider)?.icon ?? "🔌"}
-                </span>
-                <div>
-                  <h2 className="font-semibold text-slate-900 dark:text-slate-100">{connection.name}</h2>
-                  <p className="text-sm capitalize text-slate-500 dark:text-slate-400">{connection.provider}</p>
+              <Link href={`/integrations/${connection.connection_id}`} className="block">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl" aria-hidden="true">
+                    {PROVIDERS.find((p) => p.value === connection.provider)?.icon ?? "🔌"}
+                  </span>
+                  <div>
+                    <h2 className="font-semibold text-slate-900 dark:text-slate-100">{connection.provider_company_name || connection.provider}</h2>
+                    <p className="text-sm capitalize text-slate-500 dark:text-slate-400">{connection.provider}</p>
+                  </div>
                 </div>
-              </div>
+                <span
+                  className={`mt-3 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                    connection.health === "healthy" && !connection.reauthorization_required
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                      : "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                  }`}
+                >
+                  {connection.reauthorization_required ? "Reauthorization required" : connection.health}
+                </span>
+              </Link>
               <button
                 type="button"
                 onClick={() => test(connection.connection_id)}

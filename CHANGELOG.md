@@ -7,6 +7,19 @@
 - QuickBooks Online provider-domain foundation with tenant-bound OAuth state, AES-GCM credential storage, immutable mapping versions, replay-safe export items, and reconciliation.
 - Decimal source-currency, dated-rate, tax-arithmetic, and deterministic payload-preview services.
 - BDD-derived US-010 through US-018 regression coverage and a polished QuickBooks sandbox onboarding panel.
+- Live QuickBooks Online OAuth callback (`/product/connections/quickbooks/oauth/callback`) completing the Intuit code→token exchange with tenant-scoped single-use state validation (state checked before any exchange; `502 oauth_exchange_failed` when Intuit rejects; `422 oauth_state_invalid` otherwise).
+- Expiry-aware token refresh (`POST /product/connections/{id}/refresh`) with 5-minute refresh margin; failures flip the connection to `reauthorization_required` and return `409`.
+- RFC 7636 S256 PKCE wired end-to-end: `start_oauth` stores a code verifier and returns a derived challenge; the callback exchange sends the verifier to Intuit. The authorize URL cannot be replayed against the token endpoint.
+- Best-effort Intuit token revoke on disconnect (revoke failure does not block local disconnect).
+- Integration detail screen (`/integrations/[id]`) with connection health, refresh/disconnect actions, and export run history.
+
+### Changed
+- OAuth client credentials are config-driven (`RECEIPTLENS_QBO_CLIENT_ID` / `RECEIPTLENS_QBO_CLIENT_SECRET`); unset secret fails fast instead of leaking a placeholder.
+
+### Verification
+- Full Python regression 1303 passed / 10 skipped (was 1293 / 10), including 10 new live-callback/refresh/revoke tests with a recording httpx transport.
+- Ruff clean on changed files (only the pre-existing B008 FastAPI default-argument pattern remains).
+- Frontend `tsc --noEmit` passes with the new integration detail screen.
 
 
 ## [Unreleased] - 2026-08-11

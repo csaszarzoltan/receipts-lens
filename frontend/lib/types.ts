@@ -191,6 +191,18 @@ export interface Connection {
   active: boolean;
 }
 
+export interface ProviderConnection {
+  connection_id: string;
+  tenant_id: string;
+  provider: string;
+  provider_company_id: string;
+  provider_company_name: string;
+  health: string;
+  reauthorization_required: boolean;
+  created_at: string;
+  last_tested_at: string | null;
+}
+
 export interface ExportRun {
   export_id: string;
   format: string;

@@ -1083,3 +1083,30 @@ Inbound email attachment payloads may include `content_base64`. The service stor
 Versioned rule preview now returns `conflicts`, including receipt, target field, candidate values, priorities, winning rule, and winning value. Rule runs are listed at `GET /product/automation-rules/{rule_id}/runs`.
 
 Configure browser origins with the comma-separated `RECEIPTLENS_ALLOWED_ORIGINS` environment variable. Wildcard credentialed origins are not supported.
+
+## QuickBooks Online connected workflow (OAuth, refresh, revoke)
+
+The QuickBooks Online integration connects a sandbox company through Intuit's OAuth2 Authorization Code flow with PKCE. Client credentials are read from `RECEIPTLENS_QBO_CLIENT_ID` / `RECEIPTLENS_QBO_CLIENT_SECRET`; the redirect URI defaults to `RECEIPTLENS_QBO_REDIRECT_URI` (`/product/connections/quickbooks/oauth/callback`). When the client secret is unset, the OAuth exchange fails fast with `502 oauth_exchange_failed` rather than leaking a placeholder credential.
+
+### OAuth lifecycle
+
+- `POST /product/connections/quickbooks/oauth/start` — admin only (`X-Role: admin`). Body: `{"return_path": "/integrations"}`. Returns `authorization_url` (Intuit's `appcenter.intuit.com/connect/oauth2` endpoint with a single-use, tenant-bound, 10-minute `state` token and an RFC 7636 S256 PKCE `code_challenge`) and `state_expires_at`. Any other `return_path` is rejected (`422`). The PKCE verifier is stored encrypted-side along with the state and is required at exchange time, so the authorize URL can never be replayed against the token endpoint.
+- `GET|POST /product/connections/quickbooks/oauth/callback` — the browser redirect target. Query params: `state`, `code`, `realmId` (the QuickBooks company id; required, else `422 realm_required`). The tenant is derived from the single-use state token, so no tenant headers are required on this route. The state is validated **before** any token exchange; the authorization code is exchanged at Intuit's fixed token endpoint together with the stored PKCE verifier, and the resulting tokens are stored AES-GCM encrypted. The state token is consumed on success and can never be replayed. Returns `{"status": "connected", "redirect": "/integrations"}`; never returns token material.
+  - `422 oauth_state_invalid` — unknown, expired, or already-consumed state (rejected before any Intuit call).
+  - `502 oauth_exchange_failed` — Intuit rejected the exchange (bad/expired code, misconfigured client, missing client secret).
+
+### Connections
+
+- `GET /product/provider-connections` — list tenant connections (`connection_id`, provider, company id/name, health, `reauthorization_required`, timestamps).
+- `GET /product/provider-connections/{connection_id}` — single connection detail; `404` when missing.
+- `POST /product/connections/{connection_id}/test` — validates the stored access token against the provider and refreshes health/company name. `404` when missing.
+- `POST /product/connections/{connection_id}/refresh` — rotates an expiring access token via Intuit's refresh flow. Returns `{"status": "refreshed"}` or `{"status": "not_needed"}` when the token still has >5 minutes of life. On refresh failure the connection is flipped to `reauthorization_required` and `409 reauthorization_required` is returned so the UI can prompt for re-connect. `404` when the connection does not exist.
+- `POST /product/connections/{connection_id}/disconnect` — admin only. Performs a best-effort Intuit revoke with the stored refresh token, then deletes the local credentials and marks the connection `disconnected`. Revoke failure does not block the local disconnect (Intuit may already have invalidated the token).
+
+### Mappings
+
+- `POST /product/connections/{connection_id}/mappings` — save an immutable mapping version (`expense_account_ref`, `tax_strategy`, `snapshot_hash`); admin only. `404` when the connection is missing.
+- `GET /product/connections/{connection_id}/mappings/current` — latest mapping version for the connection; `404` when none exists.
+- `POST /product/provider-mappings/validate` — validates a proposed mapping against the provider's active account references and returns a `snapshot_hash` to pin before saving.
+
+All product endpoints use `X-Tenant-ID` and `X-Role` demo headers (except the OAuth callback, which authenticates via the single-use state token). These headers are not a production identity system.
