@@ -91,3 +91,23 @@ The workspace no longer uses browser `prompt()` or `confirm()` for approval deci
 - explicit cancel and confirm actions.
 
 The browser's PWA installation prompt remains unchanged because it is a platform installation API, not a ReceiptLens business-action prompt.
+
+## Exception-to-export workflow
+
+Use Review filters to isolate low-confidence receipts, correct data with the current receipt version, then create an export preparation. Preparations are immutable snapshots. Warning receipts require explicit acknowledgement. Reusing an `Idempotency-Key` returns the original export run and never duplicates the CSV artifact.
+
+## Safe automation workflow
+
+Create a draft rule, preview matching receipts, activate the previewed version, and run it over an explicit receipt set. Run items record versions. Rollback preview separates eligible receipts from conflicts created by later edits; rollback changes only eligible receipts.
+
+## Attachment-level Inbox recovery
+
+Each inbound attachment is validated independently. Valid receipt images complete, unsupported or mismatched files are quarantined, PDF files explicitly report unavailable processing, and OCR failures remain retryable. The email becomes completed, partial, failed, quarantined, or processing based on its children.
+
+## Automation conflicts and rollback
+
+Preview compares matching active rules at the target-field level. Lower numeric priority wins; ties use creation time and then rule ID. Rollback preflight excludes later-edited receipts, and execution is a single SQLite transaction so injected failures persist no partial reversal.
+
+## Verified exception-to-export contract
+
+The review, quality, inbox, automation, and export flows are tenant-scoped and version-aware. `GET /product/review-items` supports confidence field/threshold filtering and ordering. Quality benchmark reports and active profiles are available under `/product/quality`. Email attachment status and retry are exposed under `/product/inbound-emails`. Versioned automation preview, activation, runs, rollback preview, and rollback use `/product/automation-*`. Export preparations snapshot receipt versions and validation; `POST /product/export-commands` requires `Idempotency-Key`, warning acknowledgements, and rejects stale preparations. The workspace provides loading, empty, error, disabled, success, and retry states for these workflows.

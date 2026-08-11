@@ -144,10 +144,16 @@ def retry_job(job_id: str, current: Actor = Depends(actor)) -> dict[str, Any]:
 def cancel_job(job_id: str, current: Actor = Depends(actor)) -> dict[str, Any]:
     try:return service.cancel(current,job_id)
     except KeyError:raise HTTPException(404,"Job not found")
-    except ProductConflict as exc:raise HTTPException(409,str(exc))
+    except ProductConflict as exc:raise HTTPException(409,{"code":"stale_version","message":str(exc)})
 
 @router.get("/product/review-items")
-def reviews(current: Actor = Depends(actor)) -> dict[str, Any]: return {"items":service.list_reviews(current)}
+def reviews(confidence_field: str | None = None, confidence_lt: float | None = None,
+            readiness: str | None = None, sort: str = "created_asc", limit: int = 50,
+            offset: int = 0, current: Actor = Depends(actor)) -> dict[str, Any]:
+    try:
+        return service.list_reviews(current, confidence_field, confidence_lt, readiness, sort, limit, offset)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 @router.patch("/product/review-items/{receipt_id}")
 def correct(receipt_id: str, body: CorrectionRequest, if_match: int = Header(alias="If-Match"), current: Actor = Depends(actor)) -> dict[str, Any]:
@@ -465,6 +471,14 @@ def create_export_run(body: ExportRequest, current: Actor = Depends(actor)) -> d
 
 # ReceiptLens 1.1 accounting-readiness API
 accounting = AccountingWorkspace(service)
+from app.export_workflow import ExportWorkflow
+from app.quality_service import QualityService
+from app.automation_service import AutomationService
+from app.inbox_service import InboxService
+export_workflow = ExportWorkflow(service, accounting)
+quality_service = QualityService(service)
+automation_service = AutomationService(service, advanced)
+inbox_service = InboxService(service)
 
 class LineItemsRequest(BaseModel):
     items: list[dict[str, Any]]
@@ -560,18 +574,30 @@ def list_export_preparations(current: Actor = Depends(actor)) -> dict[str, Any]:
 @router.post("/product/export-preparations", status_code=201)
 def create_export_preparation(body: ExportPreparationRequest,
                               current: Actor = Depends(actor)) -> dict[str, Any]:
-    return accounting.prepare_export(current, body.receipt_ids, body.connection_id)
+    try: return export_workflow.prepare(current, body.receipt_ids, body.connection_id)
+    except ValueError as exc: raise HTTPException(422, str(exc)) from exc
 
 @router.get("/product/inbound-emails")
 def list_inbound_emails(current: Actor = Depends(actor)) -> dict[str, Any]:
-    return {"items": accounting.emails(current.tenant_id),
+    return {"items": inbox_service.list(current.tenant_id),
             "address": f"receipts+{current.tenant_id}@receiptlens.local"}
 
 @router.post("/product/inbound-emails", status_code=201)
 def receive_inbound_email(body: InboundEmailRequest,
                           current: Actor = Depends(actor)) -> dict[str, Any]:
-    return accounting.receive_email(current.tenant_id, body.sender, body.subject,
-                                    body.attachments)
+    try: return inbox_service.receive(current.tenant_id, body.sender, body.subject, body.attachments)
+    except ValueError as exc: raise HTTPException(422, str(exc)) from exc
+
+
+@router.get("/product/inbound-emails/{email_id}")
+def inbound_email_detail(email_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return inbox_service.get(current.tenant_id,email_id)
+    except KeyError as exc:raise HTTPException(404,"Email not found") from exc
+@router.post("/product/inbound-emails/{email_id}/attachments/{attachment_id}/retry")
+def retry_inbound_attachment(email_id:str,attachment_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return inbox_service.retry(current.tenant_id,email_id,attachment_id)
+    except KeyError as exc:raise HTTPException(404,"Attachment not found") from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
 
 @router.get("/product/recurring-expenses")
 def recurring_expenses(current: Actor = Depends(actor)) -> dict[str, Any]:
@@ -634,3 +660,177 @@ def diagnostic_bundle(current: Actor = Depends(actor)) -> Response:
     return Response(content, media_type="application/zip",
                     headers={"Content-Disposition": "attachment; filename=receiptlens-diagnostics.zip",
                              "Cache-Control": "private, no-store"})
+
+
+class ExportCommandRequest(BaseModel):
+    preparation_id: str
+    acknowledged_warning_receipt_ids: list[str] = []
+class BenchmarkRunRequest(BaseModel):
+    manifest_name: str
+    cases: list[dict[str, Any]]
+class ConfidenceProfileRequest(BaseModel):
+    benchmark_report_id: str
+    thresholds: dict[str, float]
+class AutomationPreviewV2(BaseModel):
+    version: int
+    receipt_ids: list[str] | None = None
+class AutomationActivate(BaseModel):
+    version: int
+    preview_token: str
+class AutomationRunRequest(BaseModel):
+    version: int
+    receipt_ids: list[str]
+class RollbackRequest(BaseModel):
+    eligible_receipt_ids: list[str]
+
+@router.post("/product/export-commands", status_code=201)
+def execute_export_command(body: ExportCommandRequest, idempotency_key: str = Header(alias="Idempotency-Key"), current: Actor = Depends(actor)) -> dict[str, Any]:
+    try:return export_workflow.execute(current,body.preparation_id,body.acknowledged_warning_receipt_ids,idempotency_key)
+    except KeyError as exc:raise HTTPException(404,"Preparation not found") from exc
+    except RuntimeError as exc:raise HTTPException(409,{"code":"stale_preparation","message":str(exc)}) from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+@router.get("/product/export-runs/{run_id}")
+def export_run_detail(run_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return export_workflow.run(current.tenant_id,run_id)
+    except KeyError as exc:raise HTTPException(404,"Export run not found") from exc
+@router.get("/product/export-runs/{run_id}/artifact")
+def export_run_artifact(run_id:str,current:Actor=Depends(actor))->Response:
+    try:return Response(export_workflow.artifact(current.tenant_id,run_id),media_type="text/csv",headers={"Content-Disposition":f"attachment; filename=receiptlens-{run_id}.csv"})
+    except KeyError as exc:raise HTTPException(404,"Export run not found") from exc
+@router.get("/product/receipts/{receipt_id}/audit")
+def receipt_audit(receipt_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    row=service._db.execute("SELECT receipt_id FROM receipts WHERE tenant_id=? AND receipt_id=?",(current.tenant_id,receipt_id)).fetchone()
+    if not row:raise HTTPException(404,"Receipt not found")
+    return {"receipt_id":receipt_id,"events":advanced.history(current.tenant_id,receipt_id)}
+@router.post("/product/quality/benchmarks/run",status_code=201)
+def run_benchmark(body:BenchmarkRunRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return quality_service.evaluate(current,body.manifest_name,body.cases)
+    except PermissionError as exc:raise HTTPException(403,"Admin role required") from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+@router.get("/product/quality/benchmarks/{report_id}")
+def benchmark_report(report_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return quality_service.report(current.tenant_id,report_id)
+    except KeyError as exc:raise HTTPException(404,"Benchmark report not found") from exc
+@router.post("/product/quality/confidence-profiles",status_code=201)
+def publish_profile(body:ConfidenceProfileRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return quality_service.publish(current,body.benchmark_report_id,body.thresholds)
+    except PermissionError as exc:raise HTTPException(403,"Admin role required") from exc
+    except KeyError as exc:raise HTTPException(404,"Benchmark report not found") from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+@router.get("/product/quality/confidence-profiles/active")
+def active_profile(current:Actor=Depends(actor))->dict[str,Any]:return {"profile":quality_service.active(current.tenant_id)}
+@router.post("/product/automation-rules/{rule_id}/preview")
+def preview_rule_version(rule_id:str,body:AutomationPreviewV2,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.preview(current,rule_id,body.version,body.receipt_ids)
+    except KeyError as exc:raise HTTPException(404,"Rule not found") from exc
+@router.post("/product/automation-rules/{rule_id}/activate")
+def activate_rule(rule_id:str,body:AutomationActivate,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.activate(current,rule_id,body.version,body.preview_token)
+    except KeyError as exc:raise HTTPException(404,"Rule not found") from exc
+    except ValueError as exc:raise HTTPException(422,str(exc)) from exc
+@router.post("/product/automation-rules/{rule_id}/runs",status_code=201)
+def run_rule(rule_id:str,body:AutomationRunRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.run(current,rule_id,body.version,body.receipt_ids)
+    except KeyError as exc:raise HTTPException(404,"Rule not found") from exc
+@router.get("/product/automation-rules/{rule_id}/runs")
+def automation_rule_runs(rule_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try: automation_service._rule(current.tenant_id,rule_id)
+    except KeyError as exc: raise HTTPException(404,"Rule not found") from exc
+    rows=service._db.execute("SELECT run_id,status,summary_json,created_at,completed_at FROM automation_runs WHERE tenant_id=? AND rule_id=? ORDER BY created_at DESC",(current.tenant_id,rule_id)).fetchall()
+    return {"items":[{"run_id":r["run_id"],"status":r["status"],"summary":json.loads(r["summary_json"]),"created_at":r["created_at"],"completed_at":r["completed_at"]} for r in rows]}
+@router.get("/product/automation-runs/{run_id}")
+def automation_run(run_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.detail(current.tenant_id,run_id)
+    except KeyError as exc:raise HTTPException(404,"Run not found") from exc
+@router.post("/product/automation-runs/{run_id}/rollback-preview")
+def rollback_preview(run_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.rollback_preview(current.tenant_id,run_id)
+    except KeyError as exc:raise HTTPException(404,"Run not found") from exc
+@router.post("/product/automation-runs/{run_id}/rollback")
+def rollback_run(run_id:str,body:RollbackRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    try:return automation_service.rollback(current,run_id,body.eligible_receipt_ids)
+    except KeyError as exc:raise HTTPException(404,"Run not found") from exc
+
+# QuickBooks connected-workflow completion API
+from app.credential_store import CredentialStore
+from app.connection_service import ConnectionService
+from app.accounting_projection import AccountingProjectionService
+import base64
+
+def _credential_store():
+    try: return CredentialStore()
+    except ValueError as exc: raise HTTPException(503, {'code':'credential_store_unavailable','message':str(exc)}) from exc
+
+def _connections(): return ConnectionService(service, _credential_store())
+projection_service = AccountingProjectionService(service)
+
+class OAuthStartRequest(BaseModel):
+    return_path: str = '/integrations'
+class MappingBody(BaseModel):
+    expense_account_ref: str
+    tax_strategy: str = 'exclusive'
+class ProjectionRefreshBody(BaseModel):
+    reporting_currency: str
+
+@router.post('/product/connections/quickbooks/oauth/start',status_code=201)
+def qbo_oauth_start(body:OAuthStartRequest,current:Actor=Depends(actor)):
+    try:
+        result=_connections().start_oauth(current,body.return_path)
+        return {'authorization_url':result['authorization_url'],'state_expires_at':result['state_expires_at']}
+    except PermissionError as exc: raise HTTPException(403,'Admin role required') from exc
+    except ValueError as exc: raise HTTPException(422,str(exc)) from exc
+
+@router.post('/product/provider-mappings/validate')
+def validate_provider_mapping(body:MappingBody,current:Actor=Depends(actor)):
+    if current.role!='admin': raise HTTPException(403,'Admin role required')
+    if not body.expense_account_ref.strip(): raise HTTPException(422,{'field':'expense_account_ref','code':'required'})
+    return {'valid':True,'mapping':body.model_dump()}
+
+@router.get('/product/receipts/{receipt_id}/accounting-projection')
+def get_accounting_projection(receipt_id:str,current:Actor=Depends(actor)):
+    row=service._db.execute('SELECT payload_json,stale FROM receipt_accounting_projections WHERE tenant_id=? AND receipt_id=?',(current.tenant_id,receipt_id)).fetchone()
+    if not row: raise HTTPException(404,'Projection not found')
+    return {**json.loads(row['payload_json']),'stale':bool(row['stale'])}
+
+@router.post('/product/receipts/{receipt_id}/accounting-projection/refresh')
+def refresh_accounting_projection(receipt_id:str,body:ProjectionRefreshBody,current:Actor=Depends(actor)):
+    try:return projection_service.refresh(current,receipt_id,body.reporting_currency.upper())
+    except KeyError as exc: raise HTTPException(404,str(exc)) from exc
+
+@router.get('/product/receipts/{receipt_id}/provider-preview')
+def provider_preview(receipt_id:str,receipt_version:int,mapping_version:int,current:Actor=Depends(actor)):
+    if current.role not in {'admin','reviewer'}: raise HTTPException(403,'Reviewer role required')
+    try:return projection_service.preview(current,receipt_id,receipt_version,mapping_version,{'expense_account_ref':'configured'})
+    except (KeyError,RuntimeError) as exc: raise HTTPException(409,str(exc)) from exc
+
+class MappingSaveBody(BaseModel):
+    expense_account_ref: str
+    tax_strategy: str = 'exclusive'
+    snapshot_hash: str
+
+@router.get('/product/provider-connections')
+def provider_connections(current:Actor=Depends(actor)):
+    return {'items':_connections().list_connections(current)}
+
+@router.get('/product/provider-connections/{connection_id}')
+def provider_connection_detail(connection_id:str,current:Actor=Depends(actor)):
+    try:return _connections().get(current,connection_id)
+    except KeyError as exc:raise HTTPException(404,'Connection not found') from exc
+
+@router.post('/product/connections/{connection_id}/disconnect')
+def disconnect_provider(connection_id:str,current:Actor=Depends(actor)):
+    try:return _connections().disconnect(current,connection_id)
+    except PermissionError as exc:raise HTTPException(403,'Admin role required') from exc
+    except KeyError as exc:raise HTTPException(404,'Connection not found') from exc
+
+@router.post('/product/connections/{connection_id}/mappings',status_code=201)
+def save_provider_mapping(connection_id:str,body:MappingSaveBody,current:Actor=Depends(actor)):
+    if current.role!='admin':raise HTTPException(403,'Admin role required')
+    if not body.expense_account_ref.strip():raise HTTPException(422,{'field':'expense_account_ref','code':'required'})
+    try:return _connections().save_mapping(current,connection_id,{'expense_account_ref':body.expense_account_ref,'tax_strategy':body.tax_strategy},body.snapshot_hash)
+    except KeyError as exc:raise HTTPException(404,'Connection not found') from exc
+
+@router.get('/product/connections/{connection_id}/mappings/current')
+def current_provider_mapping(connection_id:str,current:Actor=Depends(actor)):
+    try:return _connections().current_mapping(current,connection_id)
+    except KeyError as exc:raise HTTPException(404,'Mapping not found') from exc

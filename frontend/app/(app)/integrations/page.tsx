@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { createConnection, getConnections, testConnection } from "@/lib/api";
+import { createConnection, getConnections, testConnection, tenantRequest } from "@/lib/api";
 import type { Connection } from "@/lib/types";
 import EmptyState from "@/components/EmptyState";
 import Modal from "@/components/Modal";
@@ -23,6 +23,8 @@ export default function IntegrationsPage() {
   const [name, setName] = useState("");
   const [provider, setProvider] = useState("csv");
   const [testing, setTesting] = useState<string | null>(null);
+  const [qboBusy, setQboBusy] = useState(false);
+  const [qboError, setQboError] = useState("");
 
   const connections = data?.items ?? [];
 
@@ -42,6 +44,15 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function connectQuickBooks() {
+    setQboBusy(true); setQboError("");
+    try {
+      const result = await tenantRequest<{authorization_url:string}>("/product/connections/quickbooks/oauth/start", {method:"POST", body:JSON.stringify({return_path:"/integrations"})});
+      window.location.assign(result.authorization_url);
+    } catch (error) { setQboError(error instanceof Error ? error.message : "Could not start QuickBooks connection"); }
+    finally { setQboBusy(false); }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -53,6 +64,19 @@ export default function IntegrationsPage() {
         </div>
         <button type="button" onClick={() => setOpen(true)} className="btn-primary text-sm">+ Add integration</button>
       </div>
+
+      <section className="card overflow-hidden" aria-labelledby="qbo-heading">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-cyan-50 p-5 dark:border-slate-800 dark:from-emerald-950/40 dark:to-cyan-950/30">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div><p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Recommended next step</p><h2 id="qbo-heading" className="mt-1 text-xl font-bold text-slate-900 dark:text-white">QuickBooks Online sandbox</h2><p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-300">Connect a sandbox company, validate account and tax mappings, then export with replay protection and reconciliation evidence.</p></div>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">Not connected</span>
+          </div>
+        </div>
+        <div className="grid gap-4 p-5 md:grid-cols-3">
+          {[['1','Connect company','OAuth state is tenant-bound and credentials are encrypted.'],['2','Validate mapping','Choose expense accounts and tax treatment before posting.'],['3','Export and verify','Retry only failed items and compare the remote purchase.']].map(([n,title,body])=><div key={n} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-300">{n}</span><h3 className="mt-3 font-semibold">{title}</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{body}</p></div>)}
+        </div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 px-5 py-4 dark:border-slate-800"><button type="button" onClick={connectQuickBooks} disabled={qboBusy} className="btn-primary text-sm" aria-describedby="qbo-disclosure">{qboBusy ? "Connecting…" : "Connect QuickBooks"}</button><p id="qbo-disclosure" className="text-xs text-slate-500">Sandbox only. You will review requested accounting scopes before leaving ReceiptLens.</p>{qboError ? <p role="alert" className="w-full text-sm text-rose-700">{qboError}</p> : null}</div>
+      </section>
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -48,3 +48,7 @@ All data-list endpoints are tenant scoped. Static assets are served from a stric
 - Saved views now preserve the accounting-readiness filter.
 
 These changes reduce navigation ambiguity and remove browser-native business prompts while retaining the existing static HTML and vanilla JavaScript architecture.
+
+## Primary UI
+
+The Next.js application in `frontend/` is the primary product UI. Its Review, receipt detail, Inbox, Automation, Accounting, and Export screens share the AppShell, responsive navigation, semantic status labels, empty states, and keyboard-visible focus. The server-rendered `/workspace` remains a compatibility surface.

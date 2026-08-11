@@ -1,5 +1,25 @@
 # Changelog
 
+## [Unreleased - Connected workflow completion] - 2026-08-11
+
+### Added
+- Tenant-scoped provider connection list/detail, credential-purging disconnect, and immutable mapping current/save APIs.
+- QuickBooks Online provider-domain foundation with tenant-bound OAuth state, AES-GCM credential storage, immutable mapping versions, replay-safe export items, and reconciliation.
+- Decimal source-currency, dated-rate, tax-arithmetic, and deterministic payload-preview services.
+- BDD-derived US-010 through US-018 regression coverage and a polished QuickBooks sandbox onboarding panel.
+
+
+## [Unreleased] - 2026-08-11
+
+### Added
+- Acceptance-backed exception-to-export workflow for US-001 through US-009, including confidence triage, provenance, immutable export preparation, idempotent commands, attachment-level inbox processing, benchmark profiles, safe automation previews, run history, and rollback.
+- Repository lab gates for TDD, BDD structure, security regression, documentation sync, UI build verification, and git push verification.
+- API acceptance tests for invalid confidence fields, tenant-scoped quality profiles, and required export idempotency keys.
+
+### Verification
+- Full Python regression, focused BDD/API tests, frontend type-check and production build, startup smoke checks, security tests, and ZIP integrity verification are recorded in `development-report.md`.
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
@@ -274,3 +294,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Browser-native business `prompt()` and `confirm()` flows for approval, API-key, saved-view, and purge actions.
+
+## [1.5.0] - 2026-08-10
+
+### Added
+- Confidence-filtered review queue with deterministic pagination and sorting.
+- Immutable export preparations, tenant-scoped idempotent export commands, run detail, and CSV artifacts.
+- Persisted OCR benchmark reports and versioned confidence threshold profiles.
+- Versioned automation preview, activation, run history, optimistic rollback preview, and rollback.
+- Redacted receipt audit endpoint and nine BDD story regression tests.
+
+### Changed
+- Export preparation now snapshots receipt versions and validation results.
+- Direct async API tests run in minimal CI without an external pytest async plugin.
+- README now provides a concise GitHub product overview and primary workflow.
+
+### Fixed
+- API v2 direct-call defaults and the previously failing async endpoint behavioral tests.
+- Export preparation inserts remain compatible after additive schema migration.
+
+### Tests and documentation
+- Added US-001 through US-009 behavior coverage and updated API/workflow documentation.
+
+## [1.6.0] - 2026-08-10
+
+### Added
+- Durable inbound-email attachment records with persisted bytes, SHA-256, sanitized names, MIME/magic validation, quarantine, retries, and derived parent status.
+- Field-level automation conflict detection with deterministic priority, creation-time, and rule-ID tie breaking.
+- Export run, quality calibration, automation preview/history/rollback, and detailed Inbox Next.js screens.
+- Cross-tenant and atomic rollback regression tests.
+
+### Security
+- Replaced wildcard credentialed CORS with `RECEIPTLENS_ALLOWED_ORIGINS`; localhost origins remain the development default.
+- Preserved CSV formula neutralization and tenant-scoped lookup behavior.
+
+### Verification
+- Full Python regression and changed-module coverage completed; frontend type-check, production build, and backend startup passed.
+- Browser E2E/screenshots, Hermes gates, full-repository Ruff cleanup, and git push remain environment/repository blockers documented in `development-report.md`.

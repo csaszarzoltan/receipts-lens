@@ -36,6 +36,12 @@ async def batch_parse_receipts(
     from app.batch import BatchJob as _BatchJob
     from app.batch import BatchProcessor, _batch_jobs
 
+    # Direct function calls in tests receive FastAPI parameter marker defaults.
+    if not isinstance(max_workers, int): max_workers = 4
+    if not isinstance(image_urls, str): image_urls = None
+    if not isinstance(files, list): files = None
+    if not isinstance(lang, str): lang = None
+    if not isinstance(webhook_url, str): webhook_url = None
     job_id = str(uuid.uuid4())
     job = _BatchJob(
         job_id=job_id,

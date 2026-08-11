@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "receiptslens"
 version = "1.4.0"
 requires-python = ">=3.11"
-dependencies = ["fastapi>=0.110","uvicorn>=0.29","pydantic>=2.6","pillow>=10.3","pytesseract>=0.3","httpx>=0.27","python-multipart>=0.0.9","reportlab>=4.0"]
+dependencies = ["fastapi>=0.110","uvicorn>=0.29","pydantic>=2.6","pillow>=10.3","pytesseract>=0.3","httpx>=0.27","python-multipart>=0.0.9","reportlab>=4.0","cryptography>=43"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.2","ruff>=0.4"]
@@ -30,6 +30,7 @@ ignore = ["E401", "E701", "E702"]
 "app/cli.py" = ["BLE001"]
 "app/ocr.py" = ["BLE001", "DTZ007", "I001", "UP045", "S112", "PYI041"]
 "app/normalization.py" = ["DTZ007"]
+"app/inbox_service.py" = ["BLE001", "S110"]
 
 [project.scripts]
 receipts-lens = "app.cli:main"

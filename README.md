@@ -1,16 +1,66 @@
 # ReceiptLens
 
-<p align="center">
-  <img alt="ReceiptLens" src="docs/assets/logo.svg" width="120" />
-</p>
+ReceiptLens is a self-hostable receipt intelligence workspace for small businesses and bookkeepers. It turns receipt images into confidence-scored structured data, guides reviewers to uncertain fields, validates accounting readiness, and produces auditable exports without hiding OCR uncertainty.
 
-**ReceiptLens** extracts structured data from receipt images using Tesseract OCR.
+## What you can do
 
-Send an image (file upload, public URL, or batch of either) to `POST /v1/parse-receipt` or `POST /v1/parse-receipts` and get back JSON with `vendor`, `total`, `date`, `tax`, `currency`, and `line_items[]`.
+- Capture receipts by upload, URL, batch, or simulated inbound email.
+- Review low-confidence fields alongside the original image and OCR source boxes.
+- Correct data with optimistic concurrency and an immutable activity history.
+- Validate mandatory fields, tax, line totals, currency, and export readiness.
+- Create immutable export preparations and replay-safe CSV export commands.
+- Benchmark OCR confidence, publish tenant threshold profiles, and focus the review queue.
+- Preview versioned automation rules, activate them deliberately, record runs, and roll back eligible changes.
+- Inspect inbound email attachments individually, retry failed OCR, and safely quarantine unsupported or mismatched files.
+- Review automation conflicts with a deterministic winning rule before activation.
+- Run locally with Tesseract, or opt into vision OCR with an OpenAI-compatible endpoint.
 
-v1.3.0 improves repeated daily work with precise task deep links and accessible contextual dialogs for approvals, API keys, saved views, and irreversible retention purge. v1.2.0 added early accounting-readiness badges, filters, and export-blocker tasks. v1.1.1 added the prioritized work queue and atomic receipt workspace save. v1.1.0 adds accounting readiness: line-item editing, validation, approval-flow design, export preparation, email intake, subscriptions, FX, dashboard editing, localization, permission matrix, and private diagnostics. v1.0.0 consolidated the operational and intelligent workspace releases with secure source images, OCR overlays, duplicate review, saved views, notifications, automation rules, history, export runs, preferences, onboarding, and PWA support. v0.8.0 added a complete responsive financial operations workspace with receipt inbox, batch capture, OCR review, approval inbox, reports, integrations, administration, accessibility, and mobile layouts. v0.7.0 added **search, allocation metadata, approvals, retention controls, and portability**. v0.6.0 added **AI-powered categorization**, **budget management**, **spending analytics**, and an **alert system** — transforming ReceiptLens from a receipt scanner into a complete expense management platform. The subscription intelligence layer (renewal tracking, price-increase detection, cancellation guides, Subscriptions UI) builds on the recurring-expense analysis — see [docs/subscription-alerts.md](docs/subscription-alerts.md).
+## Product surfaces
 
----
+The **Next.js workspace** in `frontend/` is the primary user interface. The FastAPI service provides the product API, Swagger documentation, health probes, and the compatibility `/workspace` interface. Tenant and role headers are convenient demo controls, not production authentication.
+
+## Quick start
+
+```bash
+# System dependency: install Tesseract OCR first.
+python -m venv .venv
+. .venv/bin/activate
+pip install -e .
+uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+In a second terminal:
+
+```bash
+cd frontend
+npm ci
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npm run dev
+```
+
+Open `http://127.0.0.1:3000`. API documentation is available at `http://127.0.0.1:8000/docs`.
+
+## Primary workflow
+
+1. Upload or receive receipt documents.
+2. Open **Review** and filter by readiness, confidence field, threshold, or amount.
+3. Verify extracted values against the source image and correct exceptions.
+4. Complete review, create an export preparation, and resolve blockers.
+5. Acknowledge warnings explicitly and execute an idempotent CSV export.
+6. Inspect receipt history, export runs, quality reports, and reversible automation runs.
+
+## Browser security configuration
+
+Set `RECEIPTLENS_ALLOWED_ORIGINS` to a comma-separated list of trusted frontend origins. The local development default permits `http://localhost:3000` and `http://127.0.0.1:3000`.
+
+## Verification
+
+```bash
+pytest -q
+ruff check app tests
+cd frontend && npm run typecheck && npm run build
+```
+
+See `docs/api.md`, `docs/product-workflows.md`, `docs/accounting-export-guide.md`, and `docs/gui-workspace.md` for focused guidance. See `development-report.md` for the exact evidence from the latest development pass.
 
 ## Features
 
@@ -630,3 +680,25 @@ See [CHANGELOG.md](CHANGELOG.md).
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Exception-to-export workflow (development pass)
+
+ReceiptLens now exposes the approved bookkeeping workflow through the Next.js workspace:
+
+1. Forward or upload receipt images. Email attachments are tracked independently and unsafe or mismatched content is quarantined.
+2. Open **Review** to prioritize low-confidence fields, inspect source evidence, and correct structured values without changing the original image.
+3. Use **Settings → Diagnostics → OCR quality** to evaluate labelled cases and publish tenant-scoped confidence thresholds.
+4. Preview and activate automation rules before applying them, inspect each run, and roll back eligible receipts without overwriting later edits.
+5. Open **Export → Prepare** to create a versioned validation snapshot. Blocked receipts stay out of the artifact, warnings require acknowledgement, and repeated commands use an idempotency key.
+
+The implementation remains provider-neutral. QuickBooks and Xero production OAuth posting are intentionally deferred; the current export artifact is deterministic CSV. For local development, start FastAPI on port 8000 and the Next.js workspace on port 3000. If the workspace reports a load error, verify the backend, tenant headers, and `NEXT_PUBLIC_API_BASE_URL`, then use the visible **Retry** action.
+
+## QuickBooks Online sandbox workflow
+
+The provider foundation supports tenant-bound OAuth state, AES-GCM token storage, immutable account mappings, durable replay-safe export items, reconciliation, and source-currency/tax projections. Install project dependencies, set `RECEIPTLENS_CREDENTIAL_KEY` to URL-safe Base64 for 32 random bytes, start FastAPI and the Next.js frontend, then open **Integrations**. This phase is sandbox-oriented and does not claim production Intuit certification. See `docs/quickbooks-online.md` for the operational contract and troubleshooting boundaries.
+
+### Connected workflow API completion
+The Integrations QuickBooks action now calls the tenant-scoped OAuth-start endpoint and redirects only to its fixed Intuit authorization URL. Accounting projection refresh and role-limited provider preview endpoints are available for server-integrated screens. A configured 32-byte URL-safe Base64 `RECEIPTLENS_CREDENTIAL_KEY` is required; absent configuration fails closed with HTTP 503.
+
+### Provider connection administration
+Provider connections can now be listed tenant-safely, inspected, disconnected with active ciphertext deletion, and assigned immutable mapping versions through the `/product/provider-connections` and `/product/connections/{id}/mappings` APIs. Historical connection metadata remains after disconnect while active credentials are removed.
