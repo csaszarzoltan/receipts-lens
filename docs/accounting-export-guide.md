@@ -249,3 +249,7 @@ Date,Merchant,Category,Description,Amount,Currency,Tax
 ## Replay-safe export commands
 
 A preparation validates 1-200 unique receipt IDs and records each current version. Execute it with `POST /product/export-commands`, an `Idempotency-Key`, and all warning receipt IDs acknowledged. A changed receipt makes the preparation stale. Completed reference exports expose a CSV artifact from the run endpoint.
+
+## Provider export and reconciliation
+
+QuickBooks provider exports use durable run and item records rather than the CSV artifact path. A successful link is unique for tenant, connection, receipt, and receipt version. Replaying a command or including an already-linked receipt does not create another provider purchase. Reconciliation compares date, source-currency total with a 0.01 tolerance, and currency, and preserves a missing remote record as an auditable status.

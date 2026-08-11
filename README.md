@@ -692,3 +692,7 @@ ReceiptLens now exposes the approved bookkeeping workflow through the Next.js wo
 5. Open **Export → Prepare** to create a versioned validation snapshot. Blocked receipts stay out of the artifact, warnings require acknowledgement, and repeated commands use an idempotency key.
 
 The implementation remains provider-neutral. QuickBooks and Xero production OAuth posting are intentionally deferred; the current export artifact is deterministic CSV. For local development, start FastAPI on port 8000 and the Next.js workspace on port 3000. If the workspace reports a load error, verify the backend, tenant headers, and `NEXT_PUBLIC_API_BASE_URL`, then use the visible **Retry** action.
+
+## QuickBooks Online sandbox workflow
+
+The provider foundation supports tenant-bound OAuth state, AES-GCM token storage, immutable account mappings, durable replay-safe export items, reconciliation, and source-currency/tax projections. Install project dependencies, set `RECEIPTLENS_CREDENTIAL_KEY` to URL-safe Base64 for 32 random bytes, start FastAPI and the Next.js frontend, then open **Integrations**. This phase is sandbox-oriented and does not claim production Intuit certification. See `docs/quickbooks-online.md` for the operational contract and troubleshooting boundaries.

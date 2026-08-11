@@ -1,85 +1,87 @@
 # Development Report
 
 ## Implemented Scope
-Validated and completed the approved exception-to-export slice: accounting-safe review/export, confidence/provenance triage, quality profiles, attachment-level inbox handling, and previewable/reversible automation. Added executable lab gates, API acceptance coverage, and synchronized product documentation.
+Implemented the tested provider-domain foundation for the approved QuickBooks Online pass: encrypted tenant-scoped OAuth state/credentials, immutable mapping versions, replay-safe provider runs and links, reconciliation comparison, and Decimal source-currency/tax/payload projections. Added a polished sandbox onboarding panel to Integrations and synchronized documentation.
 
 ## Research Items Addressed
-- Deterministic accounting preflight and auditable handoff.
-- Confidence-aware exception processing with source provenance.
-- Multi-channel receipt capture with safe reusable automation.
+- One accounting-provider sandbox contract before a second provider.
+- Deterministic replay protection and remote reconciliation evidence.
+- Original-currency preservation, dated conversion provenance, and tax arithmetic.
 
 ## Plan Requirements Completed
-Features A, B, and C are implemented in the existing FastAPI/SQLite and Next.js workspace boundaries. Provider-neutral export, optimistic receipt versions, tenant scoping, immutable image evidence, versioned quality profiles, attachment quarantine/retry, preview-bound rule activation, and conflict-safe rollback remain compatible with existing APIs.
+The domain services and persistence for Features A, B, and C are implemented and tested. Fixed-host QuickBooks network adapter methods are present. The complete HTTP endpoint set, live Intuit token exchange/refresh, durable retry scheduler, provider attachment upload, all planned detail screens, and real sandbox verification are not complete and are explicitly blocked/partial rather than claimed.
 
 ## User Stories Covered
-- US-001: PASS, confidence queue and stale-write behavior covered.
-- US-002: PASS, preflight, warning acknowledgement, stale snapshot, and idempotency covered.
-- US-003: PASS, redacted chronological audit behavior covered.
-- US-004: PASS, confidence filtering, ordering, pagination, and invalid field behavior covered.
-- US-005: PASS, 200-case benchmark accounting, tenant profile, and threshold publication covered.
-- US-006: PASS, OCR box provenance and missing-source fallback covered.
-- US-007: PASS, independent attachment status, quarantine, partial processing, and retry covered.
-- US-008: PASS, non-mutating preview, conflicts, version token, and activation covered.
-- US-009: PASS, eligibility preview, later-edit conflict protection, and transactional rollback covered.
+- US-010: PARTIAL. State, tenant binding, single use, encryption, and redaction pass; live callback/token exchange UI flow is not wired.
+- US-011: PARTIAL. Rotation, health, and reauthorization state pass; automatic provider refresh flow is not wired.
+- US-012: PARTIAL. Mapping validation/versioning pass; full mapping editor and drift preflight are not built.
+- US-013: PARTIAL. 50-item replay and cross-command skip pass; scheduled Retry-After behavior is not implemented.
+- US-014: PARTIAL. Item detail, aggregate counts, and redacted errors pass; failed-item retry API/UI is not built.
+- US-015: PARTIAL. Verified, mismatch, and missing-remote comparison pass; reconciliation route/UI is not built.
+- US-016: PARTIAL. Dated/identity conversion model passes; receipt accounting UI and readiness integration are not built.
+- US-017: PARTIAL. Decimal tax boundaries and invalid-tax behavior pass; mixed-line provider tax mapping is not complete.
+- US-018: PARTIAL. Deterministic version-bound redacted preview passes; preview endpoint/drawer and role checks are not built.
 
 ## Architecture Decisions
-No rewrite or runtime dependency was introduced. FastAPI remains the API boundary; SQLite remains the tenant-scoped reference store; Next.js 14, SWR, and Tailwind remain the UI stack. Export execution is snapshot- and idempotency-based. Automation rollback uses receipt versions to avoid overwriting later changes.
+Used AES-GCM through `cryptography`, SQLite additive schemas, an injected provider protocol, fixed QuickBooks hosts, deterministic SHA-256 dedupe keys, immutable provider links, Decimal money calculations, and provider-independent reconciliation. Existing CSV and US-001..US-009 behavior remain unchanged.
 
 ## UI and UX Implementation
-The workspace includes review, receipt detail/history, export preparation/run detail, OCR quality, inbox, automation editor/run history, and rollback screens. Shared cards, skeletons, workflow states, disabled controls, semantic labels, visible focus, responsive layouts, and retry paths are retained. Production build generated all 31 routes successfully. HTTP startup smoke passed for `/review`; direct browser screenshots and Playwright execution were blocked because the required Chromium headless-shell binary was unavailable, despite an attempted browser install.
+Integrations now contains an accessible responsive QuickBooks sandbox onboarding card with connection, mapping, and verification steps, scope disclosure, semantic heading structure, and existing design tokens. Type-check and production build pass, and `/integrations` startup HTML contains the new panel. The button intentionally does not fake OAuth success. Planned mapping, run, reconciliation, accounting, and payload-preview screens remain incomplete. Browser screenshots and axe execution were blocked because Playwright Chromium headless-shell is unavailable.
 
 ## TDD Evidence
-The archive already contained real behavior tests named for US-001 through US-009. Baseline full regression was green before changes: 1,280 collected tests at that point, with 10 skips. This pass added `tests/test_us_contract_api.py`; its first recorded execution was GREEN, 3 passed. No false RED result is claimed. Final targeted gate: 29 passed. Final full suite after additions: 1,283 collected, 1,273 passed, 10 skipped, 0 failed.
+- RED: `pytest -q tests/test_us_010_018_provider_workflow.py` failed during collection with `ModuleNotFoundError: app.credential_store`.
+- GREEN: the same story suite passed after implementation, initially 6 passed and finally 9 passed.
+- Broader GREEN: targeted existing/new workflow set passed 18 tests before final additions; complete regression passed.
 
 ## Tests and Coverage
-- `pytest -q tests/test_us_contract_api.py`: 3 passed, 0 failed.
-- `bash scripts/tdd-gate-v3.sh`: 29 passed, 0 failed.
-- `pytest -q`: 1,273 passed, 10 skipped, 0 failed from 1,283 collected.
-- Coverage command: `pytest -q tests/test_development_stories.py tests/test_us_contract_api.py --cov=app.export_workflow --cov=app.quality_service --cov=app.automation_service --cov=app.inbox_service --cov-report=term-missing`.
-- Measured result: 79% aggregate across 263 statements. `automation_service.py` 95%, `export_workflow.py` 95%, `quality_service.py` 100%, `inbox_service.py` 34%. The 90% aggregate target was not met; the low inbox result reflects limited direct service coverage even though broader regression tests exercise inbox routes.
+- Final full regression: 1,292 collected; 1,282 passed; 10 skipped; 0 failed.
+- New story suite: 9 passed, 0 failed.
+- Coverage command: `pytest -q tests/test_us_010_018_provider_workflow.py --cov=app.credential_store --cov=app.connection_service --cov=app.provider_export_service --cov=app.reconciliation_service --cov=app.accounting_projection --cov=app.quickbooks_connector --cov-report=term-missing`.
+- Measured: 97% aggregate across 156 imported statements. Accounting projection 100%, connection service 100%, credential store 82%, provider export 96%, reconciliation 100%. QuickBooks adapter was not imported by this suite and therefore has no measured coverage. The credential module does not meet the plan's 100% branch target.
 
 ## Lab Quality Gates
-- `scripts/tdd-gate-v3.sh`: PASS, 29 passed.
-- `scripts/bdd-gate.sh`: PASS, 9 structurally valid stories mapped to behavioral tests.
-- `scripts/security-gate.sh`: PASS, secret-file scan and 33 security regressions passed.
+- `scripts/tdd-gate-v3.sh`: PASS, 29 passed in the configured gate.
+- `scripts/bdd-gate.sh`: PASS, 9 stories structurally valid and mapped.
+- `scripts/security-gate.sh`: PASS, secret scan and 33 regressions.
 - `scripts/doc-sync-check.sh`: PASS.
-- `scripts/ui-gate.sh`: PASS, TypeScript and production build passed.
-- `scripts/git-push-verify.sh`: FAIL/BLOCKED, input archive contains no `.git` directory or remote.
+- `scripts/ui-gate.sh`: PASS through equivalent direct type-check/build; the combined invocation timed out after build output, but both underlying commands completed successfully.
+- `scripts/git-push-verify.sh`: FAIL/BLOCKED because the transported archive has no `.git` directory or remote.
 
 ## Lint, Formatting, Type-Check, Build, and Startup Results
-- Ruff lint: BLOCKED. The environment had the Python wrapper but no runnable Ruff binary; install retry did not provide one.
-- Formatting: no standalone formatter script exists in the repository; no formatting success is claimed.
-- `npm run typecheck`: PASS.
-- `npm run build`: PASS, 31 routes generated.
-- Backend startup: PASS, `/health` returned `{"status":"ok"}`.
-- Frontend startup: PASS, `/review` returned HTML.
-- Integration: PASS, FastAPI TestClient acceptance tests and service/database workflow tests passed.
-- E2E/accessibility: BLOCKED, 18 Playwright cases could not launch because Chromium headless-shell was unavailable. These are environment launch failures, not assertion failures.
-- Screenshots: BLOCKED for the same browser-binary reason; no screenshots are claimed.
+- Ruff: BLOCKED. `python -m ruff` found its wrapper but no runnable binary.
+- Formatting: no repository formatter command exists; no pass is claimed.
+- TypeScript type-check: PASS.
+- Next.js production build: PASS, 31 routes generated.
+- Backend startup: PASS; `/health` returned `{"status":"ok"}`.
+- Frontend startup: PASS after production rebuild; `/integrations` returned HTML containing `QuickBooks Online sandbox`.
+- Integration: PASS using real temporary SQLite files and an injected fake provider for 50-item replay.
+- E2E/accessibility: BLOCKED; 18 existing Playwright cases could not launch due to missing Chromium headless-shell.
+- Screenshots: BLOCKED for the same reason; none are claimed.
 
 ## Files Added
-- `scripts/tdd-gate-v3.sh`, `scripts/bdd-gate.sh`, `scripts/security-gate.sh`, `scripts/doc-sync-check.sh`, `scripts/ui-gate.sh`, `scripts/git-push-verify.sh`.
-- `tests/test_us_contract_api.py`.
+- `app/credential_store.py`, `app/connection_service.py`, `app/provider_connectors.py`, `app/quickbooks_connector.py`, `app/provider_export_service.py`, `app/reconciliation_service.py`, `app/accounting_projection.py`.
+- `tests/test_us_010_018_provider_workflow.py`.
+- `docs/quickbooks-online.md`.
 
 ## Files Modified
-- `README.md`, `CHANGELOG.md`, `FEATURES-DONE.md`, `docs/product-workflows.md`, `development-report.md`.
+- `pyproject.toml`, `frontend/app/(app)/integrations/page.tsx`, `scripts/tdd-gate-v3.sh`, `scripts/bdd-gate.sh`, `README.md`, `CHANGELOG.md`, `docs/accounting-export-guide.md`, `FEATURES-DONE.md`, `development-report.md`.
 
 ## Deferred or Blocked Items
-Production QuickBooks/Xero OAuth posting, jurisdiction-specific tax logic, production identity, and billing remain deferred by plan. Git commit/push, Ruff execution, browser E2E, accessibility browser scans, and screenshots are blocked by missing repository metadata/tool binaries.
+Full API wiring, live Intuit OAuth/token refresh, Retry-After worker scheduling, attachment upload, mapping/accounting/run/reconciliation screens, real QBO sandbox test, Xero, production identity, billing, Playwright screenshots, Ruff, and git push.
 
 ## Known Limitations
-Header-based demo identity is not production authentication. The export artifact is provider-neutral CSV. Aggregate measured coverage is 79%, below the 90% lab target. UI browser inspection could not be completed in this container.
+This artifact is a production-oriented domain foundation, not a completed sellable QuickBooks integration. The Integrations CTA is informational until HTTP OAuth routes are wired. Provider export processing is synchronous when invoked and lacks scheduled retry. Credential key rotation metadata is not implemented.
 
 ## Integrity Verification
-The baseline contained 221 pre-existing files. No pre-existing file was removed. Intentional changes are limited to five documentation files, `FEATURES-DONE.md`, and the added gates/API test. Dependency directories, build output, coverage files, Playwright traces, and caches were removed before packaging.
+Baseline contains 228 pre-existing files. Final reconciliation preserves every pre-existing file. Intentional additions and modifications are listed above. Dependency directories, `.next`, coverage, traces, caches, and temporary output are removed before packaging.
 
 ## Traceability Matrix
 | Research need | User story id | Plan requirement | Implementation evidence | Test evidence | Status |
 |---|---|---|---|---|---|
-| Accounting-safe handoff | US-001, US-002, US-003 | Review, preflight, audit | product service, export workflow, receipt/export UI | development stories, export regressions | COMPLETE |
-| Explainable exceptions | US-004, US-005, US-006 | confidence queue, calibration, provenance | quality service, OCR boxes, review/quality UI | development stories, API contract | COMPLETE |
-| Safe multi-channel automation | US-007, US-008, US-009 | attachment processing, preview, rollback | inbox and automation services/UI | development stories, completion scope | COMPLETE |
-| Browser visual evidence | US-001..US-009 | screenshots and E2E | build/startup verified | Playwright launch blocked | BLOCKED |
+| Single provider foundation | US-010..012 | OAuth safety, encryption, mapping | credential/connection/QBO modules | US provider suite | PARTIAL |
+| Replay and reconciliation | US-013..015 | dedupe, item state, compare | provider export/reconciliation modules | 50-item replay and compare tests | PARTIAL |
+| Currency and tax provenance | US-016..018 | Decimal projection, tax, preview | accounting projection module | rate/tax/stale preview tests | PARTIAL |
+| Complete UI/API flow | US-010..018 | all planned routes/screens | onboarding entry only | build/startup only | BLOCKED |
 
 ## Suggested Commit Message
-`feat(workflows): verify exception-to-export automation and lab gates`
+`feat(accounting): add QuickBooks sandbox domain foundation and provenance`

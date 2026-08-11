@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased - Provider integration] - 2026-08-11
+
+### Added
+- QuickBooks Online provider-domain foundation with tenant-bound OAuth state, AES-GCM credential storage, immutable mapping versions, replay-safe export items, and reconciliation.
+- Decimal source-currency, dated-rate, tax-arithmetic, and deterministic payload-preview services.
+- BDD-derived US-010 through US-018 regression coverage and a polished QuickBooks sandbox onboarding panel.
+
+
 ## [Unreleased] - 2026-08-11
 
 ### Added

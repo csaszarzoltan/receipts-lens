@@ -1,398 +1,379 @@
 # Implementation Plan
 
-**Planning baseline:** ReceiptLens 1.4.0 project archive and `research-findings.md`, reviewed 2026-08-11.
-
 ## Executive Summary
-This pass will deliver three integrated features on the existing FastAPI, SQLite, Next.js 14, React 18, TypeScript, SWR, Tailwind, pytest, and Playwright stack:
+This pass advances ReceiptLens from a provider-neutral exception-to-export product into a **single-provider, sandbox-verified accounting integration**. The selected scope is deliberately one coherent daily-close path: (1) QuickBooks Online sandbox OAuth and versioned mapping, (2) replay-safe posting with per-item reconciliation and recovery, and (3) source-currency/tax provenance from receipt through provider payload preview. It covers nine new BDD stories, US-010 through US-018.
 
-1. **Accounting-safe review and export gate** covering US-001 through US-003.
-2. **Transparent OCR confidence and exception queue** covering US-004 through US-006.
-3. **Inbox-to-books automation with safe rules** covering US-007 through US-009.
+The plan builds on the completed US-001 through US-009 workflow rather than reopening it. QuickBooks Online is the only live provider in scope. Xero, production identity, billing, jurisdiction-specific tax advice, and autonomous currency-rate fetching are deferred. Existing CSV export, demo header identity, OCR, review, automation, and all legacy endpoints remain compatible.
 
-The product slice is deliberately bounded around one outcome: a bookkeeper can receive receipts, identify and correct uncertain fields with source evidence, apply only previewed automation, and export only receipts that pass deterministic accounting checks. The pass does not add a live QuickBooks or Xero connector, billing, travel/expense cards, or new OCR providers. Existing endpoints and file formats remain compatible; additions are versioned, tenant-scoped, and persisted in the existing product SQLite database.
-
-The Next.js workspace remains the primary UI. The legacy `/workspace` surface remains available but receives no new feature work. No new runtime dependency is required. New quality-gate shell scripts are repository-owned wrappers around existing commands and checks, not application dependencies.
+The implementation must use the existing FastAPI, SQLite, Next.js 14, SWR, Tailwind, pytest, and Playwright stack. Add only the official Intuit OAuth/API client boundary implemented with the existing `httpx`; do not add a provider SDK. Provider I/O must be behind an interface so deterministic fake-server integration tests can run without credentials, while one opt-in sandbox test proves the real contract when credentials are available.
 
 ## Current-State Validation
-The research report matches the project:
-
-- `pyproject.toml` defines ReceiptLens 1.4.0 on Python 3.11+ with FastAPI, Pydantic, Pillow, pytesseract, httpx, multipart, and reportlab.
-- `frontend/package.json` defines Next.js 14.2.35, React 18.3.1, TypeScript, SWR, Recharts, Tailwind, Playwright, and axe.
-- `app/product_api.py` already exposes receipt upload/list/detail, review, OCR boxes, history, validation, export preparation, export runs, automation rules, previews, and inbound-email endpoints.
-- `app/advanced_workspace.py` persists assets, OCR boxes, automation rules, notifications, saved views, duplicate decisions, preferences, history, and export runs.
-- `app/accounting_workspace.py` persists inbound-email records and export preparations and implements readiness validation.
-- `app/product_service.py` persists tenant receipts/jobs, versions, metadata, approvals, connections, and activity history.
-- The Next.js application already contains review, receipt detail, export preparation, automation, and inbox pages, so this is an enhancement and consolidation pass rather than a rewrite.
-- The report's nine selected stories are actionable and align with existing primitives. The missing elements are calibrated queue filters, complete provenance presentation, immutable export preflight/run semantics, attachment-level ingestion, rule conflict/version/run tracking, and rollback.
-
-Planning assumptions that are now decisions:
-
-- SQLite remains the reference product store for this pass.
-- `X-Tenant-ID` and `X-Role` remain for compatibility and tests; production authentication is deferred.
-- The source receipt image is immutable. Corrections alter structured data only.
-- “Ready” is computed, never manually set.
-- Export preparation is a snapshot; export execution references that snapshot and an idempotency key.
-- Automation affects future receipts by default. Existing receipts change only through an explicit previewed run.
-- Rollback is optimistic and atomic: receipts modified after the automation run are conflicts and are not reverted.
+- ReceiptLens 1.4.0 already provides tenant-scoped receipts, optimistic versions, accounting readiness, provider-neutral connections, immutable preparations, idempotent export commands, artifacts, audit history, and a Next.js export UI (`app/product_service.py`, `app/accounting_workspace.py`, `app/export_workflow.py`, `app/product_api.py`, `frontend/app/(app)/exports/**`).
+- The completed development report confirms US-001 through US-009 pass and identifies the next product limitations: CSV-only export, header-based demo identity, no live provider posting, 79% measured coverage in selected workflow modules, and unavailable browser screenshots in that environment (`development-report.md`).
+- Research prioritizes one provider sandbox deeply before adding a second, and separately identifies multi-currency/tax preservation as P1 because accounting integrations, reconciliation, and currency mistakes drive user pain (`research-findings.md`, Differentiation Opportunities and Priority-Ranked Development Recommendations).
+- Existing `connections` records and `Connection` frontend type model provider/name/mapping but not OAuth state, encrypted credentials, provider company metadata, mapping versions, provider links, item attempts, or reconciliation snapshots. Additive schema migration is required.
+- The app already depends on `httpx`, so no new Python runtime package is necessary. Built-in `secrets`, `hashlib`, `hmac`, `base64`, and an environment-supplied 32-byte key are sufficient for state generation and authenticated token encryption using a new repository-local AES-free encrypt-then-MAC construction only if cryptography is unavailable. Preferred decision: add `cryptography>=43` because authenticated encryption for OAuth tokens must not be hand-rolled.
+- A real product UI is appropriate and already exists. This is an enhancement to Integrations, Export Preparation, Export Runs, and Receipt Detail, not a frontend rewrite.
 
 ## Research Priorities
-| Rank | Research-backed priority | Selected | Reason |
+| Rank | Candidate | Decision | Evidence-to-risk rationale |
 |---|---|---|---|
-| P0 | Accounting-safe review and export gate | Yes | Directly addresses matching, tax, completeness, and auditability pain while reusing implemented validation/export primitives. |
-| P0 | Transparent OCR confidence and exception queue | Yes | Converts uncertain OCR into focused work and makes quality measurable instead of relying on accuracy claims. |
-| P1 | Inbox-to-books automation with safe rules | Yes | Completes the existing inbound-email and rules foundations with preview, conflict handling, run history, and rollback. |
-| P1 | Production QuickBooks/Xero connectors | Deferred | Requires OAuth, provider sandboxes, mapping certification, replay recovery, and operational ownership after internal export contracts are stable. |
-| P1 | Multi-currency/tax expansion | Deferred | Current validation and exchange-rate primitives are retained; jurisdiction-specific behavior needs separate fixtures and accounting review. |
-| P2 | Privacy-first deployment program | Deferred | Existing retention/diagnostic primitives remain; threat model and deployment hardening merit a dedicated security pass. |
-| P2 | Usage-based packaging | Deferred | Billing must follow measured activation, cost, and willingness-to-pay data. |
+| P0 | QuickBooks Online sandbox connector | Select | Research says accounting integration is table stakes and recommends one provider sandbox deeply; provider-neutral preflight is already complete. |
+| P0 | Replay-safe posting and reconciliation | Select | User pain centers on matching and opaque sync; idempotent commands and receipt versions provide a strong base. |
+| P0 | Source-currency and tax provenance | Select | Currency/tax mistakes are directly reported and the project already has rate and validation primitives. |
+| P1 | Xero connector | Defer | Simultaneous providers would duplicate OAuth, mapping, and reconciliation risk before the first contract is proven. |
+| P1 | Production identity/SSO | Defer | Required before public production, but not necessary to prove the sandbox integration contract; current role checks remain explicit. |
+| P2 | Billing and usage enforcement | Defer | Requires activation and cost telemetry after provider workflow validation. |
+| P2 | New OCR provider/model | Defer | No benchmark evidence justifies changing extraction in this pass. |
 
 ## Selected Scope for This Pass
-### Feature A: Accounting-safe review and export gate
-Deliver a single review-to-export workflow with deterministic readiness, deep-linked blockers, warning acknowledgement, immutable preparation snapshots, idempotent export execution, and auditable receipt/export history. Satisfies US-001, US-002, and US-003.
+### Feature A: QuickBooks Online sandbox connector
+Implement admin-only OAuth 2.0 Authorization Code with PKCE/state, encrypted token storage, company discovery, connection health, disconnect, and immutable mapping versions. Stories: US-010, US-011, US-012.
 
-### Feature B: Transparent OCR confidence and exception queue
-Add server-side confidence filters and ordering, field-level provenance selection, accessible OCR-box highlighting, and a labelled benchmark/calibration report maintained through Diagnostics. Satisfies US-004, US-005, and US-006.
+### Feature B: Reconciled and replay-safe provider export
+Extend the existing preparation/command model with queued per-item provider posting, deterministic deduplication, rate-limit retry, immutable item attempts, run detail, failed-item retry, remote verification, and reconciliation status. Stories: US-013, US-014, US-015.
 
-### Feature C: Inbox-to-books automation with safe rules
-Persist email attachments individually, process supported attachments independently, quarantine unsupported content, add retry, and introduce draft/versioned rules with preview conflicts, explicit runs over selected receipts, run history, and atomic rollback. Satisfies US-007, US-008, and US-009.
+### Feature C: Source-currency and tax provenance
+Preserve original and reporting values, dated-rate provenance, arithmetic validation, provider tax-code mapping, and a redacted deterministic provider-payload preview tied to preparation and mapping versions. Stories: US-016, US-017, US-018.
 
-Coherence boundary: these features share receipt versions, history, readiness, provenance, and tenant-scoped persistence. They form one complete operational path. Forecasting, budgets, subscriptions, reports, approvals, and duplicates must continue to work but are regression scope only. The developer must implement the exact labels, routes, state behavior, schemas, and test mappings in this plan; deviations require a documented compatibility fix, not an unplanned product alternative.
+Scope boundary: complete the connected QuickBooks sandbox path for purchase/expense-style transactions only. Do not implement invoices, bills, payments, reimbursements, cards, payroll, bank-feed matching, or production certification.
 
 ## Deferred Scope and Rationale
-1. **Live QuickBooks connector:** defer to the next integration phase after idempotent provider-neutral export has test evidence. Prerequisites: OAuth secret storage, sandbox tenant, mapping policy, attachment upload, rate-limit handling, and reconciliation tests.
-2. **Live Xero connector:** defer until the QuickBooks adapter contract proves provider portability. Same prerequisites plus Xero certification review.
-3. **Jurisdiction-specific VAT/GST engines:** defer to a tax domain phase. Prerequisites: target countries, accountant-reviewed rules, rounding policy, and legal disclaimer.
-4. **New OCR providers or model training:** defer until the benchmark identifies actual failure segments. The adapter seam may be clarified but no provider is added.
-5. **Production authentication/SSO:** defer to a dedicated identity and tenancy pass. Current headers remain explicitly non-production.
-6. **Billing and usage enforcement:** defer until beta telemetry establishes unit economics and acceptable limits.
-7. **Travel, cards, reimbursement payments, and generalized AP:** rejected for the current product wedge; they dilute the exception-to-export workflow.
-8. **Legacy workspace migration/removal:** defer. The Next.js app becomes the documented primary surface, while `/workspace` stays compatible.
-9. **README rewrite during this planning phase:** prohibited by the phase's hard scope. The development pass must update README as specified below.
+1. **Xero OAuth and posting:** next provider-adapter phase after QuickBooks contract, retry, and reconciliation metrics are green.
+2. **Production authentication, SSO, and invite acceptance:** dedicated identity phase; prerequisite for public multi-tenant hosting.
+3. **Jurisdiction-specific VAT/GST advice:** tax-domain phase with accountant-reviewed country fixtures and legal wording.
+4. **Automatic third-party FX-rate fetching:** integration phase after data-source licensing, cache, and outage policy are chosen. This pass accepts tenant-admin supplied rates only.
+5. **Provider webhooks and bidirectional updates:** reconciliation phase after outbound links are proven; polling verification is sufficient here.
+6. **Xero/QuickBooks simultaneous launch or provider certification:** operational release phase with real partner accounts.
+7. **Billing, quotas, and usage-based pricing:** commercial experiment phase after sandbox-to-beta conversion data.
+8. **Production migration from SQLite to PostgreSQL:** scale phase; new services must remain repository-interface compatible.
+9. **Legacy `/workspace` removal:** frontend consolidation phase; no behavior changes in this pass.
+10. **OCR model/provider changes:** quality phase only when labelled benchmark evidence identifies a segment-specific gap.
 
 ## User Stories (BDD)
 ```json
 [
   {
-    "id": "US-001",
-    "epic": "Accounting-safe review and export gate",
-    "role": "bookkeeper",
-    "action": "review all uncertain fields in one prioritized queue",
-    "benefit": "I can export only accounting-ready receipts",
-    "story": "As a bookkeeper, I want to review all uncertain fields in one prioritized queue, so that I can export only accounting-ready receipts.",
+    "id": "US-010",
+    "epic": "QuickBooks Online sandbox connector",
+    "role": "tenant administrator",
+    "action": "connect a QuickBooks Online sandbox company through OAuth",
+    "benefit": "approved receipts can be posted without copying CSV files",
+    "story": "As a tenant administrator, I want to connect a QuickBooks Online sandbox company through OAuth, so that approved receipts can be posted without copying CSV files.",
     "gui_flow": [
-      "User opens Review Queue → sees items ordered by blocking severity and confidence",
-      "User opens a receipt → sees image, extracted fields, and highlighted low-confidence sources",
-      "User edits a field → validation and readiness recalculate immediately",
-      "User opens line items → sees sum-to-total variance",
-      "User clicks Complete → receipt moves to Ready when no blockers remain",
-      "User opens Export Preparation → sees the completed receipt included"
+      "Administrator opens Integrations → sees QuickBooks Online marked Not connected",
+      "Administrator selects Connect QuickBooks → sees a disclosure of requested scopes and data use",
+      "Administrator selects Continue to Intuit → browser is redirected to the provider authorization URL with state and PKCE parameters",
+      "Provider callback returns → ReceiptLens validates state, stores encrypted tokens, and shows the selected company name",
+      "Administrator selects Test connection → sees Connected, company identifier suffix, and last-tested timestamp",
+      "Administrator opens Export Preparation → QuickBooks Online is available as a destination"
     ],
     "acceptance_criteria": [
       {
         "type": "given",
-        "text": "a receipt has one low-confidence total and valid source image",
-        "when": "the user corrects the total and clicks Complete",
-        "then": "the saved version increments once and readiness becomes exportable within 2 seconds"
+        "text": "an admin starts a connection for tenant A",
+        "when": "the OAuth callback returns matching state, realm identifier, and authorization code",
+        "then": "one active tenant-A connection is stored and the callback redirects to `/integrations?connected=quickbooks` without exposing tokens"
       },
       {
         "type": "given",
-        "text": "another reviewer saved a newer version",
-        "when": "the user submits an edit based on the stale version",
-        "then": "the UI shows a conflict, preserves the draft, and does not overwrite server data"
+        "text": "an OAuth state belongs to tenant A",
+        "when": "a tenant-B callback or a replay uses that state",
+        "then": "the callback returns 400, stores no token, and records a redacted security event"
       },
       {
         "type": "given",
-        "text": "the image endpoint fails",
-        "when": "the user opens the receipt",
-        "then": "the form remains usable and an error state offers Retry without marking the receipt complete"
+        "text": "the provider token exchange times out",
+        "when": "the callback is processed",
+        "then": "the connection remains disconnected, the UI shows `Connection could not be completed`, and Retry creates a new state"
       }
     ]
   },
   {
-    "id": "US-002",
-    "epic": "Accounting-safe review and export gate",
+    "id": "US-011",
+    "epic": "QuickBooks Online sandbox connector",
+    "role": "tenant administrator",
+    "action": "inspect and refresh the accounting connection",
+    "benefit": "expired credentials do not interrupt an export unexpectedly",
+    "story": "As a tenant administrator, I want to inspect and refresh the accounting connection, so that expired credentials do not interrupt an export unexpectedly.",
+    "gui_flow": [
+      "Administrator opens Integrations → sees connection health, scope summary, and token expiry status",
+      "Administrator selects Test connection → ReceiptLens requests provider company information",
+      "Successful response appears → status changes to Healthy with a UTC timestamp",
+      "Administrator selects Refresh authorization when consent is stale → a new OAuth flow begins",
+      "Administrator returns from provider → the existing connection is updated rather than duplicated",
+      "Administrator selects Disconnect → a confirmation dialog explains queued exports will stop"
+    ],
+    "acceptance_criteria": [
+      {
+        "type": "given",
+        "text": "an access token expires and a valid refresh token exists",
+        "when": "the connection test runs",
+        "then": "ReceiptLens refreshes once, retries once, and returns Healthy without exposing either token"
+      },
+      {
+        "type": "given",
+        "text": "a refresh response rotates the refresh token",
+        "when": "the new token set is stored",
+        "then": "the previous encrypted token material is replaced and cannot be retrieved through any API response"
+      },
+      {
+        "type": "given",
+        "text": "the provider returns invalid_grant",
+        "when": "the connection test runs",
+        "then": "the connection becomes Reauthorization required, no repeated refresh loop occurs, and the UI offers Reconnect"
+      }
+    ]
+  },
+  {
+    "id": "US-012",
+    "epic": "QuickBooks Online sandbox connector",
+    "role": "integrator",
+    "action": "map ReceiptLens fields to QuickBooks purchase fields and validate the mapping",
+    "benefit": "posting failures are caught before an export run",
+    "story": "As a integrator, I want to map ReceiptLens fields to QuickBooks purchase fields and validate the mapping, so that posting failures are caught before an export run.",
+    "gui_flow": [
+      "Integrator opens QuickBooks connection detail → sees the Mapping tab",
+      "Integrator chooses expense account, payment account, tax treatment, vendor fallback, and attachment behavior",
+      "Integrator selects Validate mapping → server checks required fields and provider references",
+      "Valid mapping appears → each row shows Ready and the Save mapping button enables",
+      "Integrator saves → mapping version and editor role appear in the audit panel",
+      "Integrator opens Export Preparation → preflight uses the saved mapping version"
+    ],
+    "acceptance_criteria": [
+      {
+        "type": "given",
+        "text": "a mapping references active provider accounts and defines every required target",
+        "when": "the integrator validates and saves it",
+        "then": "a new immutable mapping version is stored and returned with `valid=true`"
+      },
+      {
+        "type": "given",
+        "text": "the provider account list changes after a mapping was saved",
+        "when": "preflight validates the mapping",
+        "then": "the affected receipts are blocked with `mapping_reference_inactive` and a deep link to Mapping"
+      },
+      {
+        "type": "given",
+        "text": "a required purchase account is blank",
+        "when": "the integrator selects Validate mapping",
+        "then": "the API returns 422 with field `expense_account_ref` and Save remains disabled"
+      }
+    ]
+  },
+  {
+    "id": "US-013",
+    "epic": "Reconciled and replay-safe provider export",
+    "role": "bookkeeper",
+    "action": "post a prepared batch to QuickBooks exactly once",
+    "benefit": "retries cannot create duplicate purchases",
+    "story": "As a bookkeeper, I want to post a prepared batch to QuickBooks exactly once, so that retries cannot create duplicate purchases.",
+    "gui_flow": [
+      "Bookkeeper opens Export Preparation → selects exportable receipts and QuickBooks Online",
+      "Bookkeeper runs Preflight → sees Ready, Warning, and Blocked groups plus mapping version",
+      "Bookkeeper acknowledges warning receipts → Export ready items enables",
+      "Bookkeeper selects Export ready items → a queued run appears with progress",
+      "Worker posts each receipt with deterministic idempotency metadata → item rows update independently",
+      "Run completes → summary shows Created, Already exported, Failed, and Needs reconciliation counts"
+    ],
+    "acceptance_criteria": [
+      {
+        "type": "given",
+        "text": "50 valid prepared receipts and a healthy sandbox connection",
+        "when": "the export command executes twice with the same idempotency key",
+        "then": "exactly 50 provider purchases exist and both calls return the same ReceiptLens run identifier"
+      },
+      {
+        "type": "given",
+        "text": "one receipt already has a successful provider link",
+        "when": "a different export command includes it",
+        "then": "that receipt is reported Already exported and no second provider create request is made"
+      },
+      {
+        "type": "given",
+        "text": "the provider returns HTTP 429 with Retry-After for an item",
+        "when": "the worker processes the run",
+        "then": "the item is retried no more than three times, other items continue, and terminal failure remains retryable"
+      }
+    ]
+  },
+  {
+    "id": "US-014",
+    "epic": "Reconciled and replay-safe provider export",
+    "role": "bookkeeper",
+    "action": "inspect every provider result and retry only failed items",
+    "benefit": "partial failures can be recovered without reposting successful receipts",
+    "story": "As a bookkeeper, I want to inspect every provider result and retry only failed items, so that partial failures can be recovered without reposting successful receipts.",
+    "gui_flow": [
+      "Bookkeeper opens Export Runs → sees destination, state, counts, and created timestamp",
+      "Bookkeeper opens a partial run → sees one row per receipt and provider result",
+      "Bookkeeper filters Failed → successful rows remain unchanged and hidden",
+      "Bookkeeper opens a failed row → sees redacted provider error, attempt count, and next action",
+      "Bookkeeper selects Retry failed items → a confirmation lists only retryable item identifiers",
+      "Retry completes → rows update and the aggregate run state recalculates"
+    ],
+    "acceptance_criteria": [
+      {
+        "type": "given",
+        "text": "a run contains 42 created, 5 already exported, and 3 retryable failures",
+        "when": "the detail endpoint is read",
+        "then": "all 50 immutable item records are returned with matching aggregate counts"
+      },
+      {
+        "type": "given",
+        "text": "a receipt changed after the original preparation",
+        "when": "the user retries its failed item",
+        "then": "the retry is rejected as `receipt_version_changed` and creates no provider request"
+      },
+      {
+        "type": "given",
+        "text": "a provider error contains request headers or tokens",
+        "when": "the error is persisted and displayed",
+        "then": "credentials are removed, the provider request ID is retained, and the payload is limited to 2 KB"
+      }
+    ]
+  },
+  {
+    "id": "US-015",
+    "epic": "Reconciled and replay-safe provider export",
     "role": "accountant",
-    "action": "see deterministic export blockers before posting",
-    "benefit": "I do not create incomplete ledger entries",
-    "story": "As an accountant, I want to see deterministic export blockers before posting, so that I do not create incomplete ledger entries.",
+    "action": "reconcile a ReceiptLens receipt with its QuickBooks purchase and attachment",
+    "benefit": "I can prove what the accounting system accepted",
+    "story": "As a accountant, I want to reconcile a ReceiptLens receipt with its QuickBooks purchase and attachment, so that I can prove what the accounting system accepted.",
     "gui_flow": [
-      "User opens Export Preparation → sees selected receipts",
-      "User chooses an accounting connection → preflight starts",
-      "User sees Ready, Warning, and Blocked groups with counts",
-      "User expands a blocked receipt → sees field-level reasons and deep links",
-      "User fixes the receipt → returns to preflight with selection preserved",
-      "User clicks Export Ready Items → sees immutable run summary"
+      "Accountant opens a successful run item → sees ReceiptLens and provider identifiers",
+      "Accountant selects Verify in QuickBooks → ReceiptLens retrieves the purchase by provider identifier",
+      "Comparison panel opens → amount, currency, date, vendor, account, tax, and attachment state are shown side by side",
+      "Matching values show Verified → mismatches show Needs attention with field names",
+      "Accountant selects Mark resolved after correcting the provider record → verification runs again",
+      "Verified result is written to receipt and run audit history with a UTC timestamp"
     ],
     "acceptance_criteria": [
       {
         "type": "given",
-        "text": "ten receipts include two missing mandatory fields",
-        "when": "the user runs preflight",
-        "then": "exactly two are blocked with field names and eight are eligible"
+        "text": "provider and ReceiptLens values match for all compared fields",
+        "when": "verification runs",
+        "then": "the item becomes verified and records a provider sync token plus verified_at timestamp"
       },
       {
         "type": "given",
-        "text": "a warning-only receipt is selected",
-        "when": "the user exports with warnings",
-        "then": "the export requires explicit acknowledgement and records it in history"
+        "text": "the provider purchase exists but total differs by more than 0.01 in source currency",
+        "when": "verification runs",
+        "then": "the item becomes needs_reconciliation with field `total` and cannot be marked verified manually"
       },
       {
         "type": "given",
-        "text": "the connection test returns an authentication error",
-        "when": "the user starts export",
-        "then": "no receipt is posted and the run reports a retryable connection error"
+        "text": "the provider purchase was deleted",
+        "when": "verification runs",
+        "then": "the item becomes missing_remote, the original successful link remains in audit history, and Recreate stays disabled until a new preflight"
       }
     ]
   },
   {
-    "id": "US-003",
-    "epic": "Accounting-safe review and export gate",
-    "role": "reviewer",
-    "action": "trace every correction and export decision",
-    "benefit": "I can answer audit questions",
-    "story": "As a reviewer, I want to trace every correction and export decision, so that I can answer audit questions.",
+    "id": "US-016",
+    "epic": "Source-currency and tax provenance",
+    "role": "cross-border bookkeeper",
+    "action": "preserve original currency and conversion evidence from receipt through provider export",
+    "benefit": "foreign receipts are not silently posted in the wrong currency",
+    "story": "As a cross-border bookkeeper, I want to preserve original currency and conversion evidence from receipt through provider export, so that foreign receipts are not silently posted in the wrong currency.",
     "gui_flow": [
-      "User opens Receipt Detail → sees current status and version",
-      "User opens History → sees chronologically ordered events",
-      "User selects an event → sees actor role, timestamp, and changed fields",
-      "User compares before and after → sensitive image bytes are absent",
-      "User filters to Export events → sees run and connection identifiers",
-      "User downloads a redacted audit record → receives machine-readable JSON"
+      "Bookkeeper opens Receipt Detail → sees Original amount, Original currency, and tenant reporting currency",
+      "Bookkeeper selects Currency details → sees exchange-rate value, date, source, and conversion status",
+      "Bookkeeper edits original currency → existing conversion becomes Stale and readiness recalculates",
+      "Bookkeeper selects Refresh conversion → server resolves the configured dated rate",
+      "Updated conversion appears → original values remain unchanged and converted values are visually secondary",
+      "Bookkeeper opens Export Preflight → provider currency capability and conversion decision are explicit"
     ],
     "acceptance_criteria": [
       {
         "type": "given",
-        "text": "a receipt has two corrections and one export",
-        "when": "the user opens History",
-        "then": "all three events appear with UTC timestamps and before/after field values"
+        "text": "a EUR receipt belongs to a CHF reporting tenant and a dated EUR/CHF rate exists",
+        "when": "conversion is calculated",
+        "then": "the original EUR amount remains unchanged and the CHF amount, rate, rate date, and source are stored together"
       },
       {
         "type": "given",
-        "text": "an event has no before value",
-        "when": "the user opens its diff",
-        "then": "the UI labels it Created rather than rendering a broken comparison"
+        "text": "a receipt currency equals the tenant reporting currency",
+        "when": "currency details open",
+        "then": "the conversion uses rate 1 with source `identity` and makes no exchange-rate lookup"
       },
       {
         "type": "given",
-        "text": "audit retrieval fails",
-        "when": "the user opens History",
-        "then": "the UI displays an error and retry control without inventing events"
+        "text": "no applicable rate exists",
+        "when": "preflight runs",
+        "then": "the receipt is blocked with `exchange_rate_missing`, no fallback rate is invented, and a deep link opens Currency details"
       }
     ]
   },
   {
-    "id": "US-004",
-    "epic": "Transparent OCR confidence and exception queue",
-    "role": "bookkeeper",
-    "action": "filter work by confidence and business impact",
-    "benefit": "I spend time only on likely errors",
-    "story": "As a bookkeeper, I want to filter work by confidence and business impact, so that I spend time only on likely errors.",
+    "id": "US-017",
+    "epic": "Source-currency and tax provenance",
+    "role": "accountant",
+    "action": "review tax arithmetic and tax-code mapping before export",
+    "benefit": "tax errors do not reach the ledger",
+    "story": "As a accountant, I want to review tax arithmetic and tax-code mapping before export, so that tax errors do not reach the ledger.",
     "gui_flow": [
-      "User opens Review Queue → sees blocker and confidence filters",
-      "User selects Total confidence below 0.80 → list updates",
-      "User sorts by amount descending → high-value receipts move first",
-      "User opens a result → low-confidence fields are visually distinguished",
-      "User corrects the receipt → the queue count updates",
-      "User saves the filter as a private view → it appears in Saved Views"
+      "Accountant opens Receipt Detail → Tax panel shows net, tax, gross, and line-item totals",
+      "Accountant expands Validation → arithmetic checks display pass or fail with tolerance",
+      "Accountant selects provider tax treatment → compatible QuickBooks tax codes load",
+      "Accountant maps the receipt tax treatment → preview shows provider payload totals",
+      "Accountant saves → readiness recalculates and audit history records the mapping",
+      "Accountant opens Export Preparation → tax-ready receipts appear in Ready"
     ],
     "acceptance_criteria": [
       {
         "type": "given",
-        "text": "five receipts match the confidence filter",
-        "when": "the user applies it",
-        "then": "the list shows exactly five and the URL stores the filter state"
+        "text": "net plus tax equals gross within 0.01 source-currency units",
+        "when": "validation runs",
+        "then": "tax arithmetic passes and records the exact evaluated values"
       },
       {
         "type": "given",
-        "text": "no receipts match",
-        "when": "the user applies a stricter threshold",
-        "then": "an empty state explains the filter and offers Clear filters"
+        "text": "line items contain mixed tax rates",
+        "when": "validation runs",
+        "then": "the receipt is warning or blocked according to mapping completeness and each unmapped line identifies its index"
       },
       {
         "type": "given",
-        "text": "the list request times out",
-        "when": "the user changes the filter",
-        "then": "the previous list remains visible with a retryable loading error"
+        "text": "tax exceeds gross or is negative",
+        "when": "validation runs",
+        "then": "the receipt is blocked with a stable error code and no provider payload is generated"
       }
     ]
   },
   {
-    "id": "US-005",
-    "epic": "Transparent OCR confidence and exception queue",
-    "role": "quality owner",
-    "action": "calibrate review thresholds from benchmark results",
-    "benefit": "I can limit false clears",
-    "story": "As a quality owner, I want to calibrate review thresholds from benchmark results, so that I can limit false clears.",
+    "id": "US-018",
+    "epic": "Source-currency and tax provenance",
+    "role": "finance reviewer",
+    "action": "see the exact provider payload preview without secrets before posting",
+    "benefit": "I can approve the accounting interpretation",
+    "story": "As a finance reviewer, I want to see the exact provider payload preview without secrets before posting, so that I can approve the accounting interpretation.",
     "gui_flow": [
-      "User opens Diagnostics → sees OCR Quality card",
-      "User uploads or selects a labelled benchmark manifest → validation runs",
-      "User starts evaluation → progress and sample count are shown",
-      "User opens results → sees precision, recall, and false-clear rate per field",
-      "User adjusts a proposed threshold → metrics recalculate on the benchmark",
-      "User publishes thresholds → version and timestamp are recorded"
+      "Reviewer opens Export Preflight → selects a Ready receipt",
+      "Reviewer selects Preview provider payload → a read-only structured panel opens",
+      "Panel shows purchase date, source and provider currencies, lines, accounts, tax codes, memo, and attachment filename",
+      "Sensitive OAuth data and binary attachment bytes are absent → redaction note is visible",
+      "Reviewer compares totals → calculated provider total and source total show their tolerance",
+      "Reviewer closes preview → selected receipts and warning acknowledgements remain unchanged"
     ],
     "acceptance_criteria": [
       {
         "type": "given",
-        "text": "a valid 200-field benchmark is loaded",
-        "when": "the user evaluates threshold 0.80",
-        "then": "the report shows confusion counts whose sum equals 200"
+        "text": "a mapped foreign-currency receipt is ready",
+        "when": "payload preview is requested",
+        "then": "the response is deterministic for the preparation and includes mapping_version and receipt_version"
       },
       {
         "type": "given",
-        "text": "the benchmark lacks labels for tax",
-        "when": "the user evaluates it",
-        "then": "tax is marked not evaluated and does not contribute to aggregate metrics"
+        "text": "the receipt changes after preparation",
+        "when": "payload preview is requested",
+        "then": "the API returns 409 `preparation_stale` and the UI preserves selection while offering Run preflight again"
       },
       {
         "type": "given",
-        "text": "the benchmark schema is invalid",
-        "when": "the user uploads it",
-        "then": "publication is disabled and row-level validation errors are shown"
-      }
-    ]
-  },
-  {
-    "id": "US-006",
-    "epic": "Transparent OCR confidence and exception queue",
-    "role": "reviewer",
-    "action": "see OCR provenance on the receipt image",
-    "benefit": "I can verify extracted values quickly",
-    "story": "As a reviewer, I want to see OCR provenance on the receipt image, so that I can verify extracted values quickly.",
-    "gui_flow": [
-      "User opens a receipt → image and fields load side by side",
-      "User focuses Vendor → matching OCR boxes highlight",
-      "User focuses Total → the viewport pans to the source region",
-      "User switches between AI and Tesseract provenance → values and confidence update",
-      "User chooses a value → the field changes and validation reruns",
-      "User saves → provenance choice is recorded in history"
-    ],
-    "acceptance_criteria": [
-      {
-        "type": "given",
-        "text": "OCR boxes exist for the total",
-        "when": "the user focuses Total",
-        "then": "at least one normalized source box is highlighted on the image"
-      },
-      {
-        "type": "given",
-        "text": "no source box exists",
-        "when": "the user focuses the field",
-        "then": "the UI states Source region unavailable and still permits manual entry"
-      },
-      {
-        "type": "given",
-        "text": "the source image is corrupt",
-        "when": "the viewer loads",
-        "then": "an accessible error appears and no stale image from another receipt is displayed"
-      }
-    ]
-  },
-  {
-    "id": "US-007",
-    "epic": "Inbox-to-books automation with safe rules",
-    "role": "business owner",
-    "action": "forward receipts to a dedicated inbox",
-    "benefit": "I do not manually upload every attachment",
-    "story": "As a business owner, I want to forward receipts to a dedicated inbox, so that I do not manually upload every attachment.",
-    "gui_flow": [
-      "User opens Inbox → sees the tenant forwarding address",
-      "User forwards an email with image and PDF attachments → message appears as Processing",
-      "System validates attachment types → accepted files enter the receipt pipeline",
-      "User opens the message → sees per-attachment status",
-      "User opens a created receipt → sees sender and email subject provenance",
-      "User archives the processed message → it leaves the active inbox"
-    ],
-    "acceptance_criteria": [
-      {
-        "type": "given",
-        "text": "an email contains two supported attachments",
-        "when": "processing completes",
-        "then": "two receipts are created and linked to one email record"
-      },
-      {
-        "type": "given",
-        "text": "an email includes an unsupported executable",
-        "when": "processing runs",
-        "then": "the executable is quarantined while supported attachments continue"
-      },
-      {
-        "type": "given",
-        "text": "OCR fails for one attachment",
-        "when": "processing completes",
-        "then": "the message is Partial, one receipt exists, and the failed attachment has a Retry action"
-      }
-    ]
-  },
-  {
-    "id": "US-008",
-    "epic": "Inbox-to-books automation with safe rules",
-    "role": "admin",
-    "action": "preview an automation rule before activation",
-    "benefit": "I avoid unintended bulk changes",
-    "story": "As a admin, I want to preview an automation rule before activation, so that I avoid unintended bulk changes.",
-    "gui_flow": [
-      "User opens Automations → sees active and draft rules",
-      "User clicks New rule → condition and action builder opens",
-      "User enters vendor and amount conditions → validation runs",
-      "User clicks Preview → matching receipt count and samples appear",
-      "User reviews conflicts → higher-priority rule effects are shown",
-      "User activates the rule → future uploads use the versioned rule"
-    ],
-    "acceptance_criteria": [
-      {
-        "type": "given",
-        "text": "a rule matches 12 existing receipts",
-        "when": "the user previews it",
-        "then": "the preview reports 12 and shows up to 20 representative receipts without changing data"
-      },
-      {
-        "type": "given",
-        "text": "the new rule conflicts with an active rule",
-        "when": "the user previews it",
-        "then": "the conflict and winning priority are displayed before activation"
-      },
-      {
-        "type": "given",
-        "text": "the preview API fails",
-        "when": "the user clicks Activate",
-        "then": "activation remains disabled and the draft is preserved"
-      }
-    ]
-  },
-  {
-    "id": "US-009",
-    "epic": "Inbox-to-books automation with safe rules",
-    "role": "admin",
-    "action": "reverse an erroneous automation run",
-    "benefit": "I can recover without manual cleanup",
-    "story": "As a admin, I want to reverse an erroneous automation run, so that I can recover without manual cleanup.",
-    "gui_flow": [
-      "User opens Automations → selects a rule",
-      "User opens Run History → sees affected counts and timestamps",
-      "User opens a run → sees receipt-level before/after changes",
-      "User clicks Roll back → impact preflight checks later edits",
-      "User confirms eligible rollback → changes are reverted atomically",
-      "User opens a receipt history → sees rollback provenance"
-    ],
-    "acceptance_criteria": [
-      {
-        "type": "given",
-        "text": "a run changed ten receipts and none changed later",
-        "when": "the user confirms rollback",
-        "then": "all ten return to prior metadata and one rollback event is recorded per receipt"
-      },
-      {
-        "type": "given",
-        "text": "two receipts were edited after the run",
-        "when": "the user preflights rollback",
-        "then": "those two are excluded and identified as conflicts while eight remain eligible"
-      },
-      {
-        "type": "given",
-        "text": "rollback fails mid-transaction",
-        "when": "the system handles the error",
-        "then": "zero partial reversions persist and the run remains retryable"
+        "text": "a non-admin/non-reviewer role requests preview",
+        "when": "the endpoint is called",
+        "then": "the API returns 403 and records no payload content in logs"
       }
     ]
   }
@@ -400,562 +381,311 @@ Coherence boundary: these features share receipt versions, history, readiness, p
 ```
 
 ## Product Requirements
-### A. Accounting-safe review and export gate
-**Evidence and stories:** recurring matching, tax, line-item, and missing-document complaints; accounting integration is table stakes. US-001, US-002, US-003.
+### A. QuickBooks Online sandbox connector
+**Problem/evidence:** research identifies accounting integration as table stakes and recommends one sandbox implementation. Existing CSV export does not complete the ledger outcome.
 
-**Functional requirements**
-- `GET /product/review-items` returns paginated items with readiness, blocker count, lowest field confidence, total, currency, created time, and version. It accepts `confidence_field`, `confidence_lt`, `readiness`, `sort`, `limit`, and `offset`.
-- Receipt detail and review expose structured fields, immutable source image, normalized OCR boxes, selected provenance source, validation, and history in one coordinated view.
-- Saving uses existing optimistic concurrency. A 409 response contains current version and current server fields; the UI preserves the unsaved draft and offers **Reload server version** and **Copy my draft**.
-- Completing a receipt reruns readiness. Completion is rejected with 422 if blockers remain. Warning-only receipts may complete.
-- Export preparation persists requested receipt IDs, connection ID, per-receipt validation snapshot, valid IDs, blockers, warnings, receipt versions, and creation time.
-- Export execution requires `preparation_id`, `Idempotency-Key`, and `acknowledged_warning_receipt_ids`. If a receipt version changed after preparation, execution returns 409 and no export is created.
-- Repeating an execution with the same tenant and idempotency key returns the original run and creates no duplicate rows.
-- Receipt history contains creation, correction, completion, preparation, warning acknowledgement, export, and rollback events, with UTC timestamps and no image bytes/secrets.
-- Audit-record download is JSON and tenant-scoped.
+**Functional contract**
+- Add provider value `quickbooks_online`; retain `csv`, `quickbooks`, and `xero` legacy values as accepted inputs but do not reinterpret them.
+- OAuth is admin-only. Start endpoint generates 32-byte state, PKCE verifier/challenge, tenant binding, 10-minute expiry, single-use status, and normalized return path allowlisted to `/integrations`.
+- Callback validates state, tenant binding, expiry, single use, and provider error before token exchange. Never accept tenant identity from callback query parameters.
+- Store access and refresh tokens only as authenticated ciphertext. Master key comes from `RECEIPTLENS_CREDENTIAL_KEY`; startup remains available without it, but OAuth start returns 503 `credential_store_unavailable`.
+- Do not return tokens, verifier, ciphertext, client secret, or authorization code in API responses, errors, logs, diagnostics, or audit records.
+- Test connection calls provider company-info. One token refresh and one request retry are allowed for an expired token. `invalid_grant` marks `reauthorization_required`.
+- Mapping versions contain expense account, payment account when applicable, vendor fallback, tax strategy, attachment behavior, and provider reference snapshots. Saving creates a new immutable version; preparations pin a version.
 
-**Validation and business rules**
-- Mandatory export fields: vendor, date, total, currency. Total cannot be negative; tax cannot exceed total; date must be ISO date; line-item mismatch over 0.01 is a warning; missing cost center remains a warning unless the chosen mapping marks it required.
-- `ready` means no validation errors, status completed/approved, and current receipt version equals the version in the preparation.
-- Warnings cannot be silently ignored. Every exported warning receipt must be included in acknowledgement.
-- An export run is immutable. Retry creates or returns a run tied to the same preparation and idempotency key.
-- Limits: 1-200 receipt IDs per preparation; duplicates are normalized to first occurrence; unknown or cross-tenant IDs become blockers without leaking existence.
+**Validation/business rules**
+- Provider realm/company identifier is unique per tenant/provider active connection.
+- Disconnect revokes remotely when possible, deletes ciphertext locally in the same transaction, sets disconnected, and does not delete historical links/audit.
+- The provider base URL is fixed by `RECEIPTLENS_QBO_ENV` (`sandbox` default, `production` allowed only with `RECEIPTLENS_ALLOW_PRODUCTION_QBO=true`). User-supplied URLs are forbidden.
+- Mapping validation checks provider references using a cached provider account/tax-code list no older than 15 minutes; stale cache triggers refresh.
 
-**Failure behavior**
-- Image failure does not disable form correction.
-- Validation failure is field-addressable and links back to the edit control.
-- Connection failure creates a failed run with retryable status and sanitised error code; no receipt is marked exported.
-- Partial provider behavior is not implemented in this pass. The reference CSV provider is atomic from the product's perspective.
+**Acceptance:** every criterion in US-010..012; 100% branch coverage for state validation and token redaction; no plaintext token in SQLite inspection test.
 
-**Compatibility**
-- Existing response fields remain. New fields are additive.
-- Existing `POST /product/export-runs` remains accepted and delegates to the new preparation-based service only when `preparation_id` is supplied; legacy request shape remains under tests.
-- Existing CSV output columns and delimiter behavior remain unchanged.
+**Non-goals:** production IdP login, Xero, provider certification, invoices/bills, bank-feed matching.
 
-**Acceptance summary**
-- A 10-receipt fixture with two missing required fields yields exactly two blocked and eight eligible.
-- A stale edit never overwrites a newer version and the draft remains visible.
-- Replaying the same export command produces one run.
-- History lists all relevant events in reverse chronological order and contains no binary/image payload.
+### B. Reconciled and replay-safe provider export
+**Functional contract**
+- Existing `POST /product/export-commands` remains synchronous for CSV. For a `quickbooks_online` preparation it creates a durable queued run and item rows, returning HTTP 202.
+- Deterministic dedupe key is SHA-256 of tenant, provider, connection, receipt ID, receipt version, mapping version, and operation type. A successful provider link prevents a second create under any command key.
+- Worker claims queued items atomically, posts one purchase plus optional receipt attachment, records request ID, provider ID, sync token, attempt count, timestamps, redacted error, and resulting status.
+- Retry policy: 429/5xx/network errors respect Retry-After, exponential schedule 1/4/16 seconds in tests through injectable clock, maximum three attempts. 4xx validation errors are terminal non-retryable. Authentication errors pause connection and remaining unattempted items.
+- Retry-failed endpoint creates new attempts only for retryable failed items whose receipt/mapping versions still match.
+- Reconciliation fetches remote purchase and compares date, total tolerance 0.01 source currency, currency, vendor reference, account, tax, and attachment state. Status is `verified`, `needs_reconciliation`, or `missing_remote`; users cannot manually override comparison.
 
-**Non-goals:** live QBO/Xero posting, payment/reimbursement, tax advice, editing the source image, merging duplicate receipts.
+**Compatibility:** CSV artifacts and existing run responses remain unchanged. Add fields rather than rename. Existing old runs deserialize with destination `csv` and empty item list.
 
-### B. Transparent OCR confidence and exception queue
-**Evidence and stories:** users distrust opaque extraction and need focused exception handling. US-004, US-005, US-006.
+**Acceptance:** all US-013..015 criteria; restart test proves queued items resume without duplicate create; fake provider integration proves 50-item replay and partial retry.
 
-**Functional requirements**
-- Queue filtering supports one confidence field at a time: `vendor`, `date`, `total`, `tax`, `currency`, or `line_items`; threshold range is 0.00-1.00 inclusive. Null confidence sorts before numeric confidence and matches any `confidence_lt` filter.
-- Queue URL query parameters are the source of truth. Saved views persist supported filters and sort.
-- Receipt review maps a focused field to one or more OCR boxes. Boxes are keyboard reachable through the field, not individually tabbed. The viewer pans/zooms the union rectangle with reduced motion respected.
-- AI and Tesseract provenance choices are shown only when both results exist. Choosing a candidate updates the draft, reruns client validation, and records source name after save.
-- A benchmark manifest is a UTF-8 JSON file with schema version, cases, receipt fixture reference, and expected fields. Images remain test fixtures and are not uploaded by Diagnostics in production mode.
-- Diagnostics can run a configured server-side benchmark fixture set. It reports evaluated count, true-clear, false-clear, true-review, false-review, precision, recall, and false-clear rate per field and aggregate.
-- Threshold publication persists a versioned threshold profile by tenant. Default thresholds remain current behavior until an admin publishes a profile.
+**Non-goals:** inbound provider webhooks, deleting provider purchases, automatic recreation of deleted remote records, bulk sizes above 200.
 
-**Validation and business rules**
-- Only admin can run a benchmark or publish thresholds; reviewer can view the active profile and latest report.
-- A field with no expected label is `not_evaluated` and excluded from aggregate denominator.
-- Metric count invariants are enforced: confusion counts sum to evaluated labels.
-- Publishing is disabled if the manifest is invalid, evaluation has zero labels, or any metric calculation failed.
-- Threshold profile includes version, field thresholds, benchmark report ID, actor role, and UTC timestamp.
+### C. Source-currency and tax provenance
+**Functional contract**
+- Add receipt accounting projection separate from OCR payload: original currency/total/tax/net, reporting currency/amount, rate, rate date, source, conversion timestamp, and stale flag.
+- Never mutate OCR original amount/currency due to conversion. Editing original currency/total marks existing conversion stale.
+- Rate lookup uses newest tenant rate on or before receipt date, never after it. Identity conversion is explicit with rate 1.
+- Tax validation computes net + tax versus gross and line totals using Decimal quantized to currency minor units. Floating-point arithmetic is prohibited in new money calculations.
+- Provider tax-code mapping is stored in the pinned mapping version. Unmapped mixed-rate lines block; a single mapped receipt-level rate may apply only when every line shares the same rate.
+- Payload preview is generated server-side from preparation snapshot, mapping version, receipt version, and accounting projection. It is never persisted with credentials and contains no binary bytes.
 
-**Failure behavior**
-- Empty queue displays **No receipts match these filters** and **Clear filters**.
-- Queue refresh failure leaves previous data visible with **Retry**.
-- Missing boxes display **Source region unavailable** while editing remains enabled.
-- Corrupt/missing image clears the previous image from memory and shows an accessible error.
-- Benchmark errors identify case ID and field without displaying receipt raw text in logs.
+**Acceptance:** all US-016..018 criteria; deterministic property tests cover rounding boundaries and missing rates; preview snapshot hash is stable.
 
-**Compatibility**
-- Existing OCR engines and confidence values are unchanged.
-- Existing review endpoint without filters returns its prior item collection plus additive metadata.
-- Thresholds influence routing only after explicit publication.
-
-**Acceptance summary**
-- Filters and sorting are deterministic and represented in the URL.
-- The 200-label benchmark fixture reports counts summing to 200.
-- At least one normalized box highlights for a fixture with known total coordinates.
-- No stale image appears when navigation changes to a broken asset.
-
-**Non-goals:** retraining OCR, claiming universal accuracy, editing OCR boxes, arbitrary user image upload into the benchmark, multiple simultaneous threshold profiles.
-
-### C. Inbox-to-books automation with safe rules
-**Evidence and stories:** multi-channel capture and automation are expected, but opaque rules create operational risk. US-007, US-008, US-009.
-
-**Functional requirements**
-- Inbound email has parent status and child attachment records. Supported MIME types for this pass: JPEG, PNG, TIFF, BMP, WEBP, GIF, and PDF. Image magic bytes must match. PDF acceptance is ingestion-only unless an existing supported parser can create image pages; otherwise the attachment becomes `failed` with code `pdf_processing_unavailable`, not a fake receipt.
-- Each attachment has filename, declared MIME, detected MIME, byte size, SHA-256, status, attempt count, receipt ID, error code, and timestamps. Raw bytes use the existing asset/blob storage path, not JSON columns.
-- Email parent status is `processing`, `completed`, `partial`, `failed`, `quarantined`, or `archived`, derived from children.
-- Retry is attachment-specific, increments attempt, and is idempotent while processing. Unsupported executable content is quarantined and never sent to OCR.
-- Rules have lifecycle `draft`, `active`, or `archived`, monotonically increasing version, priority, conditions, actions, created/updated actor and timestamps.
-- Preview returns exact match count, up to 20 sample receipts, and conflicts with active rules including winning rule by priority then creation time.
-- Activation requires a successful preview of the same draft version. It affects new receipts only.
-- Explicit automation run accepts a rule version and receipt IDs or saved-view snapshot. It persists per-receipt before/after, receipt version before/after, outcome, and errors.
-- Rollback preflight classifies each successful item as eligible or conflict. Confirmed rollback runs in one SQLite transaction over eligible items. Any database error rolls back all eligible changes.
-
-**Validation and business rules**
-- Rule priority is integer 0-1000, lower number wins. Tie-breaker is older active rule ID creation time, then lexical rule ID for determinism.
-- Conditions remain the existing allowlist: vendor contains, currency, min total, max total. Actions remain tags, project, cost center, request approval.
-- Conflicting actions are same target field with differing values on a receipt. Preview must display both values and winner.
-- Activation is rejected if draft changed after preview or preview failed.
-- Rollback never reverses fields changed after run version. Such receipts are conflicts and remain unchanged.
-- Cross-tenant email, attachment, rule, run, and rollback IDs return 404.
-
-**Failure behavior**
-- One bad attachment does not block supported siblings.
-- OCR failure leaves attachment retryable with sanitized code.
-- Preview failure preserves draft and disables activation.
-- Automation run records item-level failures and continues only when failure is validation-related; transaction/system failure aborts the whole run.
-- Rollback system failure produces zero persisted reversions.
-
-**Compatibility**
-- Existing rule create/list/preview endpoints remain, with additive lifecycle/version fields.
-- Existing email simulation payload remains accepted; new attachment detail is additive.
-- Existing automatic application on upload uses only active rules and records a run.
-
-**Acceptance summary**
-- Two supported attachments create two linked receipts.
-- Unsupported executable is quarantined while sibling image succeeds.
-- Preview causes zero receipt mutations.
-- Rollback of ten unchanged receipts reverts ten; two later-edited receipts are excluded as conflicts.
-
-**Non-goals:** full SMTP server, mailbox provider integration, arbitrary scripts/actions, schedule engine, cross-tenant shared rules, PDF OCR implementation if absent.
+**Non-goals:** tax advice, tax filing, automatic rate-provider calls, cryptocurrency, unsupported currencies outside ISO 4217 configured list.
 
 ## UI and UX Specification
-### Personas and primary journey
-- **Marta, bookkeeper:** starts in Review Queue, resolves high-value blockers, prepares an export, acknowledges warnings, and downloads the CSV run artifact.
-- **Alex, admin:** inspects benchmark quality, publishes thresholds, creates and previews rules, and reverses an erroneous run.
-- **Sam, business owner:** forwards documents, checks attachment processing, and retries one failed receipt.
+### Personas and journey
+- **Tenant administrator:** connects and monitors QuickBooks, manages consent, disconnects safely.
+- **Integrator/accountant:** maps accounts/tax codes and resolves mapping drift.
+- **Bookkeeper:** preflights, exports, watches progress, retries failures, and reconciles.
+- **Finance reviewer:** inspects currency/tax evidence and provider payload before posting.
 
-Primary journey: Inbox or Upload → Review Queue → Receipt Review → Export Preparation → Export Run Success. Secondary admin journey: Diagnostics Quality → Automation Draft → Preview → Activate → Run History → Rollback.
+Primary journey: Integrations → Connect QuickBooks → Mapping → Receipt currency/tax review → Export Preparation → Payload preview → Export run → Retry failures → Reconcile verified result.
 
-### Information architecture and navigation
-Keep the existing AppShell. Use these primary destinations and labels:
-- **Dashboard**
-- **Receipts**
-- **Upload**
-- **Review** with outstanding count badge
-- **Approvals**
-- **Accounting**
-- **Export Center**
-- **Inbox**
-- **Automations**
-- remaining existing destinations unchanged
-- **Settings** with Diagnostics under it
+### Information architecture
+Keep the existing sidebar. `Integrations` owns connection and mapping. `Receipts/[id]` owns source-currency/tax evidence. `Exports/prepare` owns selection and preflight. `Exports/runs/[id]` owns provider progress and reconciliation. Do not add a new top-level navigation item.
 
-Mobile bottom navigation remains Dashboard, Receipts, Upload, Review, More. Export, Inbox, Automation, and Settings appear in More. Breadcrumbs appear on receipt detail, export preparation/run, automation detail/run, and Diagnostics Quality.
+### Design system
+Reuse Tailwind tokens and existing `card`, `btn-primary`, `btn-secondary`, `WorkflowState`, `StatusBadge`, `Skeleton`, `Modal`, and `Toast`. Add no component library. New provider/status colors must derive from semantic tokens: success emerald, warning amber, failure rose, information brand blue, neutral slate. Text contrast must meet WCAG 2.2 AA; controls have 44×44 px touch targets; focus ring is 2 px with 2 px offset.
 
-### Design system decision
-Reuse Tailwind and existing components. Do not add a new component library. Extend existing design tokens in `frontend/app/globals.css` and `tailwind.config.ts` only if a token is absent. Required tokens:
-- spacing: 4, 8, 12, 16, 24, 32, 48 px;
-- radii: 6 px controls, 10 px cards, 999 px pills;
-- type: 14 px body-small, 16 px body, 20 px section heading, 28 px page title; line-height at least 1.4;
-- semantic colors: canvas, surface, text, muted, border, primary, focus, success, warning, danger, info;
-- minimum normal-text contrast 4.5:1 and large-text 3:1;
-- focus ring: 2 px solid focus color plus 2 px offset;
-- elevation: border by default, one subtle shadow only for dialogs/popovers;
-- animations 150-200 ms; `prefers-reduced-motion` removes panning animation and nonessential transitions.
+### Shared states and behavior
+- Every provider-mutating button disables while pending and prevents duplicate submission.
+- Skeletons match final block geometry; stale data remains visible with a non-modal retry banner.
+- Success uses `role=status`; blocking error uses `role=alert`; focus moves to the first error summary after failed submission and to the page heading after route transition.
+- Dialog focus is trapped, Escape closes non-destructive dialogs, and focus returns to invoker. Disconnect and retry batch confirmations require explicit action labels.
+- Respect `prefers-reduced-motion`; no essential state depends on animation or color.
+- Mobile <760 px stacks panels and uses a sticky bottom action bar; tablet 760–1049 px uses two columns where noted; desktop ≥1050 px uses sidebar plus content and a 12-column grid.
 
-### Shared interaction rules
-- Primary CTA is one filled button per screen. Secondary actions are outline or text.
-- Destructive actions require confirmation with affected count.
-- Toasts confirm non-destructive success; persistent inline banners report failures.
-- Loading uses skeletons matching final geometry. Do not blank existing lists during refetch.
-- Form validation appears below the field and in a summary linked to invalid controls.
-- Dialog opening moves focus to its heading; close returns focus to trigger.
-- Route changes focus the `h1`. Skip link targets `main`.
-- Tables use semantic table elements on desktop. On screens below 760 px, receipt and run tables become labelled cards while preserving sort/filter controls.
-- Status is never conveyed by color alone; include icon and text.
-
-### Responsive behavior
-- **Mobile:** 320-759 px. Single column, sticky bottom action bar, image above form, filter drawer, card lists.
-- **Tablet:** 760-1049 px. Two-column where useful, collapsible sidebar overlay, image/form 45/55 split in landscape.
-- **Desktop:** 1050 px and above. Fixed sidebar, review image/form 50/50, filter rail or horizontal bar, max content width 1440 px.
-
-### Accessibility verification
-Semantic landmarks, one `h1`, ordered headings, labelled controls, `aria-live=polite` for processing updates, `role=alert` for blocking errors, accessible table captions, keyboard-operable menus, and no keyboard trap. Playwright plus `@axe-core/playwright` must report zero serious or critical violations on all selected screens at 375x812 and 1440x900.
+### Onboarding/first use
+When no QuickBooks connection exists, Integrations shows a three-step checklist: Connect company, Validate mapping, Export first receipt. Progress derives from server state. Existing onboarding remains unchanged; it links to this checklist after first receipt completion.
 
 ## Screen Inventory and User Flows
-### 1. Review Queue, `/review`
-**Purpose:** prioritize exceptions by readiness, confidence, and financial impact.
+### 1. Integrations list, `/integrations`
+**Header:** title `Integrations`; subtitle `Connect an accounting destination and verify its health.` Primary top-right action is not global; actions stay in cards.
 
-**Layout:** page header with `Review` title, outstanding count, and secondary **Refresh**; KPI strip for Blocked, Needs review, Warning, Ready; filter bar with readiness, field, threshold, sort, saved view, and **Clear filters**; result list/table; pagination. Primary action on each item: **Review receipt**.
+**QuickBooks card:** logo/icon, `QuickBooks Online`, environment badge, company or `Not connected`, health, last tested. Primary action `Connect QuickBooks` or `Open connection`; secondary `Learn what is shared`. Loading uses one card skeleton. Empty provider catalog is not possible. Error preserves card metadata and shows `Retry status`.
 
-**States:** skeleton rows on first load; prior rows plus inline retry banner on refetch failure; empty unfiltered state says **All clear** with **Upload receipts**; filtered empty state says **No receipts match these filters** with **Clear filters**; disabled saved-view action until a filter differs from defaults.
+**Flow:** Connect → consent disclosure modal → `Continue to Intuit` → redirect. Callback success returns with focused success banner `QuickBooks connected`. Callback failure returns with focused error banner and `Try again`.
 
-**Flow:** open Review → set Total and Below 0.80 → URL and list update → sort Amount high to low → open item → receipt screen focuses Total. Back returns with filter and scroll position preserved.
+### 2. QuickBooks connection detail, `/integrations/quickbooks/[id]`
+**Header:** company name, environment, status badge; actions `Test connection`, overflow `Disconnect`.
 
-### 2. Receipt Review/Detail, `/receipts/[id]` and queue deep link
-**Purpose:** verify source evidence, correct fields, resolve blockers, and complete.
+**Tabs:** Overview, Mapping, Audit. Overview shows company suffix, scopes, expiry status, created/tested timestamps, and reauthorization callout. Mapping contains grouped selects: Purchase accounts, Vendor behavior, Tax, Attachments. Each field includes accessible help text and validation status. Bottom sticky actions: `Validate mapping`, then `Save mapping` enabled only after latest validation succeeds. Audit is chronological and redacted.
 
-**Layout:** breadcrumb; header with vendor fallback, receipt ID, version, readiness badge; desktop split panel. Left: image toolbar (zoom, rotate view only, fit, source toggle when available), image, OCR highlight overlay, image error panel. Right: validation summary, vendor/date/total/tax/currency controls, confidence/source labels, line-item editor, metadata, sticky action bar with **Save draft** and primary **Complete review**. History is a lower tab alongside Details and Validation.
+**States:** account/tax reference loading skeleton; no accounts error with `Retry provider data`; validation summary links to fields; save success toast and version badge; disconnected state makes mapping read-only.
 
-**States:** image and form load independently; missing image leaves form; stale save opens conflict dialog; save success shows version; blockers disable Complete with linked reason; warning-only completion remains enabled; unsaved navigation prompts.
+### 3. Receipt accounting panel, `/receipts/[id]?tab=accounting`
+**Layout:** existing receipt header; tabs preserve History and Details. Accounting tab uses two desktop columns. Left `Source values` displays original gross/tax/net/currency and editable correction entry points. Right `Reporting values` displays converted amount, rate, date, source, stale badge, and `Refresh conversion`. Tax validation card lists arithmetic and line-level checks.
 
-**Flow:** select low-confidence Total → image pans to source → choose candidate or type correction → validation updates → Save draft → Complete review → success banner and **Prepare export** link.
+**States:** identity conversion, missing rate blocker with `Add exchange rate`, stale conversion warning, invalid arithmetic error, successful recalculation. On mobile, source precedes reporting and action bar is sticky.
 
-### 3. Export Preparation, `/exports/prepare`
-**Purpose:** create immutable preflight snapshot and resolve blockers.
+### 4. Export Preparation, `/exports/prepare`
+**Header:** title and destination selector. Keep receipt selection. After selection, primary `Run preflight`; secondary `Clear selection`.
 
-**Layout:** breadcrumb and title; step indicator Select → Validate → Acknowledge → Export; connection selector; selected receipt count; three accordions Ready, Warnings, Blocked; each row shows vendor, total, version, reasons, and **Fix receipt**; sticky footer with secondary **Save preparation** and primary **Export ready items**.
+**Preflight result:** summary cards Ready/Warning/Blocked; pinned connection and mapping versions; expandable receipt rows; blockers deep-link to Accounting or Mapping. Ready rows expose `Preview provider payload`. Payload drawer is read-only, syntax-independent definition list/tree, with Source, Provider interpretation, Lines, Tax, Attachment, Snapshot metadata. No raw JSON-only UI.
 
-**States:** validation skeleton; no selection prompts **Choose receipts**; missing connection disables export; stale preparation shows persistent banner and **Revalidate**; connection error creates failure panel with **Retry export**; warnings require checkboxes and an overall acknowledgement summary.
+**Action bar:** warning checkbox count, `Export ready items`, exact count, disabled reasons. Stale preparation replaces action with `Run preflight again` while preserving selection.
 
-**Flow:** choose connection → validate → fix blocker in new route and return with selection → acknowledge warnings → export → navigate to run detail.
+### 5. Export run detail, `/exports/runs/[id]`
+**Header:** destination/company, aggregate status, UTC created time. Summary cards Created, Already exported, Failed, Needs reconciliation. Progress bar has text percentage.
 
-### 4. Export Run Detail, `/exports/runs/[id]` (new)
-**Purpose:** provide immutable outcome and retry/download actions.
+**Table/cards:** receipt, vendor, amount/currency, attempt, provider ID suffix, status, action. Filters All/Failed/Needs reconciliation/Verified are URL-backed. Failed row drawer shows safe error, request ID, retryability, and version state. Primary `Retry failed items` appears only for eligible rows; confirmation lists count and exclusions.
 
-**Layout:** breadcrumb; status header with run ID and timestamp; summary cards requested/exported/failed; error panel when applicable; receipt list; audit metadata; primary **Download CSV** for completed reference provider, or **Retry export** for retryable failure; secondary **View preparation**.
+**Live updates:** SWR polls every 2 seconds while queued/processing, stops on terminal aggregate state, and announces count changes no more than once per 5 seconds.
 
-**States:** processing polls every 2 seconds up to 60 seconds then uses manual Refresh; completed exposes artifact; failed exposes sanitized code; 404 has **Back to Export Center**.
+### 6. Reconciliation view, `/exports/runs/[id]/items/[itemId]`
+**Header:** receipt/vendor and status. Split comparison: ReceiptLens on left, QuickBooks on right, field rows with Match or Mismatch. Links: `Open receipt`; external provider link only from provider-returned fixed host and opens with `noopener noreferrer`.
 
-### 5. Receipt Audit Record, `/receipts/[id]?tab=history`
-**Purpose:** answer who changed what and when.
+Primary `Verify in QuickBooks`; disabled during request. Missing remote shows destructive-looking but non-destructive warning and `Run a new preflight`; no Recreate button. Success focuses `Verified` heading. Error preserves previous snapshot with `Retry verification`.
 
-**Layout:** filter chips All, Corrections, Automation, Export; event timeline; selected event detail with actor role, UTC time, before/after diff, linked run/preparation; secondary **Download audit JSON**.
+### 7. Connection-loss recovery banner
+Across Export Preparation and active runs, `Reauthorization required` banner includes `Reconnect QuickBooks` for admins and `Ask an administrator` for other roles. It never discards preparation/run state.
 
-**States:** created events label missing before as Created; empty filter gives **No events in this category**; retrieval failure preserves receipt header and offers Retry.
+### Complete success and failure paths
+**Success:** admin connects → validates/saves mapping → bookkeeper fixes missing rate → preflights 50 receipts → previews one payload → acknowledges warnings → exports → watches 50 items → verifies a provider purchase → sees Verified audit event.
 
-### 6. Diagnostics Quality, `/settings/diagnostics/quality` (new)
-**Purpose:** evaluate and publish confidence thresholds.
+**Failure recovery:** token refresh returns invalid_grant → run pauses before unattempted items → banner explains reauthorization → admin reconnects → mapping remains pinned → bookkeeper selects Retry failed items → successful links are skipped → reconciliation completes without duplicates.
 
-**Layout:** breadcrumb; active threshold profile card; benchmark selection card limited to repository-configured fixtures; **Run evaluation**; progress; result table per field; aggregate cards; threshold sliders/numeric inputs; primary **Publish thresholds**, secondary **Reset proposal**.
-
-**States:** no prior report explains benchmark requirement; running disables publication; invalid manifest lists case/field errors; zero-label report blocks publication; success shows profile version and effective timestamp.
-
-**Flow:** select fixture → run → inspect false-clear metrics → adjust threshold → metrics recalculate against stored results → publish → Review Queue uses profile on next request.
-
-### 7. Inbox, `/inbox`
-**Purpose:** observe email and attachment ingestion.
-
-**Layout:** header with forwarding address and **Copy address**; status filters; message cards with sender, subject, time, parent status, and attachment counts; expandable attachment rows with status, filename, size, receipt link, error, and **Retry**; archive action in overflow menu.
-
-**States:** empty state explains forwarding; processing uses live region; partial status lists success and failure; quarantine uses danger icon/text; retry disabled while processing; archive success removes card and offers Undo for 10 seconds.
-
-### 8. Automations List, `/automations`
-**Purpose:** manage draft/active/archived rules.
-
-**Layout:** title and primary **New rule**; tabs Active, Drafts, Archived; rule cards with priority, summary, version, last run, and actions **Edit**, **Preview**, **Run history**.
-
-**States:** empty active state offers New rule; API failure banner with Retry; archived is read-only except Restore as draft.
-
-### 9. Automation Editor/Preview, `/automations/[id]` (new)
-**Purpose:** edit a draft, preview matches/conflicts, and activate safely.
-
-**Layout:** breadcrumb; status/version; condition builder; action builder; priority; sticky **Save draft** and primary **Preview rule**. After preview, lower panel shows exact count, up to 20 samples, conflicts, winner explanation, and primary **Activate rule**.
-
-**States:** field validation; unsaved changes; preview spinner; preview error preserves draft and disables activation; changed draft invalidates prior preview; activation success routes to detail with confirmation.
-
-### 10. Automation Run History, `/automations/[id]/runs`
-**Purpose:** inspect applied runs and initiate rollback.
-
-**Layout:** rule header; run table/cards with status, affected/failed counts, time, actor; row action **View run**.
-
-### 11. Automation Run Detail/Rollback, `/automations/[id]/runs/[runId]`
-**Purpose:** show receipt-level effects and safely reverse them.
-
-**Layout:** summary; before/after item list; primary **Preview rollback** for completed runs; rollback panel categorizes Eligible and Conflicts; destructive **Roll back eligible changes** confirmation shows count.
-
-**States:** no eligible changes disables rollback; conflicts link to receipt history; system failure shows zero-changes guarantee and Retry; success records rollback run and removes rollback CTA.
-
-### End-to-end friendly failure recovery
-Marta opens Review, filters low-confidence totals, corrects a receipt, and completes it. She opens Export Preparation and sees another receipt blocked for currency. **Fix receipt** deep-links to Currency; after saving, Back returns to the unchanged preparation selection. She acknowledges one line-total warning and exports. If the connection simulation fails, the run detail shows a retryable error and leaves all receipts unexported. **Retry export** reuses the same preparation with a new idempotency key; refresh/replay of that request returns the same run rather than duplicating output.
-
-### UI verification procedure
-- Build and type-check the frontend.
-- Start FastAPI on 127.0.0.1:8000 and Next.js on 127.0.0.1:3000 with the documented API base URL.
-- Run Playwright critical flows at desktop and mobile sizes.
-- Run axe checks on all eleven screens.
-- Capture screenshots for Review Queue, Receipt Review, Export Preparation, Diagnostics Quality, Inbox partial state, Automation Preview conflict, and Rollback preflight. Store intentional documentation screenshots under `docs/screenshots/`; temporary failure screenshots remain excluded from packaging.
+### UI verification
+Developer must run type-check/build, backend and frontend startup, Playwright with installed Chromium, axe on all six screens, and capture desktop 1440×900 plus mobile 390×844 screenshots for Integrations disconnected/connected, Mapping error/success, Accounting missing-rate/success, Preflight blocked/ready, Run partial/completed, and Reconciliation mismatch/verified. Screenshots go only in development evidence if repository policy accepts them; otherwise record paths and exclude generated outputs from final package.
 
 ## Architecture and Technical Design
-### Boundaries
-- **HTTP adapters:** `app/product_api.py` validates transport and delegates; no SQL is added directly to route handlers.
-- **Review/readiness service:** extend `app/product_service.py` for queue queries and structured conflicts; reuse `AccountingWorkspace.validate` through a service facade.
-- **Export workflow service:** new `app/export_workflow.py` owns preparation snapshots, idempotent execution, run state, audit record, and artifact metadata.
-- **Quality service:** extend `app/quality.py` or add `app/quality_service.py` for manifest validation, metrics, reports, and threshold profiles.
-- **Inbox service:** extend `app/accounting_workspace.py` only for schema migration compatibility; put attachment processing/state in new `app/inbox_service.py`.
-- **Automation service:** move lifecycle/run/rollback behavior into new `app/automation_service.py`; `AdvancedWorkspace` remains persistence adapter for legacy methods.
-- **Frontend API layer:** `frontend/lib/api.ts` and `types.ts` define all shapes. SWR owns server state; page-local React state owns drafts, viewer state, and selection.
-- **No global store:** URL params own queue filters; server IDs own preparation/run state; localStorage is not used for financial drafts.
+### Component boundaries
+- `app/provider_connectors.py`: `AccountingProvider` protocol, provider errors, request/response domain types.
+- `app/quickbooks_connector.py`: OAuth URL, token exchange/refresh, company info, reference lists, purchase create/get, attachment upload. All network calls use injected `httpx.Client`/transport and fixed base URLs.
+- `app/credential_store.py`: authenticated encryption/decryption and redacted metadata. No provider semantics.
+- `app/connection_service.py`: OAuth state, connections, health, disconnect, mapping versions, authorization.
+- `app/provider_export_service.py`: queued runs/items, claim/attempt/retry, dedupe links, aggregate status.
+- `app/reconciliation_service.py`: remote comparison and immutable snapshots.
+- `app/accounting_projection.py`: Decimal currency conversion, tax arithmetic, payload preview inputs.
+- `app/product_api.py`: thin HTTP validation/error mapping only.
+- Frontend: typed API functions in `frontend/lib/api.ts`; new types in `frontend/lib/types.ts`; screen-specific client components under existing routes; shared `ConnectionStatus`, `MappingEditor`, `ProviderPayloadPreview`, `RunItemTable`, `ReconciliationComparison`, `AccountingProjectionCard`.
 
-### Data flow
-1. Ingestion creates email plus attachments or direct receipt.
-2. OCR stores immutable asset, extraction, confidence, boxes, and provenance candidates.
-3. Active automation rules execute and record a run.
-4. Queue query joins computed readiness and threshold profile.
-5. Reviewer saves with expected version; history records changed fields and provenance.
-6. Preparation snapshots validation and receipt versions.
-7. Execution checks snapshot versions, acknowledgements, connection, and idempotency, then writes immutable run and artifact metadata.
+### Data flow/state
+OAuth transient state and durable connections live in SQLite. SWR cache keys include tenant plus resource route; mutations call API then revalidate connection/preparation/run. No new global state store. Export worker is callable in-process for the reference adapter and exposes `process_next()` for deterministic tests; production deployment may schedule it separately without changing domain logic.
 
-### State and concurrency
-- All write commands require tenant context.
-- Receipt writes use expected version.
-- Rule writes use expected rule version.
-- Preparation is immutable. Revalidation creates a new preparation.
-- Automation run and rollback are transaction boundaries.
-- Idempotency table is keyed by tenant, scope, and key with 24-hour minimum retention; stored response includes status and resource ID.
+### Error model/logging
+Stable codes: `oauth_state_invalid`, `oauth_state_expired`, `credential_store_unavailable`, `provider_reauthorization_required`, `provider_rate_limited`, `provider_validation_failed`, `mapping_reference_inactive`, `receipt_version_changed`, `preparation_stale`, `exchange_rate_missing`, `tax_arithmetic_invalid`, `remote_missing`. API errors include `code`, `message`, `field`, `retryable`, optional `provider_request_id`; never raw provider body. Structured logs contain tenant hash, run/item IDs, status, latency, attempt, and request ID, not receipt contents or credentials.
 
-### Alternatives considered
-- **New UI library:** rejected; it adds bundle and migration cost without solving workflow gaps.
-- **Redux/Zustand:** rejected; server state and local drafts fit SWR plus component state.
-- **Background queue dependency:** rejected for this pass; current executor remains, with durable state and deterministic retries. A production worker is a later scalability phase.
-- **Modify legacy workspace in parallel:** rejected; doubles implementation and testing cost.
-- **Build live provider connector now:** rejected; internal correctness and idempotency come first.
+### Dependencies
+Add `cryptography>=43` to Python dependencies and lockfile solely for AES-GCM token encryption. Do not add an Intuit SDK, queue framework, state store, or UI library. Tests use existing `httpx` MockTransport and pytest.
+
+### Alternatives rejected
+- Hand-rolled encryption: rejected due to credential risk.
+- Simultaneous QBO/Xero: rejected due to duplicated provider risk.
+- Posting synchronously in request: rejected because rate limits/retries require durable item states.
+- Reusing CSV artifact as provider payload: rejected because account/tax references and reconciliation metadata require typed mapping.
+- Storing converted values in OCR payload: rejected because source evidence must remain immutable.
 
 ## Data, API, and Compatibility Changes
-### SQLite schema migration
-Use additive, idempotent `CREATE TABLE IF NOT EXISTS` and column migration helpers. Increment the product schema version and test migration from a database created by 1.4.0.
+### SQLite additive schema
+Create migration-safe `CREATE TABLE IF NOT EXISTS` plus column checks for:
+- `oauth_states(state_hash PK, tenant_id, provider, pkce_ciphertext, return_path, expires_at, used_at, created_at)`.
+- `provider_credentials(connection_id PK, tenant_id, provider, token_ciphertext, key_version, expires_at, refresh_expires_at, updated_at)`.
+- Extend `connections` add `provider_company_id`, `provider_company_name`, `environment`, `health`, `reauthorization_required`, `last_tested_at`, `disconnected_at`.
+- `connection_mapping_versions(mapping_id PK, connection_id, tenant_id, version, payload_json, reference_snapshot_json, valid, created_by_role, created_at, UNIQUE(connection_id,version))`.
+- Extend preparations add `mapping_version`, `destination_provider`, `projection_snapshot_json`, `snapshot_hash`.
+- `provider_export_runs(run_id PK, tenant_id, preparation_id, connection_id, command_key, status, counts_json, created_at, completed_at)`.
+- `provider_export_items(item_id PK, run_id, tenant_id, receipt_id, receipt_version, mapping_version, dedupe_key UNIQUE, status, attempt_count, provider_id, provider_sync_token, provider_request_id, retryable, safe_error_json, next_attempt_at, created_at, updated_at)`.
+- `provider_links(link_id PK, tenant_id, provider, connection_id, receipt_id, receipt_version, provider_id, provider_sync_token, created_at, UNIQUE(tenant_id,provider,connection_id,receipt_id,receipt_version))`.
+- `reconciliation_snapshots(snapshot_id PK, item_id, status, comparison_json, provider_sync_token, verified_at, created_at)`.
+- `receipt_accounting_projections(receipt_id, tenant_id, receipt_version, payload_json, stale, updated_at, PRIMARY KEY(tenant_id,receipt_id))`.
 
-New tables:
-- `confidence_profiles(profile_id, tenant_id, version, thresholds_json, benchmark_report_id, active, created_by_role, created_at)` with one active profile per tenant.
-- `benchmark_reports(report_id, tenant_id, manifest_name, metrics_json, evaluated_count, status, created_by_role, created_at)`.
-- `inbound_email_attachments(attachment_id, email_id, tenant_id, filename, declared_type, detected_type, size_bytes, sha256, status, attempt, receipt_id, error_code, created_at, updated_at)`.
-- `automation_rule_versions(rule_id, tenant_id, version, status, name, conditions_json, actions_json, priority, preview_token, previewed_at, created_by_role, created_at)`.
-- `automation_runs(run_id, tenant_id, rule_id, rule_version, status, input_json, summary_json, rollback_of, created_by_role, created_at, completed_at)`.
-- `automation_run_items(run_id, receipt_id, before_json, after_json, before_version, after_version, status, error_code)`.
-- `export_commands(command_id, tenant_id, preparation_id, idempotency_key, warning_ack_json, run_id, response_json, created_at)` unique on tenant and idempotency key.
+All JSON is canonical sorted output. Historical records are never cascade-deleted when disconnecting.
 
-Extend export preparation persistence with receipt-version and validation-snapshot JSON. Do not drop legacy columns.
+### Exact API
+- `POST /product/connections/quickbooks/oauth/start` body `{return_path}` → `{authorization_url,state_expires_at}`.
+- `GET /product/connections/quickbooks/oauth/callback?code&state&realmId` → 303 redirect, no JSON tokens.
+- `GET /product/connections/{id}` → metadata/health/current mapping version, no secrets.
+- `POST /product/connections/{id}/test` → health, company, tested_at, reauthorization_required.
+- `POST /product/connections/{id}/disconnect` → status disconnected.
+- `GET /product/connections/{id}/references?kind=accounts|tax_codes|vendors` → normalized references plus fetched_at.
+- `POST /product/connections/{id}/mappings/validate` body mapping → `{valid,errors,reference_snapshot}`.
+- `POST /product/connections/{id}/mappings` body validated mapping + snapshot hash → immutable mapping version.
+- Extend `POST /product/export-preparations` to accept `connection_id`; response includes provider, mapping_version, snapshot_hash, projections.
+- `GET /product/export-preparations/{id}/receipts/{receipt_id}/payload-preview` → redacted typed preview or 409 stale.
+- Extend `POST /product/export-commands`; provider target returns 202 and durable run.
+- `GET /product/provider-export-runs/{id}` and `/items` with status/offset/limit.
+- `POST /product/provider-export-runs/{id}/retry` body `{item_ids}`.
+- `GET /product/provider-export-runs/{id}/items/{item_id}`.
+- `POST /product/provider-export-runs/{id}/items/{item_id}/verify`.
+- `GET /product/receipts/{id}/accounting-projection`.
+- `POST /product/receipts/{id}/accounting-projection/refresh` body reporting_currency, optional rate_date.
 
-### Exact API additions and changes
-All responses use existing error conventions plus `{code, message, field?, retryable?, current_version?}` for structured errors.
-
-- `GET /product/review-items?confidence_field=total&confidence_lt=0.8&readiness=blocked&sort=amount_desc&limit=50&offset=0`
-  - Response: `{items, total, limit, offset, active_threshold_profile}`.
-- `PATCH /product/receipts/{id}/workspace` additive 409 body: `{code:"stale_version", message, current_version, current_fields}`.
-- `GET /product/receipts/{id}/audit` returns redacted JSON audit record.
-- `POST /product/export-preparations` request `{receipt_ids:[...], connection_id}`; response adds `receipt_versions` and `validation_snapshot`.
-- `POST /product/export-commands` request `{preparation_id, acknowledged_warning_receipt_ids}` and required `Idempotency-Key`; response `{run_id,status,preparation_id,requested,exported,error_code,retryable}`.
-- `GET /product/export-runs/{id}` returns immutable detail.
-- `GET /product/export-runs/{id}/artifact` returns CSV only when completed.
-- `POST /product/quality/benchmarks/run` request `{manifest_name}`; admin only.
-- `GET /product/quality/benchmarks/{report_id}` retrieves metrics.
-- `POST /product/quality/confidence-profiles` request `{benchmark_report_id, thresholds}`; admin only.
-- `GET /product/quality/confidence-profiles/active` retrieves active profile.
-- `GET /product/inbound-emails/{email_id}` returns parent plus attachment details.
-- `POST /product/inbound-emails/{email_id}/attachments/{attachment_id}/retry` has empty body and returns attachment state.
-- `POST /product/inbound-emails/{email_id}/archive` returns archived parent.
-- `GET /product/automation-rules/{rule_id}` returns latest plus versions.
-- `PATCH /product/automation-rules/{rule_id}` request `{expected_version,name,conditions,actions,priority}` creates next draft version.
-- `POST /product/automation-rules/{rule_id}/preview` request `{version,receipt_ids?,saved_view_id?}` returns `{preview_token,match_count,samples,conflicts}`.
-- `POST /product/automation-rules/{rule_id}/activate` request `{version,preview_token}`.
-- `POST /product/automation-rules/{rule_id}/runs` request `{version,receipt_ids?,saved_view_id?}`.
-- `GET /product/automation-rules/{rule_id}/runs` and `GET /product/automation-runs/{run_id}`.
-- `POST /product/automation-runs/{run_id}/rollback-preview` returns eligible/conflicts.
-- `POST /product/automation-runs/{run_id}/rollback` request `{eligible_receipt_ids}` and required `Idempotency-Key`.
-
-### Migration and compatibility
-- Migration runs at service startup inside a transaction and is idempotent.
-- A copied 1.4.0 database must open with all old data readable.
-- Existing endpoints, headers, and response fields remain accepted.
-- Existing rule records are migrated as version 1 active rules.
-- Existing inbound-email JSON attachments are converted lazily or by migration into child metadata rows without inventing bytes.
-- No route is removed. Deprecations, if any, are documented but remain operational for this release.
+### Compatibility/migration
+No existing endpoint is removed. Existing connections without new columns default to legacy/unhealthy metadata. Existing CSV export commands remain synchronous. Existing frontend routes continue; new detail routes are additive. Database migration is restart-safe and tested from a fixture representing current schema.
 
 ## Security and Privacy Considerations
-- Continue MIME allowlisting, magic-byte validation, size limits, sanitized filenames, SHA-256, SSRF protections, and tenant predicates on every query.
-- Set attachment limit to 20 MB each and 20 attachments per email, matching existing image limit unless configuration specifies a lower value.
-- Reject path traversal and never use user filename as filesystem path.
-- Quarantine executable, script, archive, and unknown binary content. Quarantine means metadata retained, bytes inaccessible to OCR and UI download.
-- Audit JSON excludes image bytes, raw OCR text by default, API keys, tokens, webhook secrets, and full attachment bytes.
-- Logs include request ID, tenant ID, resource ID, operation, status, duration, and error code; never log receipt values, email bodies, or binary content.
-- CORS wildcard-with-credentials is a known risk. The development pass must change configuration to explicit allowed origins from environment while retaining a test/dev default for localhost, and must add regression tests. This is an explicitly justified behavior change.
-- Use constant-time comparison where secrets or idempotency signatures are compared. Do not expose whether a cross-tenant ID exists.
-- Benchmark fixture selection is allowlisted server-side; no arbitrary filesystem path.
-- CSV formula-injection protection remains mandatory.
+- OAuth state is random, hashed at rest, tenant-bound, single-use, and expires in 10 minutes. PKCE verifier is encrypted.
+- AES-GCM master key is environment-only, minimum 32 bytes, supports key-version metadata, and is excluded from diagnostics.
+- Client secret and tokens are never sent to browser. Callback query values are not logged.
+- Provider base URLs and external links are fixed allowlists; no SSRF from connection configuration.
+- Admin role required for connect/disconnect/mapping; admin or reviewer for payload preview; bookkeeper/admin for export/retry; all queries include tenant ID.
+- Attachment upload validates stored image/PDF magic bytes and size before provider transmission.
+- Redaction tests search API JSON, logs, audit, diagnostic bundle, SQLite non-credential tables, and error payloads for seeded token markers.
+- Disconnect preserves financial audit links but removes active credential material. Retention/purge later must include expired OAuth states and disconnected ciphertext.
 
 ## Test Strategy (TDD)
-### Test mapping discipline
-Every acceptance criterion in the embedded JSON receives a test ID in `FEATURES-DONE.md` and `development-report.md`. Test names include the story ID, for example `test_us_001_stale_version_preserves_server_data`. The traceability matrix below defines the minimum mapping; one test may cover multiple criteria only when all outcomes are asserted.
+### RED sequence and acceptance mapping
+Create `tests/test_us_010_quickbooks_oauth.py` through `test_us_018_payload_preview.py`. Each acceptance criterion gets one named test `test_us_NNN_<criterion>`. Run each before implementation and record the expected failure, then GREEN. Production tests may not contain `pytest.raises(NotImplementedError)` as their only behavior.
 
-### RED tests before implementation
-**Feature A**
-- US-001: queue/review fixture corrects low-confidence total; stale version returns structured 409; image failure leaves workspace data available.
-- US-002: exactly 2 of 10 blocked; warning acknowledgement required and audited; connection error creates failed retryable run with zero exports.
-- US-003: history ordering and before/after; Created event rendering contract; audit failure UI retry.
-- Idempotency replay test and migration-from-1.4.0 test.
+**Feature A tests:** state entropy/expiry/replay/cross-tenant, callback redaction, encrypted-at-rest marker scan, refresh rotation, invalid_grant, disconnect, account cache, mapping required fields and inactive reference drift.
 
-**Feature B**
-- US-004: server filter returns five; empty filter contract; failed SWR refetch preserves rendered rows in Playwright.
-- US-005: 200 labels sum invariant; missing tax excluded; invalid manifest blocks publish with row errors.
-- US-006: total box highlight; unavailable region message; corrupt asset clears prior image.
+**Feature B tests:** 50-item real SQLite + `httpx.MockTransport` posting, duplicate replay across command keys, restart claim recovery, 429 injected clock, partial failure, retry version conflict, error redaction/size, remote verify/mismatch/missing.
 
-**Feature C**
-- US-007: two attachments create two receipts; executable sibling quarantined; one OCR failure yields partial and retry.
-- US-008: preview count 12 with no mutations; deterministic conflict winner; activation disabled after preview error/version change.
-- US-009: ten-item rollback; two later edits excluded; injected transaction failure leaves zero reversions.
+**Feature C tests:** Decimal conversion/date selection/identity/missing rate, stale projection on correction, minor-unit rounding, mixed tax lines, negative/impossible tax, deterministic preview hash, stale 409, role 403, preview secret scan.
 
-### Unit tests
-- Readiness rule functions, confidence filter parser/sorter, metric calculations, threshold validation, MIME detection, parent-status derivation, rule conflict resolution, idempotency lookup, rollback eligibility, redaction, and structured error mapping.
-- Changed/new Python modules require at least 90% statement coverage measured with pytest-cov, which must be added to dev dependencies only if not available in the lockfile.
-- Frontend utility functions and reducers use existing testing approach; if no component unit runner exists, do not add one solely for this pass. Cover behavior through Playwright and TypeScript checks.
-
-### Integration tests
-- Temporary on-disk SQLite, real file bytes for valid/invalid images, real CSV artifact I/O, service restart, and migration from a copied legacy schema.
-- No live external accounting API is required. Do not mock internal persistence in the integration suite.
-- Validate transaction rollback by injecting a database failure after multiple eligible items.
-- Validate no cross-tenant access for every new resource type.
-
-### Browser/E2E tests
-- Upload/inbox → review filter → source highlight → correction → completion → preparation → warning acknowledgement → export → CSV download.
-- Automation draft → preview conflict → activate → explicit run → history → rollback conflict and success.
-- Diagnostics benchmark → metric view → threshold publish → queue reflects profile.
-- Mobile 375x812 and desktop 1440x900; keyboard-only pass for all primary actions.
-- Axe on selected screens, zero serious/critical violations.
+### Integration/E2E
+- Real I/O: temporary SQLite file closed/reopened between queue and worker; local ASGI fake-provider server handles OAuth token, company, account, create, upload, and get endpoints.
+- Opt-in real sandbox: `pytest -m qbo_sandbox` runs only when documented credentials exist, creates one uniquely memoed purchase in a dedicated sandbox, verifies it, and records provider ID for cleanup. It is required before release but skipped in credentialless CI.
+- Playwright covers connect callback simulation, mapping validation, missing-rate recovery, preflight payload preview, partial run retry, mismatch reconciliation, keyboard focus, mobile layout, and axe.
 
 ### Commands
-Supported existing commands:
-- Python targeted: `pytest -q tests/test_product_features.py tests/test_export_readiness_workflow.py tests/test_accounting_readiness_ui.py`
-- Python full regression: `pytest -q`
-- Ruff: `ruff check app tests`
-- Frontend install: `cd frontend && npm ci`
-- Type-check: `cd frontend && npm run typecheck`
-- Build: `cd frontend && npm run build`
-- E2E: `cd frontend && npx playwright test`
-- Backend startup smoke: `uvicorn app.main:app --host 127.0.0.1 --port 8000`
-- Frontend startup smoke after build: `cd frontend && npm run start -- --hostname 127.0.0.1 --port 3000`
+Existing supported commands:
+- Target feature: `pytest -q tests/test_us_010_quickbooks_oauth.py ... tests/test_us_018_payload_preview.py`.
+- Affected regressions: `pytest -q tests/test_development_stories.py tests/test_export_readiness_workflow.py tests/test_accounting_readiness_ui.py tests/test_us_contract_api.py`.
+- Full: `pytest -q`.
+- Coverage: `pytest -q <new test files> --cov=app.quickbooks_connector --cov=app.credential_store --cov=app.connection_service --cov=app.provider_export_service --cov=app.reconciliation_service --cov=app.accounting_projection --cov-report=term-missing --cov-fail-under=90`.
+- Lint: `python -m ruff check app tests` after ensuring the dev extra installed from project metadata.
+- Frontend: `cd frontend && npm ci && npm run typecheck && npm run build && npx playwright install chromium && npx playwright test`.
+- Startup: backend `uvicorn app.main:app --host 127.0.0.1 --port 8000`; frontend `cd frontend && npm run start -- --hostname 127.0.0.1 --port 3000`; probe `/health`, `/ready`, `/integrations`.
+- Gates: `bash scripts/tdd-gate-v3.sh`, `bash scripts/bdd-gate.sh`, `bash scripts/security-gate.sh`, `bash scripts/doc-sync-check.sh`, `bash scripts/ui-gate.sh`, `bash scripts/git-push-verify.sh .`.
 
-New repository gate wrappers to add and execute:
-- `bash scripts/tdd-gate-v3.sh`
-- `bash scripts/bdd-gate.sh`
-- `bash scripts/security-gate.sh`
-- `bash scripts/doc-sync-check.sh`
-- `bash scripts/ui-gate.sh`
-- `bash scripts/git-push-verify.sh`
-
-The wrappers must fail closed, use only repository-supported commands, print command/status evidence, and be documented. `git-push-verify.sh` verifies clean working tree, current branch upstream, local HEAD equals upstream HEAD, and the pushed commit includes required artifacts. If the execution environment has no authenticated remote, the development phase is incomplete and must state that gate as blocked rather than fabricating success.
-
-### Objective gates
-- All targeted tests pass after each feature.
-- Full pytest, Ruff, type-check, Next build, Playwright, and startup smoke pass.
-- Changed/new Python modules have at least 90% statement coverage.
-- Every BDD criterion maps to a passing test ID.
-- No serious/critical axe violation.
-- No duplicate export or rollback under repeated idempotency key.
-- All six lab gate scripts exit 0, including UI gate because a UI exists.
+### Objective pass/fail
+- Every US-010..018 criterion has a passing test and traceability row.
+- New/changed domain modules each ≥90% statement coverage and aggregate ≥90%; credential/state modules require 100% branch coverage.
+- Zero full-regression failures; documented provider sandbox test passes before release.
+- Type-check/build/startup pass; Playwright/axe has zero critical/serious violations; required screenshots visibly inspected.
+- Security gate proves no plaintext seeded token outside encrypted credential blob and no cross-tenant access.
 
 ## Documentation Deliverables
-The development phase must update:
-
-- **`README.md`:** rewrite the opening GitHub-facing section to explain the product in one paragraph; show current screenshots; list the exception-to-export workflow; distinguish Next.js primary UI from legacy workspace; provide backend/frontend quickstart; explain Tesseract and optional vision setup; identify demo auth limitations; list supported import/export behavior; link focused docs; include tested commands. Keep advanced API reference out of the opening overview.
-- **`CHANGELOG.md`:** add a release entry with Added, Changed, Security, Fixed, Compatibility, and Migration sections, including explicit CORS change and new schema.
-- **`docs/api.md`:** document every new/changed endpoint, request/response, headers, status codes, idempotency, pagination/filter semantics, and compatibility.
-- **`docs/product-workflows.md`:** document inbox-to-review-to-export and automation rollback with failure recovery.
-- **`docs/accounting-export-guide.md`:** document readiness rules, warnings, preparation snapshot, replay behavior, and CSV artifact.
-- **`docs/gui-workspace.md`:** document new Next.js screens, keyboard behavior, and legacy-workspace status.
-- **`FEATURES-DONE.md`:** requirement/story/test traceability list; each story and criterion marked implemented only with test evidence and file locations.
-- **`development-report.md`:** summary; architecture decisions; migrations; exact files changed; test/gate commands and results; coverage; screenshots; known limitations; git commit hash, branch, remote, and push verification.
-
-Documentation must describe observed behavior after tests, not planned behavior. `doc-sync-check.sh` validates route names, documented commands, version references, required files/sections, and absence of placeholders.
+- `README.md`: QuickBooks sandbox prerequisites, environment variables without values, connection flow, mapping, export/retry/reconcile, FX-rate setup, troubleshooting, production warning.
+- `CHANGELOG.md`: new connector, encryption, schema, export/reconciliation, currency/tax, tests, and compatibility.
+- `docs/quickbooks-online.md`: OAuth/scopes, sandbox app setup, mapping semantics, status/error codes, disconnect/reconnect, operational runbook.
+- `docs/accounting-export-guide.md`: provider preflight, payload preview, warning acknowledgement, run/retry/reconciliation.
+- `docs/api.md`: exact endpoints and shapes, 202 behavior, stable error codes.
+- `FEATURES-DONE.md`: only completed US-010..018 items and sources mapping.
+- `development-report.md`: RED/GREEN evidence per story, exact sandbox/fake-provider evidence, coverage, gates, screenshots, migrations, file list, blockers, integrity, traceability, commit message.
 
 ## Expected File Changes
-**Backend additions:**
-- `app/export_workflow.py`
-- `app/quality_service.py` if `app/quality.py` cannot retain a single responsibility
-- `app/inbox_service.py`
-- `app/automation_service.py`
+**Add:** `app/provider_connectors.py`, `app/quickbooks_connector.py`, `app/credential_store.py`, `app/connection_service.py`, `app/provider_export_service.py`, `app/reconciliation_service.py`, `app/accounting_projection.py`; nine story-focused test modules plus fixtures; `docs/quickbooks-online.md`; frontend shared components and reconciliation route.
 
-**Backend modifications:**
-- `app/product_api.py`
-- `app/product_service.py`
-- `app/advanced_workspace.py`
-- `app/accounting_workspace.py`
-- `app/quality.py`
-- `app/api.py` for explicit CORS configuration only
-- `pyproject.toml` and `uv.lock` only if pytest-cov is newly required
-
-**Frontend additions:**
-- `frontend/app/(app)/exports/runs/[id]/page.tsx`
-- `frontend/app/(app)/settings/diagnostics/quality/page.tsx`
-- `frontend/app/(app)/automations/[id]/page.tsx`
-- `frontend/app/(app)/automations/[id]/runs/page.tsx`
-- `frontend/app/(app)/automations/[id]/runs/[runId]/page.tsx`
-- focused components under `frontend/components/` for validation summary, provenance viewer, confidence filter, export status groups, attachment status, rule builder, conflict table, and rollback preview
-
-**Frontend modifications:**
-- existing review, receipt detail, export preparation, inbox, automation, diagnostics pages
-- `frontend/lib/api.ts`, `frontend/lib/types.ts`, relevant hooks, AppShell/navigation, globals/tokens only where necessary
-
-**Tests:**
-- extend current targeted files and add focused tests such as `tests/test_export_workflow.py`, `tests/test_quality_calibration.py`, `tests/test_inbox_attachments.py`, `tests/test_automation_runs.py`, `tests/test_schema_migration_v140.py`
-- add Playwright specs for review/export, quality, inbox, and automation rollback
-
-**Gates and docs:**
-- add six scripts under `scripts/`
-- update documentation listed above
-- add `FEATURES-DONE.md`, `development-report.md`, and intentional screenshots
-
-Do not modify unrelated forecasting, budget, subscription, approval, duplicate, or report behavior except to fix a regression introduced by this pass.
+**Modify:** `app/product_api.py`, service initialization, `pyproject.toml`, `uv.lock`, existing schema/service modules, frontend types/API/routes, gate scripts, README, CHANGELOG, API/export docs, FEATURES-DONE, development-report. Do not modify research findings or this plan during development except to correct a proven contradiction, which must be separately documented.
 
 ## Traceability Matrix
 | Research need | Research evidence | User story id | Planned requirement | Acceptance criterion | Planned implementation location | Planned test evidence | Priority |
 |---|---|---|---|---|---|---|---|
-| Focus corrections on uncertain receipts | Competitor accuracy claims conflict with user reports of currency/tax errors | US-001 | Unified review with source evidence and readiness recomputation | Correcting total increments version and reaches exportable within 2 seconds | `product_service.py`, review/detail pages | `test_us_001_happy`, Playwright review/export | P0 |
-| Prevent data loss under concurrent review | Current optimistic version exists; drafts need recovery | US-001 | Structured 409 and preserved client draft | Stale submission does not overwrite and draft remains | `product_api.py`, receipt page | `test_us_001_stale`, E2E conflict | P0 |
-| Continue review when image fails | Users report missing/opaque documents | US-001 | Independent image/form loading | Retryable image error; completion remains false | receipt page, asset endpoint | `test_us_001_image_error` | P0 |
-| Deterministic preflight | Matching and completeness are core pains | US-002 | Immutable validation snapshot and groups | Exactly 2 blockers and 8 eligible in fixture | `export_workflow.py`, prepare page | `test_us_002_preflight_counts` | P0 |
-| Explicit warning consent | Tax/line mismatch can require manual review | US-002 | Warning acknowledgement in command and audit | Warning export blocked until acknowledged | export API/UI | `test_us_002_warning_ack` | P0 |
-| Recover from connector failure | Background sync failures reported | US-002 | Failed immutable run, zero posts, retryable error | Auth error creates failed run without exports | export service/run page | `test_us_002_connection_failure` | P0 |
-| Audit who changed what | Accounting workflow requires defensibility | US-003 | Redacted chronological history and JSON download | 3 expected events with UTC before/after | history/audit API and tab | `test_us_003_history` | P0 |
-| Render creation safely | Missing before values are valid | US-003 | Created event semantic state | UI displays Created, no broken diff | history component | `test_us_003_created_event` | P0 |
-| Recover audit retrieval | Operational UI needs friendly errors | US-003 | Persistent receipt header and Retry | No invented events after failure | history component | `test_us_003_error` | P0 |
-| Prioritize confidence exceptions | Users need exception handling over raw OCR | US-004 | URL-backed confidence filter and sort | Five exact matches and URL state | queue query/review page | `test_us_004_filter`, E2E | P0 |
-| Explain empty results | Modern baseline requires explicit empty states | US-004 | Filtered empty CTA | Empty message plus Clear filters | review page | `test_us_004_empty` | P0 |
-| Preserve work during refresh failure | Opaque processing erodes trust | US-004 | SWR stale-data error banner | Prior list remains with Retry | review hook/page | `test_us_004_timeout` | P0 |
-| Measure false-clear risk | No quality claim without benchmark | US-005 | Versioned benchmark metrics | Counts sum to 200 | quality service/diagnostics | `test_us_005_metrics` | P0 |
-| Handle missing labels correctly | Benchmark data can be partial | US-005 | Exclude not-evaluated fields | Tax excluded from aggregate | quality service | `test_us_005_missing_label` | P0 |
-| Block invalid publication | Thresholds can misroute receipts | US-005 | Strict manifest validation | Row errors and disabled publish | quality API/page | `test_us_005_invalid_manifest` | P0 |
-| Verify extraction source quickly | Provenance reduces review time | US-006 | Field-to-box focus and pan | Known total box highlighted | viewer component | `test_us_006_box`, E2E | P0 |
-| Allow manual fallback | Boxes may not exist | US-006 | Source unavailable state | Manual input remains enabled | viewer/detail page | `test_us_006_no_box` | P0 |
-| Prevent stale source display | Cross-document confusion is harmful | US-006 | Clear image before new load | Broken asset never shows previous image | viewer component | `test_us_006_corrupt` | P0 |
-| Multi-channel ingestion | Dext/Hubdoc make email capture table stakes | US-007 | Attachment-level processing | Two supported files create two links | inbox service/UI | `test_us_007_two_attachments` | P1 |
-| Quarantine unsafe content | Financial inbox is an attack surface | US-007 | MIME/magic allowlist and quarantine | Executable quarantined; image succeeds | inbox/security service | `test_us_007_quarantine` | P1 |
-| Retry one failed attachment | One failure must not block siblings | US-007 | Attachment Retry and partial parent | One receipt plus retry action | inbox API/page | `test_us_007_partial_retry` | P1 |
-| Preview before automation | Opaque automation risks bulk errors | US-008 | Zero-mutation preview with sample count | Count 12, max 20 samples, no writes | automation service/editor | `test_us_008_preview` | P1 |
-| Resolve rule conflicts | Multiple rules can target same field | US-008 | Deterministic priority and winner display | Conflict and winner shown | automation service/UI | `test_us_008_conflict` | P1 |
-| Prevent stale activation | Draft can change after preview | US-008 | Preview token bound to version | Activation disabled/rejected | automation API/editor | `test_us_008_stale_preview` | P1 |
-| Reverse erroneous runs | Safe automation requires recovery | US-009 | Atomic rollback with history | Ten receipts reverted with events | automation service/run page | `test_us_009_rollback` | P1 |
-| Preserve later manual edits | Rollback must not destroy newer work | US-009 | Version-based conflict exclusion | Two conflicts excluded, eight eligible | automation service | `test_us_009_conflicts` | P1 |
-| Guarantee transaction atomicity | Partial reversal is unacceptable | US-009 | Single transaction and retryable failure | Injected failure persists zero reversions | automation service | `test_us_009_atomic_failure` | P1 |
+| Deep single-provider integration | Competitors position accounting sync as core; research recommends one sandbox | US-010 | Tenant-bound OAuth/PKCE and encrypted token exchange | Matching callback stores one redacted connection | connection/credential/QBO services; Integrations | oauth callback integration | P0 |
+| Prevent OAuth cross-tenant/replay | Production connector risk | US-010 | Single-use hashed state | Cross-tenant/replay returns 400, no token | connection service | state security tests | P0 |
+| Recover provider timeout | Operational reliability need | US-010 | Retryable new state | timeout leaves disconnected and Retry available | API/UI | callback timeout + UI | P0 |
+| Connection health | Opaque sync complaints | US-011 | Test/refresh/reauthorize | expired token refreshes once | QBO connector/detail | refresh transport test | P0 |
+| Protect rotated credentials | OAuth risk | US-011 | Replace encrypted token set | old marker absent after rotation | credential store | SQLite marker test | P0 |
+| Avoid refresh loops | Operational safety | US-011 | invalid_grant terminal health | reauthorization required | connection service/UI | invalid_grant test | P0 |
+| Deterministic accounting mapping | Currency/tax/matching complaints | US-012 | Immutable validated mapping | active refs save new version | mapping service/editor | mapping integration | P0 |
+| Detect provider drift | Provider references change | US-012 | preflight reference revalidation | inactive ref blocks with deep link | prep/mapping UI | drift test/E2E | P0 |
+| Field validation | Modern error baseline | US-012 | 422 field errors | missing expense account disables save | API/editor | schema + E2E | P0 |
+| No duplicate posting | Research success metric | US-013 | item dedupe and durable links | replay creates exactly 50 | provider export service | 50-item fake server | P0 |
+| Skip prior success | Retry safety | US-013 | provider link lookup | no second request | export service | request-count test | P0 |
+| Respect rate limits | Provider API reality | US-013 | bounded Retry-After policy | max three attempts, siblings continue | worker | injected-clock 429 test | P0 |
+| Recover partial run | Matching/reliability pain | US-014 | immutable item detail/retry | aggregate 42/5/3 matches items | run service/UI | run detail test | P0 |
+| Protect later edits | Existing optimistic contract | US-014 | version gate retry | changed item rejected | worker | conflict test | P0 |
+| Redact provider errors | Financial credential privacy | US-014 | safe 2 KB error envelope | token removed; request ID kept | provider errors/UI | seeded-secret test | P0 |
+| Prove remote result | Reconciliation pain | US-015 | fetch-and-compare | matching fields verify | reconciliation service/view | provider get test | P0 |
+| Surface mismatch | Currency/tax errors | US-015 | tolerance comparison | total mismatch names field | reconciliation | mismatch test/E2E | P0 |
+| Preserve deleted history | Audit need | US-015 | missing_remote status | link retained; recreate disabled | reconciliation/UI | delete simulation | P0 |
+| Preserve source currency | Reported foreign-currency errors | US-016 | separate accounting projection | original unchanged with dated CHF result | projection/receipt UI | Decimal projection test | P0 |
+| Identity conversion | Correct boundary behavior | US-016 | explicit rate 1 | no lookup | projection | identity mock assertion | P0 |
+| Never invent FX | Trust requirement | US-016 | missing-rate blocker | deep-linked stable error | readiness/UI | missing rate API/E2E | P0 |
+| Validate tax arithmetic | Reported tax rework | US-017 | Decimal arithmetic | 0.01 tolerance passes | projection/tax panel | rounding tests | P0 |
+| Handle mixed tax | Accounting mapping gap | US-017 | line-level code completeness | unmapped indices listed | mapping/projection | mixed lines test | P0 |
+| Block impossible tax | Accounting safety | US-017 | stable validation code | no payload generated | projection/preflight | negative/excess tests | P0 |
+| Preview interpretation | Transparent preflight differentiation | US-018 | snapshot-bound redacted preview | deterministic versioned response | preview endpoint/drawer | snapshot hash test | P0 |
+| Stale preview recovery | Concurrency | US-018 | 409 and preserved selection | Run preflight again | API/UI | stale E2E | P0 |
+| Role/privacy | Financial data access | US-018 | admin/reviewer only | 403 and no payload logs | API | RBAC/log capture | P0 |
 
 ## Risks and Mitigations
-| Risk | Impact | Mitigation |
-|---|---|---|
-| Scope is still broad | Partial features | Implement in vertical slices A then B then C; feature flags are not completion substitutes; stop only at selected-scope boundary. |
-| Schema drift or data loss | Existing installs fail | Additive migration, copied 1.4.0 DB integration test, backup guidance, no column drops. |
-| Confidence metrics mislead | False trust | Labelled fixture, explicit denominator, false-clear primary metric, versioned publication, no marketing claim. |
-| Rollback overwrites newer data | Financial corruption | Receipt versions, preflight, conflict exclusion, atomic transaction, immutable run items. |
-| Duplicate exports | Ledger duplication | Tenant-scoped idempotency key, preparation version check, immutable run, replay test. |
-| Malicious attachments | Code execution/data exposure | MIME plus magic validation, strict limits, quarantine, no filename path use, tenant isolation. |
-| Dual UI confusion | Maintenance overhead | New work only in Next.js; document primary surface; preserve legacy compatibility without parallel feature implementation. |
-| Gate scripts absent today | False completion claim | Add explicit scripts; fail closed; record output in development report; no substitution with manual summary. |
-| Git push unavailable | Lab policy failure | Treat as blocker, retain completed artifact, report exact remote/auth limitation; never claim success without upstream hash match. |
+- **Provider API/certification drift:** centralize provider adapter, pin minor API version in config, contract-test normalized shapes, record tested version/date.
+- **Credential compromise:** authenticated encryption, strict redaction, key rotation metadata, no browser tokens, disconnect purge, 100% security branch coverage.
+- **Duplicate financial entries:** deterministic dedupe, provider links, command idempotency, version-pinned preparation, restart tests.
+- **Rate limits/outages:** durable per-item state, bounded Retry-After, connection pause on auth failure, retry UI.
+- **Tax misinterpretation:** validation and mapping only; no legal advice; explicit preview and blockers.
+- **FX rounding:** Decimal/minor units, dated rate provenance, source values immutable.
+- **SQLite contention:** short claim transactions, no network I/O inside transaction, bounded batch 200. PostgreSQL remains future adapter.
+- **Credentialless CI:** full fake-provider integration mandatory; real sandbox marker may skip in CI but must pass before release and be documented.
+- **Header identity limitation:** retain explicit non-production banner and admin role checks; production identity remains release blocker.
 
 ## Definition of Done
-- [ ] All three selected features are complete end to end with no facade, placeholder, synthetic success, or unpersisted critical state.
-- [ ] All nine embedded stories and every acceptance criterion have implementation and test evidence.
-- [ ] Inbox/upload → review/provenance → completion → preparation → acknowledgement → export artifact works.
-- [ ] Automation draft → preview/conflict → activate → run → rollback works.
-- [ ] Diagnostics benchmark → metrics → threshold publish → queue behavior works.
-- [ ] Existing behavior remains compatible, including legacy endpoints and `/workspace`.
-- [ ] Additive migration from a 1.4.0 database passes and existing records remain readable.
-- [ ] Targeted tests pass during each slice, then full `pytest -q` passes.
-- [ ] Meaningful integration tests use on-disk SQLite and real file/CSV I/O.
-- [ ] Changed/new Python modules achieve at least 90% statement coverage.
-- [ ] `ruff check app tests` passes.
-- [ ] Frontend `npm ci`, type-check, build, Playwright, and startup smoke pass.
-- [ ] Desktop and mobile screenshots and keyboard checks are complete.
-- [ ] Axe reports zero serious or critical issues on selected screens.
-- [ ] `scripts/tdd-gate-v3.sh` passes.
-- [ ] `scripts/bdd-gate.sh` passes.
-- [ ] `scripts/security-gate.sh` passes.
-- [ ] `scripts/doc-sync-check.sh` passes.
-- [ ] `scripts/ui-gate.sh` passes.
-- [ ] README, CHANGELOG, API/workflow/export/GUI docs, `FEATURES-DONE.md`, and `development-report.md` match tested behavior.
-- [ ] README gives a concise, accurate GitHub overview and clearly identifies the Next.js primary UI and demo-auth limitation.
-- [ ] No secrets, credentials, caches, virtual environments, coverage artifacts, build outputs, screenshots outside intentional docs, or scratch data are committed or packaged.
-- [ ] Requirement → story → implementation → test → evidence traceability is complete.
-- [ ] Git commit and push are completed; `scripts/git-push-verify.sh` proves local HEAD equals upstream HEAD and working tree is clean.
-- [ ] The complete project is packaged, ZIP integrity-tested, listed, extracted into a separate directory, checked for required files, and confirmed to have no extra enclosing directory.
+- [ ] US-010 through US-018 complete with no façade, production mock, placeholder, or unconditional success.
+- [ ] OAuth state, credential encryption, refresh, disconnect, and mapping are tenant-safe and redaction-tested.
+- [ ] A 50-receipt fake-provider export is replayed with zero duplicate creates; restart and partial retry pass.
+- [ ] Opt-in QuickBooks sandbox create/get/verify passes before release and provider IDs are recorded safely.
+- [ ] Currency and tax projection preserves source values and blocks missing/invalid evidence.
+- [ ] All acceptance criteria map to RED/GREEN test evidence and implementation in the development report.
+- [ ] New/changed modules meet ≥90% coverage; credential/state modules meet 100% branch coverage.
+- [ ] Targeted and full pytest regressions pass with zero failures.
+- [ ] `tdd-gate-v3.sh`, `bdd-gate.sh`, `security-gate.sh`, `doc-sync-check.sh`, and `ui-gate.sh` pass.
+- [ ] Ruff, type-check, production build, backend/frontend startup, Playwright, axe, and required screenshot inspection pass.
+- [ ] README, CHANGELOG, API/export/QBO docs, FEATURES-DONE, and development-report match actual behavior.
+- [ ] Migration from current SQLite fixture and restart recovery pass.
+- [ ] No tokens, client secrets, `.env`, caches, dependencies, build output, traces, or scratch artifacts are packaged.
+- [ ] Git add/commit/pull-rebase/push succeeds and `git-push-verify.sh` confirms clean tree and upstream HEAD; without repository metadata the phase must report BLOCKED, not PASS.
+- [ ] Baseline reconciliation accounts for every intentional file change and no pre-existing file disappears.
+- [ ] Complete project ZIP passes integrity, listing, separate extraction, required-file, and top-level-layout verification.
