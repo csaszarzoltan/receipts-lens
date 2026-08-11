@@ -1,8 +1,9 @@
 # Changelog
 
-## [Unreleased - Provider integration] - 2026-08-11
+## [Unreleased - Connected workflow completion] - 2026-08-11
 
 ### Added
+- Tenant-scoped provider connection list/detail, credential-purging disconnect, and immutable mapping current/save APIs.
 - QuickBooks Online provider-domain foundation with tenant-bound OAuth state, AES-GCM credential storage, immutable mapping versions, replay-safe export items, and reconciliation.
 - Decimal source-currency, dated-rate, tax-arithmetic, and deterministic payload-preview services.
 - BDD-derived US-010 through US-018 regression coverage and a polished QuickBooks sandbox onboarding panel.

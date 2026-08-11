@@ -750,3 +750,87 @@ def rollback_preview(run_id:str,current:Actor=Depends(actor))->dict[str,Any]:
 def rollback_run(run_id:str,body:RollbackRequest,current:Actor=Depends(actor))->dict[str,Any]:
     try:return automation_service.rollback(current,run_id,body.eligible_receipt_ids)
     except KeyError as exc:raise HTTPException(404,"Run not found") from exc
+
+# QuickBooks connected-workflow completion API
+from app.credential_store import CredentialStore
+from app.connection_service import ConnectionService
+from app.accounting_projection import AccountingProjectionService
+import base64
+
+def _credential_store():
+    try: return CredentialStore()
+    except ValueError as exc: raise HTTPException(503, {'code':'credential_store_unavailable','message':str(exc)}) from exc
+
+def _connections(): return ConnectionService(service, _credential_store())
+projection_service = AccountingProjectionService(service)
+
+class OAuthStartRequest(BaseModel):
+    return_path: str = '/integrations'
+class MappingBody(BaseModel):
+    expense_account_ref: str
+    tax_strategy: str = 'exclusive'
+class ProjectionRefreshBody(BaseModel):
+    reporting_currency: str
+
+@router.post('/product/connections/quickbooks/oauth/start',status_code=201)
+def qbo_oauth_start(body:OAuthStartRequest,current:Actor=Depends(actor)):
+    try:
+        result=_connections().start_oauth(current,body.return_path)
+        return {'authorization_url':result['authorization_url'],'state_expires_at':result['state_expires_at']}
+    except PermissionError as exc: raise HTTPException(403,'Admin role required') from exc
+    except ValueError as exc: raise HTTPException(422,str(exc)) from exc
+
+@router.post('/product/provider-mappings/validate')
+def validate_provider_mapping(body:MappingBody,current:Actor=Depends(actor)):
+    if current.role!='admin': raise HTTPException(403,'Admin role required')
+    if not body.expense_account_ref.strip(): raise HTTPException(422,{'field':'expense_account_ref','code':'required'})
+    return {'valid':True,'mapping':body.model_dump()}
+
+@router.get('/product/receipts/{receipt_id}/accounting-projection')
+def get_accounting_projection(receipt_id:str,current:Actor=Depends(actor)):
+    row=service._db.execute('SELECT payload_json,stale FROM receipt_accounting_projections WHERE tenant_id=? AND receipt_id=?',(current.tenant_id,receipt_id)).fetchone()
+    if not row: raise HTTPException(404,'Projection not found')
+    return {**json.loads(row['payload_json']),'stale':bool(row['stale'])}
+
+@router.post('/product/receipts/{receipt_id}/accounting-projection/refresh')
+def refresh_accounting_projection(receipt_id:str,body:ProjectionRefreshBody,current:Actor=Depends(actor)):
+    try:return projection_service.refresh(current,receipt_id,body.reporting_currency.upper())
+    except KeyError as exc: raise HTTPException(404,str(exc)) from exc
+
+@router.get('/product/receipts/{receipt_id}/provider-preview')
+def provider_preview(receipt_id:str,receipt_version:int,mapping_version:int,current:Actor=Depends(actor)):
+    if current.role not in {'admin','reviewer'}: raise HTTPException(403,'Reviewer role required')
+    try:return projection_service.preview(current,receipt_id,receipt_version,mapping_version,{'expense_account_ref':'configured'})
+    except (KeyError,RuntimeError) as exc: raise HTTPException(409,str(exc)) from exc
+
+class MappingSaveBody(BaseModel):
+    expense_account_ref: str
+    tax_strategy: str = 'exclusive'
+    snapshot_hash: str
+
+@router.get('/product/provider-connections')
+def provider_connections(current:Actor=Depends(actor)):
+    return {'items':_connections().list_connections(current)}
+
+@router.get('/product/provider-connections/{connection_id}')
+def provider_connection_detail(connection_id:str,current:Actor=Depends(actor)):
+    try:return _connections().get(current,connection_id)
+    except KeyError as exc:raise HTTPException(404,'Connection not found') from exc
+
+@router.post('/product/connections/{connection_id}/disconnect')
+def disconnect_provider(connection_id:str,current:Actor=Depends(actor)):
+    try:return _connections().disconnect(current,connection_id)
+    except PermissionError as exc:raise HTTPException(403,'Admin role required') from exc
+    except KeyError as exc:raise HTTPException(404,'Connection not found') from exc
+
+@router.post('/product/connections/{connection_id}/mappings',status_code=201)
+def save_provider_mapping(connection_id:str,body:MappingSaveBody,current:Actor=Depends(actor)):
+    if current.role!='admin':raise HTTPException(403,'Admin role required')
+    if not body.expense_account_ref.strip():raise HTTPException(422,{'field':'expense_account_ref','code':'required'})
+    try:return _connections().save_mapping(current,connection_id,{'expense_account_ref':body.expense_account_ref,'tax_strategy':body.tax_strategy},body.snapshot_hash)
+    except KeyError as exc:raise HTTPException(404,'Connection not found') from exc
+
+@router.get('/product/connections/{connection_id}/mappings/current')
+def current_provider_mapping(connection_id:str,current:Actor=Depends(actor)):
+    try:return _connections().current_mapping(current,connection_id)
+    except KeyError as exc:raise HTTPException(404,'Mapping not found') from exc

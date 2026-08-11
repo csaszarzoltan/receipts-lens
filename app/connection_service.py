@@ -50,3 +50,23 @@ class ConnectionService:
   self.get(actor,cid);v=self.db.execute('SELECT COALESCE(MAX(version),0)+1 FROM connection_mapping_versions WHERE connection_id=?',(cid,)).fetchone()[0];mid=str(uuid.uuid4())
   with self.db:self.db.execute('INSERT INTO connection_mapping_versions VALUES(?,?,?,?,?,?,1,?)',(mid,cid,actor.tenant_id,v,json.dumps(mapping,sort_keys=True),snapshot_hash,self.now().isoformat()))
   return {'mapping_id':mid,'version':v,'valid':True,'mapping':mapping,'snapshot_hash':snapshot_hash}
+
+# Completion helpers kept outside the class body above and attached explicitly.
+def _list_connections(self, actor):
+ rows=self.db.execute('SELECT * FROM provider_connections WHERE tenant_id=? ORDER BY created_at DESC',(actor.tenant_id,)).fetchall()
+ return [{**dict(r),'reauthorization_required':bool(r['reauthorization_required'])} for r in rows]
+def _disconnect(self, actor, cid):
+ self.get(actor,cid)
+ if actor.role!='admin': raise PermissionError
+ with self.db:
+  self.db.execute('DELETE FROM provider_credentials WHERE tenant_id=? AND connection_id=?',(actor.tenant_id,cid))
+  self.db.execute('UPDATE provider_connections SET health="disconnected",reauthorization_required=0 WHERE tenant_id=? AND connection_id=?',(actor.tenant_id,cid))
+ return self.get(actor,cid)
+def _current_mapping(self, actor, cid):
+ self.get(actor,cid)
+ r=self.db.execute('SELECT * FROM connection_mapping_versions WHERE tenant_id=? AND connection_id=? ORDER BY version DESC LIMIT 1',(actor.tenant_id,cid)).fetchone()
+ if not r: raise KeyError('mapping')
+ d=dict(r);d['mapping']=json.loads(d.pop('payload_json'));d['valid']=bool(d['valid']);return d
+ConnectionService.list_connections=_list_connections
+ConnectionService.disconnect=_disconnect
+ConnectionService.current_mapping=_current_mapping

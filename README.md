@@ -696,3 +696,9 @@ The implementation remains provider-neutral. QuickBooks and Xero production OAut
 ## QuickBooks Online sandbox workflow
 
 The provider foundation supports tenant-bound OAuth state, AES-GCM token storage, immutable account mappings, durable replay-safe export items, reconciliation, and source-currency/tax projections. Install project dependencies, set `RECEIPTLENS_CREDENTIAL_KEY` to URL-safe Base64 for 32 random bytes, start FastAPI and the Next.js frontend, then open **Integrations**. This phase is sandbox-oriented and does not claim production Intuit certification. See `docs/quickbooks-online.md` for the operational contract and troubleshooting boundaries.
+
+### Connected workflow API completion
+The Integrations QuickBooks action now calls the tenant-scoped OAuth-start endpoint and redirects only to its fixed Intuit authorization URL. Accounting projection refresh and role-limited provider preview endpoints are available for server-integrated screens. A configured 32-byte URL-safe Base64 `RECEIPTLENS_CREDENTIAL_KEY` is required; absent configuration fails closed with HTTP 503.
+
+### Provider connection administration
+Provider connections can now be listed tenant-safely, inspected, disconnected with active ciphertext deletion, and assigned immutable mapping versions through the `/product/provider-connections` and `/product/connections/{id}/mappings` APIs. Historical connection metadata remains after disconnect while active credentials are removed.
