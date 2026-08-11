@@ -680,3 +680,15 @@ See [CHANGELOG.md](CHANGELOG.md).
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Exception-to-export workflow (development pass)
+
+ReceiptLens now exposes the approved bookkeeping workflow through the Next.js workspace:
+
+1. Forward or upload receipt images. Email attachments are tracked independently and unsafe or mismatched content is quarantined.
+2. Open **Review** to prioritize low-confidence fields, inspect source evidence, and correct structured values without changing the original image.
+3. Use **Settings → Diagnostics → OCR quality** to evaluate labelled cases and publish tenant-scoped confidence thresholds.
+4. Preview and activate automation rules before applying them, inspect each run, and roll back eligible receipts without overwriting later edits.
+5. Open **Export → Prepare** to create a versioned validation snapshot. Blocked receipts stay out of the artifact, warnings require acknowledgement, and repeated commands use an idempotency key.
+
+The implementation remains provider-neutral. QuickBooks and Xero production OAuth posting are intentionally deferred; the current export artifact is deterministic CSV. For local development, start FastAPI on port 8000 and the Next.js workspace on port 3000. If the workspace reports a load error, verify the backend, tenant headers, and `NEXT_PUBLIC_API_BASE_URL`, then use the visible **Retry** action.

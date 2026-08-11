@@ -107,3 +107,7 @@ Each inbound attachment is validated independently. Valid receipt images complet
 ## Automation conflicts and rollback
 
 Preview compares matching active rules at the target-field level. Lower numeric priority wins; ties use creation time and then rule ID. Rollback preflight excludes later-edited receipts, and execution is a single SQLite transaction so injected failures persist no partial reversal.
+
+## Verified exception-to-export contract
+
+The review, quality, inbox, automation, and export flows are tenant-scoped and version-aware. `GET /product/review-items` supports confidence field/threshold filtering and ordering. Quality benchmark reports and active profiles are available under `/product/quality`. Email attachment status and retry are exposed under `/product/inbound-emails`. Versioned automation preview, activation, runs, rollback preview, and rollback use `/product/automation-*`. Export preparations snapshot receipt versions and validation; `POST /product/export-commands` requires `Idempotency-Key`, warning acknowledgements, and rejects stale preparations. The workspace provides loading, empty, error, disabled, success, and retry states for these workflows.

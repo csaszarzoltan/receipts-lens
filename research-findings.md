@@ -71,7 +71,8 @@ The most attractive initial segment is a small bookkeeping practice or finance o
 3. **Exception handling matters more than headline OCR (HIGH):** user complaints center on matching, currency, tax, and missing documents, while vendor pages sell categorisation, approval, duplicate, and line-item workflows [S1][S2][S10][S11].
 4. **Low-volume pricing dissatisfaction is real (MEDIUM-HIGH):** one practitioner explicitly objects to paying for unused client bundles; current official pricing spans $12 flat, $5/member, per-client minimums, and a $500 API minimum [S1][S3][S7][S8][S10].
 5. **International extraction is a differentiator (MEDIUM):** Veryfi explicitly supports 91 currencies and 38 languages; community evidence shows currency mistakes are costly [S5][S11].
-6. **Privacy/self-hosting is a plausible niche (MEDIUM):** wider IDP growth is cloud-led, while regulatory/data-sovereignty pressure is rising. This is directional, not direct willingness-to-pay evidence [S14][S15].
+6. **Privacy/self-hosting is a plausible niche (MEDIUM):** wider IDP growth is cloud-led, while regulatory/data-sovereignty pressure is rising. This is directional, not direct willingness-to-pay evidence [S14][S15][S20].
+7. **Document chasing and portal retrieval remain unresolved (MEDIUM):** bookkeeping community discussion repeatedly identifies missing receipts, bank statements, payables documents, and portal downloads as operational bottlenecks [S16].
 
 ## Market and Pricing Evidence
 The broader intelligent document processing market is growing, but published estimates conflict materially. Mordor estimates $3.17B in 2026 and 17.78% CAGR to 2031, while another 2026 report estimates $4B in 2026 and 32.6% CAGR to 2030 [S14][S15]. These figures should not be combined into a TAM. The defensible conclusion is directional: cloud automation, AI extraction, compliance, and finance workflows are expanding.
@@ -481,21 +482,28 @@ Observed pricing patterns:
 - README improvement was requested in the surrounding user message, but the phase's hard scope permits only `research-findings.md`; therefore README is intentionally byte-identical.
 
 ## Sources
-- **[S1] Dext Pricing Plans.** Dext. https://dext.com/en/partner/pricing (accessed 2026-08-10).
-- **[S2] Capture Receipts & Invoices.** Dext. https://dext.com/us/business/product/capture-receipts-and-invoices (accessed 2026-08-10).
-- **[S3] Expensify Pricing.** Expensify. https://www.expensify.com/pricing (accessed 2026-08-10).
-- **[S4] Understand Expensify Pricing.** Expensify Help. https://help.expensify.com/articles/new-expensify/billing-and-subscriptions/explore-plans-subscriptions-and-pricing/Understand-Expensify-Pricing (accessed 2026-08-10).
-- **[S5] Receipts OCR API.** Veryfi. https://www.veryfi.com/receipt-ocr-api/ (accessed 2026-08-10).
-- **[S6] Veryfi Pricing.** Veryfi. https://www.veryfi.com/pricing/ (accessed 2026-08-10).
-- **[S7] OCR API Plans & Prices.** Veryfi Help Center. https://faq.veryfi.com/en/articles/3743986-what-are-the-plans-prices-for-ocr-api (accessed 2026-08-10).
-- **[S8] Hubdoc Pricing.** Hubdoc. https://www.hubdoc.com/pricing (accessed 2026-08-10).
-- **[S9] Document & Data Capture Software.** Hubdoc. https://www.hubdoc.com/ (accessed 2026-08-10).
-- **[S10] Receipt Capturing Apps?.** Reddit r/Bookkeeping. https://www.reddit.com/r/Bookkeeping/comments/pjzikk/receipt_capturing_apps/ (accessed 2026-08-10).
-- **[S11] Hubdoc, Dext, AutoEntry or something else?.** Reddit r/xero. https://www.reddit.com/r/xero/comments/133mukt/hubdoc_dext_autoentry_or_something_else/ (accessed 2026-08-10).
-- **[S12] Best Receipt Scanner Apps 2026.** FlowParse. https://flowparse.io/blog/best-receipt-scanner-apps-2026 (accessed 2026-08-10).
-- **[S13] Receipt Management Software Comparison 2026.** Receiptor AI. https://receiptor.ai/blog/receipt-management-software-comparison-2026 (accessed 2026-08-10).
-- **[S14] Intelligent Document Processing Market.** Mordor Intelligence. https://www.mordorintelligence.com/industry-reports/intelligent-document-processing-market (accessed 2026-08-10).
-- **[S15] Intelligent Document Processing Market Report 2026.** Research and Markets / The Business Research Company. https://www.researchandmarkets.com/reports/5806873/intelligent-document-processing-market-report (accessed 2026-08-10).
+- **[S1] Dext Pricing Plans.** Dext. https://dext.com/en/partner/pricing (accessed 2026-08-11).
+- **[S2] Capture Receipts & Invoices.** Dext. https://dext.com/us/business/product/capture-receipts-and-invoices (accessed 2026-08-11).
+- **[S3] Expensify Pricing.** Expensify. https://www.expensify.com/pricing (accessed 2026-08-11).
+- **[S4] Understand Expensify Pricing.** Expensify Help. https://help.expensify.com/articles/new-expensify/billing-and-subscriptions/explore-plans-subscriptions-and-pricing/Understand-Expensify-Pricing (accessed 2026-08-11).
+- **[S5] Receipts OCR API.** Veryfi. https://www.veryfi.com/receipt-ocr-api/ (accessed 2026-08-11).
+- **[S6] Veryfi Pricing.** Veryfi. https://www.veryfi.com/pricing/ (accessed 2026-08-11).
+- **[S7] OCR API Plans & Prices.** Veryfi Help Center. https://faq.veryfi.com/en/articles/3743986-what-are-the-plans-prices-for-ocr-api (accessed 2026-08-11).
+- **[S8] Hubdoc Pricing.** Hubdoc. https://www.hubdoc.com/pricing (accessed 2026-08-11).
+- **[S9] Document & Data Capture Software.** Hubdoc. https://www.hubdoc.com/ (accessed 2026-08-11).
+- **[S10] Receipt Capturing Apps?.** Reddit r/Bookkeeping. https://www.reddit.com/r/Bookkeeping/comments/pjzikk/receipt_capturing_apps/ (accessed 2026-08-11).
+- **[S11] Hubdoc, Dext, AutoEntry or something else?.** Reddit r/xero. https://www.reddit.com/r/xero/comments/133mukt/hubdoc_dext_autoentry_or_something_else/ (accessed 2026-08-11).
+- **[S12] Best Receipt Scanner Apps 2026.** FlowParse. https://flowparse.io/blog/best-receipt-scanner-apps-2026 (accessed 2026-08-11).
+- **[S13] Receipt Management Software Comparison 2026.** Receiptor AI. https://receiptor.ai/blog/receipt-management-software-comparison-2026 (accessed 2026-08-11).
+- **[S14] Intelligent Document Processing Market.** Mordor Intelligence. https://www.mordorintelligence.com/industry-reports/intelligent-document-processing-market (accessed 2026-08-11).
+- **[S15] Intelligent Document Processing Market Report 2026.** Research and Markets / The Business Research Company. https://www.researchandmarkets.com/reports/5806873/intelligent-document-processing-market-report (accessed 2026-08-11).
+
+
+- **[S16] Opportunity - Understanding bookkeeping pains.** Reddit r/Bookkeeping. https://www.reddit.com/r/Bookkeeping/comments/11hd9zc/opportunity_understanding_bookkeeping_pains/ (accessed 2026-08-11). Directional community evidence that document collection, bank statements, emailed attachments, and portal retrieval are recurring bookkeeping pain points.
+- **[S17] Hubdoc 2026 Reviews and Alternatives.** GetApp. https://www.getapp.com/collaboration-software/a/hubdoc/ (accessed 2026-08-11). Aggregated review evidence from 92 reviews reports strong bookkeeping/document-management usage alongside document-recognition, processing, and sync complaints.
+- **[S18] receipt-ocr.** GitHub, bhimrazy. https://github.com/bhimrazy/receipt-ocr (accessed 2026-08-11). Active MIT-licensed receipt OCR project combining Tesseract, LLM-assisted extraction, CLI, FastAPI, Docker, tests, and current Python support.
+- **[S19] invoice2data 1.0.1.** PyPI. https://pypi.org/project/invoice2data/ (accessed 2026-08-11). Template-based invoice extraction library with pluggable PDF/OCR backends and CSV, JSON, and XML outputs.
+- **[S20] Intelligent Document Processing Market 2026-2033.** Grand View Research. https://www.grandviewresearch.com/industry-analysis/intelligent-document-processing-market-report (accessed 2026-08-11). A third market estimate, useful mainly to confirm direction while reinforcing the wide disagreement among published TAM and CAGR figures.
 
 ### Project evidence
 - `pyproject.toml`; `frontend/package.json`; `README.md`; `CHANGELOG.md`.

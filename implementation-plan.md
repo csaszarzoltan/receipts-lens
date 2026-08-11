@@ -1,5 +1,7 @@
 # Implementation Plan
 
+**Planning baseline:** ReceiptLens 1.4.0 project archive and `research-findings.md`, reviewed 2026-08-11.
+
 ## Executive Summary
 This pass will deliver three integrated features on the existing FastAPI, SQLite, Next.js 14, React 18, TypeScript, SWR, Tailwind, pytest, and Playwright stack:
 
@@ -54,7 +56,7 @@ Add server-side confidence filters and ordering, field-level provenance selectio
 ### Feature C: Inbox-to-books automation with safe rules
 Persist email attachments individually, process supported attachments independently, quarantine unsupported content, add retry, and introduce draft/versioned rules with preview conflicts, explicit runs over selected receipts, run history, and atomic rollback. Satisfies US-007, US-008, and US-009.
 
-Coherence boundary: these features share receipt versions, history, readiness, provenance, and tenant-scoped persistence. They form one complete operational path. Forecasting, budgets, subscriptions, reports, approvals, and duplicates must continue to work but are regression scope only.
+Coherence boundary: these features share receipt versions, history, readiness, provenance, and tenant-scoped persistence. They form one complete operational path. Forecasting, budgets, subscriptions, reports, approvals, and duplicates must continue to work but are regression scope only. The developer must implement the exact labels, routes, state behavior, schemas, and test mappings in this plan; deviations require a documented compatibility fix, not an unplanned product alternative.
 
 ## Deferred Scope and Rationale
 1. **Live QuickBooks connector:** defer to the next integration phase after idempotent provider-neutral export has test evidence. Prerequisites: OAuth secret storage, sandbox tenant, mapping policy, attachment upload, rate-limit handling, and reconciliation tests.
@@ -112,7 +114,7 @@ Coherence boundary: these features share receipt versions, history, readiness, p
     "role": "accountant",
     "action": "see deterministic export blockers before posting",
     "benefit": "I do not create incomplete ledger entries",
-    "story": "As a accountant, I want to see deterministic export blockers before posting, so that I do not create incomplete ledger entries.",
+    "story": "As an accountant, I want to see deterministic export blockers before posting, so that I do not create incomplete ledger entries.",
     "gui_flow": [
       "User opens Export Preparation → sees selected receipts",
       "User chooses an accounting connection → preflight starts",

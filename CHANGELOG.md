@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased] - 2026-08-11
+
+### Added
+- Acceptance-backed exception-to-export workflow for US-001 through US-009, including confidence triage, provenance, immutable export preparation, idempotent commands, attachment-level inbox processing, benchmark profiles, safe automation previews, run history, and rollback.
+- Repository lab gates for TDD, BDD structure, security regression, documentation sync, UI build verification, and git push verification.
+- API acceptance tests for invalid confidence fields, tenant-scoped quality profiles, and required export idempotency keys.
+
+### Verification
+- Full Python regression, focused BDD/API tests, frontend type-check and production build, startup smoke checks, security tests, and ZIP integrity verification are recorded in `development-report.md`.
+
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
