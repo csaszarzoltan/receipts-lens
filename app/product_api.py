@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.accounting_workspace import AccountingWorkspace
 from app.advanced_workspace import AdvancedWorkspace, extract_ocr_boxes
@@ -61,6 +61,14 @@ class ApiKeyRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
 
 class ConnectionRequest(BaseModel):
+    """Connection creation request.
+
+    ``extra="forbid"`` prevents the FastAPI validation error from echoing
+    arbitrary fields back (e.g. a client_secret sent inside ``config`` would
+    otherwise appear verbatim in the 422 response — SEC-001).
+    """
+    model_config = ConfigDict(extra="forbid")
+
     name: str = Field(min_length=1)
     provider: str
     mapping: dict[str, str]
@@ -586,6 +594,13 @@ def list_inbound_emails(current: Actor = Depends(actor)) -> dict[str, Any]:
 @router.post("/product/inbound-emails", status_code=201)
 def receive_inbound_email(body: InboundEmailRequest,
                           current: Actor = Depends(actor)) -> dict[str, Any]:
+    """Ingest an inbound email into the tenant's inbox.
+
+    Auth-required (SEC-002): without the tenant/role headers the request is
+    rejected — previously anyone could POST emails into any tenant's inbox.
+    """
+    if current.role not in ("admin", "integrator"):
+        raise HTTPException(403, "Admin or integrator role required")
     try: return inbox_service.receive(current.tenant_id, body.sender, body.subject, body.attachments)
     except ValueError as exc: raise HTTPException(422, str(exc)) from exc
 
