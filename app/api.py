@@ -10,9 +10,10 @@ from datetime import datetime
 from typing import Any
 
 import httpx
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -41,6 +42,31 @@ app = FastAPI(
     description="Extract structured data from receipt images.",
     version="1.3.0",
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Return validation errors WITHOUT echoing the request body (SEC-001).
+
+    FastAPI's default 422 payload includes ``input`` (the entire submitted
+    body), which leaks secrets (e.g. a client_secret sent in an unknown
+    field) into responses and logs. Strip it: keep type/loc/msg only.
+    Also normalize non-serializable values in ``ctx`` (e.g. ValueError
+    instances raised inside field validators).
+    """
+    safe = []
+    for err in exc.errors():
+        item = {k: v for k, v in err.items() if k != "input"}
+        ctx = item.get("ctx")
+        if isinstance(ctx, dict):
+            item["ctx"] = {
+                k: (str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v)
+                for k, v in ctx.items()
+            }
+        safe.append(item)
+    return JSONResponse(status_code=422, content={"detail": safe})
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)

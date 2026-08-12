@@ -128,6 +128,8 @@ def test_13_all_accounting_routes_registered():
             "/product/permissions","/product/diagnostics","/product/diagnostics/bundle"} <= paths
 
 def test_14_diagnostic_api_is_role_protected():
-    assert client.get('/product/diagnostics/bundle',headers={'X-Role':'reviewer'}).status_code==403
-    response=client.get('/product/diagnostics/bundle',headers={'X-Role':'admin'})
+    H={"X-Tenant-ID":"demo","X-Role":"reviewer"}
+    assert client.get('/product/diagnostics/bundle',headers=H).status_code==403
+    H2={"X-Tenant-ID":"demo","X-Role":"admin"}
+    response=client.get('/product/diagnostics/bundle',headers=H2)
     assert response.status_code==200 and response.headers['content-type']=='application/zip'

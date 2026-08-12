@@ -21,10 +21,19 @@ service = ProductService(os.getenv("RECEIPTLENS_PRODUCT_DB", ":memory:"))
 advanced = AdvancedWorkspace(service)
 
 
-def actor(x_tenant_id: str = Header(default="demo"), x_role: str = Header(default="admin")) -> Actor:
-    if not x_tenant_id.strip(): raise HTTPException(401, "Tenant identity is required")
-    if x_role not in {"admin", "reviewer", "integrator"}: raise HTTPException(403, "Unknown role")
-    return Actor(x_tenant_id, x_role)
+def actor(x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+          x_role: str | None = Header(default=None, alias="X-Role")) -> Actor:
+    """Strict auth for product-workspace endpoints (SEC-003).
+
+    Tenant and role headers are REQUIRED: a missing/blank tenant yields 401
+    and an unrecognised role yields 403. Previously this defaulted to
+    demo/admin, letting anyone act as an admin without headers.
+    """
+    if x_tenant_id is None or not x_tenant_id.strip():
+        raise HTTPException(401, "Tenant identity is required")
+    if x_role is None or x_role not in {"admin", "reviewer", "integrator"}:
+        raise HTTPException(403, "Unknown role")
+    return Actor(x_tenant_id.strip(), x_role)
 
 
 def _as_bool(value: str | None) -> bool:

@@ -98,6 +98,7 @@ def test_new_routes_are_registered():
 
 def test_http_validation_and_not_found():
     client=TestClient(app)
-    assert client.get("/product/receipts?limit=0").status_code==422
-    assert client.put("/product/receipts/missing/metadata",json={"tags":[]}).status_code==404
-    assert client.put("/product/privacy/retention",json={"retention_days":0}).status_code==422
+    H={"X-Tenant-ID":"demo","X-Role":"admin"}
+    assert client.get("/product/receipts?limit=0",headers=H).status_code==422
+    assert client.put("/product/receipts/missing/metadata",json={"tags":[]},headers=H).status_code==404
+    assert client.put("/product/privacy/retention",json={"retention_days":0},headers=H).status_code==422
