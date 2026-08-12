@@ -50,6 +50,33 @@ HSTS — via `frontend/next.config.ts` → `headers()`; see
 
 ## Endpoints
 
+### Rate limits (SEC-005)
+
+OCR-heavy and inbound-ingestion endpoints are rate limited **per tenant + per
+client IP** (fixed window). When a limit is exceeded the API answers `429` with
+a `Retry-After` header (seconds until the window resets) plus
+`X-RateLimit-Limit` / `X-RateLimit-Remaining`. OPTIONS preflight requests and
+unlisted routes are not limited.
+
+| Endpoint | Default limit | Window |
+|---|---|---|
+| `POST /product/receipts/upload` | 60 | 60 s |
+| `POST /product/inbound-emails` | 60 | 60 s |
+| `POST /v1/parse-receipt` | 60 | 60 s |
+| `POST /v1/parse-receipt/async` | 60 | 60 s |
+| `POST /v1/parse-receipts` | 60 | 60 s |
+| `POST /v1/parse-receipts/async` | 60 | 60 s |
+| `POST /api/v1/receipts` | 60 | 60 s |
+| `POST /api/v1/receipts/batch` | 60 | 60 s |
+
+Limits are tunable with the `RECEIPTLENS_RATE_LIMITS` environment variable
+(`METHOD /path=count/window_seconds`, `;`-separated); e.g.
+`RECEIPTLENS_RATE_LIMITS="POST /product/receipts/upload=10/60;POST /v1/parse-receipt=5/60"`.
+Any route not listed is not limited. If `login`/`register` endpoints are added
+later, add a `POST /auth/login=…` row to the same table. The counter is
+in-memory per process; a multi-worker deployment should move it to a shared
+store (e.g. Redis).
+
 ### `GET /health`
 
 Health-check probe.
@@ -1390,7 +1417,7 @@ curl -H "X-Tenant-ID: demo" -H "X-Role: admin" \
 - `POST /product/quality/benchmarks/run`, `GET /product/quality/benchmarks/{id}`, `POST /product/quality/confidence-profiles`, and `GET /product/quality/confidence-profiles/active` manage calibration.
 - Versioned automation endpoints support preview, activation, runs, rollback preview, and rollback under `/product/automation-rules` and `/product/automation-runs`.
 
-All product endpoints use `X-Tenant-ID` and `X-Role` demo headers. These headers are not a production identity system.
+All product endpoints use `X-Tenant-ID` and `X-Role` demo headers. These headers are not a production identity system. Rate limits apply per tenant + client IP on the OCR and inbound-ingestion endpoints — see the [Rate limits](#rate-limits-sec-005) section at the top of this document.
 
 ## Inbound attachment and automation completion (1.6)
 

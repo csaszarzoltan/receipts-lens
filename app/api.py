@@ -28,6 +28,7 @@ from app.homepage import render_homepage
 from app.ocr import ConfidenceReceipt, check_duplicates, parse_receipt_with_confidence
 from app.product_api import Actor, service
 from app.product_api import router as product_router
+from app.rate_limits import RateLimitMiddleware
 from app.report_generator import generate_csv, generate_pdf
 from app.reports import receipt_store
 from app.security import fetch_image_bytes
@@ -48,6 +49,12 @@ app = FastAPI(
     redoc_url=None if _is_production else "/redoc",
     openapi_url=None if _is_production else "/openapi.json",
 )
+
+# Rate limiting must be added BEFORE the CORS middlewares: middleware added
+# first sits innermost of the user stack, so its 429 responses still flow back
+# through CORSMiddleware/_UnconditionalCorsMiddleware and carry the
+# Access-Control-* headers the browser needs (SEC-005).
+app.add_middleware(RateLimitMiddleware)
 
 
 @app.exception_handler(RequestValidationError)
