@@ -12,15 +12,26 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "ReceiptLens",
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1d5ef1",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#1d5ef1" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+  ],
   width: "device-width",
   initialScale: 1,
 };
+
+/**
+ * FOUC guard — runs synchronously in <head> before first paint. Applies the
+ * `dark` class straight from localStorage (receiptlens.theme) or the OS
+ * prefers-color-scheme, so a dark-preference reload never flashes white.
+ * Keep in sync with components/ThemeToggle.tsx.
+ */
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('receiptlens.theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -28,7 +39,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body>{children}</body>
     </html>
   );
