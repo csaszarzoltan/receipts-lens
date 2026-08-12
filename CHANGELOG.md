@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased] - 2026-08-11 (BUG-007/008/010 fixes)
+
+### Fixed
+- BUG-007: dashboard loaded empty after sign-in — the CORS allowlist defaulted to ports 3000 only, blocking the Playwright E2E stack (frontend on port 3010) with no `Access-Control-Allow-Origin` header, so every dashboard fetch failed in the browser. Ports 3010 are now part of the development default origin list (`http://localhost:3010` / `http://127.0.0.1:3010`).
+- BUG-008: `POST /product/automation-rules` returned a bare `422 invalid rule` for unsupported keys. The error now names the offending condition/action key(s) and lists the supported sets, e.g. `invalid rule: unsupported condition key(s) ['bad_key']; supported conditions are [...]`. Blank names return `invalid rule: name is required`.
+- `AdvancedWorkspace.exports` no longer crashes on databases where the workflow `export_commands` table has not been created (fresh/in-memory stores) — the workflow-run listing is skipped defensively.
+
+### Added
+- BUG-010: `docs/api.md` now has dedicated sections for `/product/connections` (GET/POST/test), `/product/automation-rules` (GET/POST/preview, supported condition/action keys, documented 422 messages), and `/product/export-runs` (GET/POST, `{run_id}`, `{run_id}/artifact`) with request/response examples.
+
+### Verification
+- Full Python regression 1282 passed / 10 skipped.
+- New tests: `test_create_rule_rejects_unsupported_keys_with_specific_message`, `test_automation_rule_422_names_unsupported_keys`, `test_api_docs_cover_connections_automation_rules_and_export_runs`, CORS port-3010 assertions in `test_security_cors_allowlist_and_csv_formula`.
+- Ruff: no new errors on changed files (pre-existing 21 baseline unchanged).
+- Frontend `tsc --noEmit` passes; live browser verification: dashboard loads with service status + KPI cards after sign-in; dashboard reflects uploaded receipts.
+
 ## [Unreleased - Connected workflow completion] - 2026-08-11
 
 ### Added

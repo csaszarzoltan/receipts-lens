@@ -1064,6 +1064,277 @@ curl "http://localhost:8000/api/v1/receipts/export/formats"
 }
 ```
 
+## Product workspace endpoints (connections, automation rules, export runs)
+
+All product workspace endpoints require the demo auth headers `X-Tenant-ID` (default `demo`) and `X-Role` (`admin` | `reviewer` | `integrator`, default `admin`). A missing tenant header returns `401`; an unknown role returns `403`. These headers are a demo identity mechanism, not a production authentication system.
+
+### `GET /product/connections`
+
+List the accounting connections configured for the tenant.
+
+#### Example
+
+```bash
+curl -H "X-Tenant-ID: demo" -H "X-Role: admin" \
+  "http://localhost:8000/product/connections"
+```
+
+#### Response
+
+```json
+{
+  "items": [
+    {
+      "connection_id": "0f5f2b3e-...",
+      "name": "CSV Ledger",
+      "provider": "csv",
+      "mapping": {"vendor": "vendor", "total": "total", "currency": "currency"},
+      "active": true
+    }
+  ]
+}
+```
+
+Each item carries `connection_id`, `name`, `provider` (`csv` | `quickbooks` | `xero`), `mapping` (field-name mapping, always includes `vendor`, `total`, `currency`) and `active`.
+
+### `POST /product/connections`
+
+Create a new accounting connection.
+
+#### Request body
+
+```json
+{
+  "name": "CSV Ledger",
+  "provider": "csv",
+  "mapping": {"vendor": "vendor", "total": "total", "currency": "currency"}
+}
+```
+
+- `name` — display name (required)
+- `provider` — one of `csv`, `quickbooks`, `xero`; anything else returns `422`
+- `mapping` — object that must contain at least `vendor`, `total`, `currency`; a missing key returns `422`
+
+#### Example
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: demo" -H "X-Role: admin" \
+  -d '{"name":"CSV Ledger","provider":"csv","mapping":{"vendor":"vendor","total":"total","currency":"currency"}}' \
+  "http://localhost:8000/product/connections"
+```
+
+#### Response (201)
+
+```json
+{
+  "connection_id": "0f5f2b3e-...",
+  "name": "CSV Ledger",
+  "provider": "csv",
+  "mapping": {"vendor": "vendor", "total": "total", "currency": "currency"},
+  "active": true
+}
+```
+
+Errors: `422` for an unsupported provider or an incomplete mapping; `403` when the role is not allowed.
+
+### `POST /product/connections/{connection_id}/test`
+
+Validate a stored connection. Returns `404` when the connection does not exist.
+
+```bash
+curl -X POST -H "X-Tenant-ID: demo" -H "X-Role: admin" \
+  "http://localhost:8000/product/connections/{connection_id}/test"
+```
+
+```json
+{"connection_id": "0f5f2b3e-...", "status": "ok", "provider": "csv"}
+```
+
+### `GET /product/automation-rules`
+
+List the tenant's automation rules, ordered by priority then name.
+
+#### Example
+
+```bash
+curl -H "X-Tenant-ID: demo" -H "X-Role: admin" \
+  "http://localhost:8000/product/automation-rules"
+```
+
+#### Response
+
+```json
+{
+  "items": [
+    {
+      "rule_id": "04526a2a-...",
+      "name": "SBB travel",
+      "conditions": {"vendor_contains": "SBB", "min_total": 20.0},
+      "actions": {"tags": ["travel"], "cost_center": "tr-01"},
+      "priority": 100,
+      "active": true
+    }
+  ]
+}
+```
+
+### `POST /product/automation-rules`
+
+Create an automation rule that applies actions to matching receipts.
+
+#### Request body
+
+```json
+{
+  "name": "SBB travel",
+  "conditions": {"vendor_contains": "SBB", "currency": "CHF", "min_total": 20.0, "max_total": 500.0},
+  "actions": {"tags": ["travel"], "project": "consulting", "cost_center": "tr-01", "request_approval": true},
+  "priority": 100
+}
+```
+
+#### Supported keys
+
+- `conditions` (all optional): `vendor_contains`, `currency`, `min_total`, `max_total`
+- `actions` (all optional): `tags`, `project`, `cost_center`, `request_approval`
+- `priority` (optional, default `100`) — lower runs first; ties break by name
+
+#### Example
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: demo" -H "X-Role: admin" \
+  -d '{"name":"SBB travel","conditions":{"vendor_contains":"SBB"},"actions":{"tags":["travel"]}}' \
+  "http://localhost:8000/product/automation-rules"
+```
+
+#### Response (201)
+
+```json
+{
+  "rule_id": "04526a2a-...",
+  "name": "SBB travel",
+  "conditions": {"vendor_contains": "SBB"},
+  "actions": {"tags": ["travel"]},
+  "priority": 100,
+  "active": true
+}
+```
+
+#### Validation errors (422)
+
+The error message names the offending key(s) and the supported sets, e.g.:
+
+```json
+{
+  "detail": "invalid rule: unsupported condition key(s) ['bad_key']; supported conditions are ['currency', 'max_total', 'min_total', 'vendor_contains']"
+}
+```
+
+An empty/whitespace-only `name` returns `422` with `invalid rule: name is required`.
+
+### `POST /product/automation-rules/preview`
+
+Dry-run how many receipts would match the given conditions (no rule is stored).
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: demo" -H "X-Role: admin" \
+  -d '{"name":"preview","conditions":{"vendor_contains":"SBB"},"actions":{"tags":["travel"]}}' \
+  "http://localhost:8000/product/automation-rules/preview"
+```
+
+```json
+{"matching_receipts": 3}
+```
+
+### `GET /product/export-runs`
+
+List the tenant's export runs (legacy connection exports plus workflow exports), newest first.
+
+#### Example
+
+```bash
+curl -H "X-Tenant-ID: demo" -H "X-Role: admin" \
+  "http://localhost:8000/product/export-runs"
+```
+
+#### Response
+
+```json
+{
+  "items": [
+    {
+      "run_id": "9c1d4f2e-...",
+      "tenant_id": "demo",
+      "format": "quickbooks",
+      "status": "completed",
+      "requested": 3,
+      "exported": 3,
+      "errors": [],
+      "created_at": "2026-08-11T12:00:00Z"
+    }
+  ]
+}
+```
+
+Each item includes `run_id`, `tenant_id`, `format`, `status`, `requested`/`exported` counts, `errors`, and `created_at`.
+
+### `POST /product/export-runs`
+
+Export a set of completed receipts through a connection. Creates the connection export and records an export run.
+
+#### Request body
+
+```json
+{
+  "connection_id": "0f5f2b3e-...",
+  "receipt_ids": ["r-1", "r-2", "r-3"]
+}
+```
+
+#### Example
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: demo" -H "X-Role: admin" \
+  -d '{"connection_id":"0f5f2b3e-...","receipt_ids":["r-1","r-2"]}' \
+  "http://localhost:8000/product/export-runs"
+```
+
+#### Response (201)
+
+```json
+{
+  "run_id": "9c1d4f2e-...",
+  "status": "completed",
+  "requested": 2,
+  "exported": 2,
+  "errors": []
+}
+```
+
+A missing connection returns `404`-equivalent behavior with the run recorded as failed and `errors` populated.
+
+### `GET /product/export-runs/{run_id}`
+
+Fetch one export run's metadata. Returns `404` when the run does not exist.
+
+```bash
+curl -H "X-Tenant-ID: demo" -H "X-Role: admin" \
+  "http://localhost:8000/product/export-runs/{run_id}"
+```
+
+### `GET /product/export-runs/{run_id}/artifact`
+
+Download the run's CSV artifact. Returns `404` when the run does not exist.
+
+```bash
+curl -H "X-Tenant-ID: demo" -H "X-Role: admin" \
+  "http://localhost:8000/product/export-runs/{run_id}/artifact" -o export.csv
+```
+
 ## Review, quality, export, and automation workflow (1.5)
 
 - `GET /product/review-items` accepts `confidence_field`, `confidence_lt`, `readiness`, `sort`, `limit`, and `offset`.

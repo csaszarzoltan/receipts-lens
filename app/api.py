@@ -92,7 +92,7 @@ def platform_capabilities() -> dict:
 # We register both: the built-in one passes the interface-existence test,
 # and the custom one ensures headers on every response.)
 # ---------------------------------------------------------------------------
-_cors_origins = [value.strip() for value in os.getenv("RECEIPTLENS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if value.strip()]
+_cors_origins = [value.strip() for value in os.getenv("RECEIPTLENS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3010,http://127.0.0.1:3010").split(",") if value.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,

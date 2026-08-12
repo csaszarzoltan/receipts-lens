@@ -51,8 +51,14 @@ def test_us_009_rollback_is_atomic_under_injected_failure(tmp_path):
  assert [s.get_receipt(a,x)['version'] for x in ids]==versions
 
 def test_security_cors_allowlist_and_csv_formula():
- from app.api import app
- from app.integrations import AccountingProfile, CsvAccountingConnector
- c=TestClient(app);ok=c.get('/health',headers={'Origin':'http://localhost:3000'});bad=c.get('/health',headers={'Origin':'https://evil.example'})
- assert ok.headers['access-control-allow-origin']=='http://localhost:3000' and 'access-control-allow-origin' not in bad.headers
- csv=CsvAccountingConnector(AccountingProfile(('vendor',))).export([{'vendor':'=cmd'}]);assert "'=cmd" in csv
+    from app.api import app
+    from app.integrations import AccountingProfile, CsvAccountingConnector
+    c=TestClient(app);ok=c.get('/health',headers={'Origin':'http://localhost:3000'});bad=c.get('/health',headers={'Origin':'https://evil.example'})
+    assert ok.headers['access-control-allow-origin']=='http://localhost:3000' and 'access-control-allow-origin' not in bad.headers
+    # BUG-007: the Playwright E2E stack serves the frontend on port 3010 —
+    # it must be a permitted origin so the dashboard loads after sign-in.
+    e2e=c.get('/health',headers={'Origin':'http://localhost:3010'})
+    assert e2e.headers['access-control-allow-origin']=='http://localhost:3010'
+    e2e_ip=c.get('/health',headers={'Origin':'http://127.0.0.1:3010'})
+    assert e2e_ip.headers['access-control-allow-origin']=='http://127.0.0.1:3010'
+    csv=CsvAccountingConnector(AccountingProfile(('vendor',))).export([{'vendor':'=cmd'}]);assert "'=cmd" in csv

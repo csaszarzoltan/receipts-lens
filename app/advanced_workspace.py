@@ -192,8 +192,20 @@ class AdvancedWorkspace:
                     actions: dict[str, Any], priority: int = 100) -> dict[str, Any]:
         supported_conditions = {"vendor_contains", "currency", "min_total", "max_total"}
         supported_actions = {"tags", "project", "cost_center", "request_approval"}
-        if not name.strip() or set(conditions) - supported_conditions or set(actions) - supported_actions:
-            raise ValueError("invalid rule")
+        unknown_conditions = set(conditions) - supported_conditions
+        unknown_actions = set(actions) - supported_actions
+        if not name.strip():
+            raise ValueError("invalid rule: name is required")
+        if unknown_conditions:
+            raise ValueError(
+                f"invalid rule: unsupported condition key(s) {sorted(unknown_conditions)}; "
+                f"supported conditions are {sorted(supported_conditions)}"
+            )
+        if unknown_actions:
+            raise ValueError(
+                f"invalid rule: unsupported action key(s) {sorted(unknown_actions)}; "
+                f"supported actions are {sorted(supported_actions)}"
+            )
         rid, now = str(uuid.uuid4()), self._now()
         with self.db:
             self.db.execute("INSERT INTO automation_rules VALUES(?,?,?,?,?,?,1,?)",
@@ -329,6 +341,13 @@ class AdvancedWorkspace:
         legacy = [{**dict(row), "errors": json.loads(row["errors"])} for row in rows]
         # BUG-004 fix: the export-workflow writes to export_commands (not export_runs).
         # Surface those runs too so the list is not empty after a workflow export.
+        # The table is created by ExportWorkflow; when it has not been instantiated
+        # against this DB (fresh in-memory store), skip the join defensively.
+        table = self.db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='export_commands'"
+        ).fetchone()
+        if table is None:
+            return legacy
         wf_rows = self.db.execute(
             "SELECT run_id, tenant_id, response_json, created_at FROM export_commands "
             "WHERE tenant_id=? ORDER BY created_at DESC", (tenant_id,)).fetchall()

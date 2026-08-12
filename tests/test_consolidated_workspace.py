@@ -69,6 +69,32 @@ def test_automation_preview_and_application(bundle):
     assert service.list_approvals(actor,"pending")[0]["receipt_id"]==rid
 
 
+def test_create_rule_rejects_unsupported_keys_with_specific_message(bundle):
+    """BUG-008: a 422 'invalid rule' must name the offending key(s)."""
+    _,advanced,actor=bundle
+    try:
+        advanced.create_rule(actor.tenant_id,"Bad condition",{"vendor_contains":"SBB","nope":"x"},{"tags":["a"]})
+        raise AssertionError("expected ValueError for unsupported condition key")
+    except ValueError as exc:
+        assert "unsupported condition key(s)" in str(exc)
+        assert "nope" in str(exc)
+        assert "supported conditions are" in str(exc)
+    try:
+        advanced.create_rule(actor.tenant_id,"Bad action",{"vendor_contains":"SBB"},{"tags":["a"],"wat":1})
+        raise AssertionError("expected ValueError for unsupported action key")
+    except ValueError as exc:
+        assert "unsupported action key(s)" in str(exc)
+        assert "wat" in str(exc)
+        assert "supported actions are" in str(exc)
+    try:
+        advanced.create_rule(actor.tenant_id,"   ",{"vendor_contains":"SBB"},{"tags":["a"]})
+        raise AssertionError("expected ValueError for blank name")
+    except ValueError as exc:
+        assert "name is required" in str(exc)
+    ok = advanced.create_rule(actor.tenant_id,"Good",{"vendor_contains":"SBB"},{"tags":["a"]})
+    assert ok["name"] == "Good"
+
+
 def parsed_payload(service,actor,rid):
     return service.search_receipts(actor)["items"][0]["receipt"]
 

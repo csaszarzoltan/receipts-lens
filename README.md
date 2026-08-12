@@ -50,7 +50,7 @@ Open `http://127.0.0.1:3000`. API documentation is available at `http://127.0.0.
 
 ## Browser security configuration
 
-Set `RECEIPTLENS_ALLOWED_ORIGINS` to a comma-separated list of trusted frontend origins. The local development default permits `http://localhost:3000` and `http://127.0.0.1:3000`.
+Set `RECEIPTLENS_ALLOWED_ORIGINS` to a comma-separated list of trusted frontend origins. The local development default permits `http://localhost:3000`/`http://127.0.0.1:3000` (Next.js dev server) and `http://localhost:3010`/`http://127.0.0.1:3010` (Playwright E2E stack).
 
 ## Verification
 
