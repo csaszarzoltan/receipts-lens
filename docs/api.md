@@ -663,6 +663,7 @@ is never listed or fetched under another.
 
 | Variable | Default | Description |
 |---|---|---|
+| `RECEIPTLENS_ENV` | `development` | Set to `production` to disable `/docs`, `/redoc` and `/openapi.json` (SEC-006). Any other value keeps docs enabled. |
 | `LLM_API_KEY` | (empty) | API key for LLM categorization enrichment |
 | `LLM_MODEL` | `gpt-4o-mini` | Model name for OpenAI-compatible endpoint |
 | `LLM_BASE_URL` | `https://api.openai.com/v1` | Base URL for OpenAI-compatible API |

@@ -1,7 +1,13 @@
 """Self-contained, dependency-free HTML landing page for ReceiptLens."""
 from __future__ import annotations
 
+import os
 from html import escape
+
+
+def _is_production() -> bool:
+    """Check if running in production mode (docs gated)."""
+    return os.getenv("RECEIPTLENS_ENV") == "production"
 
 
 def render_homepage(*, name: str, version: str, description: str) -> str:
@@ -14,6 +20,22 @@ def render_homepage(*, name: str, version: str, description: str) -> str:
     safe_name = escape(name)
     safe_version = escape(version)
     safe_description = escape(description)
+
+    # SEC-006: in production, don't link to /docs or /redoc
+    prod = _is_production()
+
+    docs_button = (
+        '<a class="button secondary" href="/docs">Swagger UI</a>'
+        if not prod else ""
+    )
+    redoc_button = (
+        '<a class="button secondary" href="/redoc">ReDoc megnyitása</a>'
+        if not prod else ""
+    )
+
+    footer_docs_link = (
+        '<a href="/docs">/docs</a>' if not prod else ""
+    )
     return f"""<!doctype html>
 <html lang="hu">
 <head>
@@ -72,8 +94,8 @@ def render_homepage(*, name: str, version: str, description: str) -> str:
     <nav class="actions" aria-label="API dokumentáció">
       <a class="button" href="/dashboard">Forecast dashboard</a>
       <a class="button secondary" href="/workspace">Open workspace</a>
-      <a class="button secondary" href="/docs">Swagger UI</a>
-      <a class="button secondary" href="/redoc">ReDoc megnyitása</a>
+      {docs_button}
+      {redoc_button}
       <a class="button secondary" href="/health">Health check</a>
     </nav>
   </header>
@@ -98,7 +120,7 @@ def render_homepage(*, name: str, version: str, description: str) -> str:
     <pre><code>curl.exe -X POST "http://127.0.0.1:8000/v1/parse-receipt" `
   -F "file=@C:\\Receipts\\receipt.jpg"</code></pre>
   </section>
-  <footer>ReceiptLens API • részletes kipróbálás: <a href="/docs">/docs</a></footer>
+  <footer>ReceiptLens API • részletes kipróbálás: {footer_docs_link}</footer>
 </main>
 </body>
 </html>"""

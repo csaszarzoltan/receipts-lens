@@ -37,10 +37,16 @@ from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_v
 
 logger = logging.getLogger("uvicorn.error")
 
+# SEC-006: gate API docs behind RECEIPTLENS_ENV=production
+_is_production = os.getenv("RECEIPTLENS_ENV") == "production"
+
 app = FastAPI(
     title="ReceiptLens",
     description="Extract structured data from receipt images.",
     version="1.3.0",
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None if _is_production else "/redoc",
+    openapi_url=None if _is_production else "/openapi.json",
 )
 
 
