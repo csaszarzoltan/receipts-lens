@@ -12,6 +12,9 @@
 #   CORS_ORIGINS       — Comma-separated allowed origins for CORS
 #   AUTH_TOKEN         — Bearer token for API auth (if enabled)
 #   TESSDATA_PREFIX    — Path to Tesseract data dir (default: auto-detected)
+#   RECEIPTLENS_HTTPS  — Set to 1 when served over HTTPS (TLS-terminating
+#                        proxy) to emit HSTS + CSP security headers (SEC-004);
+#                        RECEIPTLENS_ENV=production also enables them
 # =============================================================================
 
 # ─── Builder stage: install system build deps + Python packages ────────────────

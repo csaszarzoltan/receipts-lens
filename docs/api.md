@@ -12,6 +12,42 @@ The FastAPI application is exposed as `app.api.app`.
 uvicorn app.main:app --reload
 ```
 
+## Security headers (SEC-004)
+
+Every response from the API carries the following security headers,
+added by an ASGI middleware (`SecurityHeadersMiddleware` in `app/api.py`)
+so they apply regardless of the HTTP server / proxy in front of the app
+(uvicorn, gunicorn, Caddy, Railway, …):
+
+| Header | Value | Notes |
+|---|---|---|
+| `X-Content-Type-Options` | `nosniff` | Prevents MIME sniffing. |
+| `X-Frame-Options` | `DENY` | Clickjacking protection — the API must never be framed. |
+| `Referrer-Policy` | `no-referrer` | No referrer leakage. |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Denies the sensitive browser features by default. |
+| `X-XSS-Protection` | `0` | Disables the legacy browser XSS filter (it is buggy and can itself introduce XSS); modern best practice. |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains` | **Production/HTTPS only** — see below. |
+| `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'; base-uri 'none'` | **Production/HTTPS only** — the API serves JSON, so a defensive default-deny CSP is safe. |
+
+The `Strict-Transport-Security` (HSTS) and `Content-Security-Policy` (CSP)
+headers are emitted only when the app is served over HTTPS. HTTPS is detected
+per request, in priority order:
+
+1. `X-Forwarded-Proto: https` on the request (TLS-terminating proxy in front),
+2. `RECEIPTLENS_HTTPS=1|true|yes` environment variable,
+3. `RECEIPTLENS_ENV=production` environment variable.
+
+During local development (`uvicorn app.main:app` without those settings) HSTS
+and CSP are not emitted, so browsers don't cache an HSTS policy for
+`localhost`. If you terminate TLS at a proxy, set `RECEIPTLENS_HTTPS=1` (or
+deploy with `RECEIPTLENS_ENV=production`) and make sure the proxy forwards
+`X-Forwarded-Proto`.
+
+The frontend (Next.js, port 8200 in the security-test setup) applies its own
+header set — including a browser-facing CSP with `default-src 'self'` and
+HSTS — via `frontend/next.config.ts` → `headers()`; see
+`frontend/next.config.ts` for the exact policy and its rationale.
+
 ## Endpoints
 
 ### `GET /health`

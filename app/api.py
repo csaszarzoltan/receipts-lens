@@ -120,6 +120,61 @@ def platform_capabilities() -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Security headers middleware (SEC-004) — every response carries the headers,
+# independent of the HTTP server / proxy in front of the app.
+#
+#   X-Content-Type-Options: nosniff   — no MIME sniffing
+#   X-Frame-Options: DENY             — no framing (clickjacking)
+#   Referrer-Policy: no-referrer      — no referrer leakage
+#   Permissions-Policy                — deny camera/mic/geolocation by default
+#   X-XSS-Protection: 0               — disable the legacy, buggy filter
+#                                       (modern best practice; the filter
+#                                       itself introduces XSS risks)
+#   Strict-Transport-Security (HSTS)  — HTTPS-only (production only)
+#   Content-Security-Policy (CSP)     — default-src 'none' (production only;
+#                                       the API serves JSON, so no scripts
+#                                       need loading; relaxed in dev)
+#
+# Production/HTTPS is detected per request: RECEIPTLENS_HTTPS=1 or
+# RECEIPTLENS_ENV=production, or the request arriving via a TLS-terminating
+# proxy (x-forwarded-proto: https).
+# ---------------------------------------------------------------------------
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Attach the SEC-004 security header set to every response."""
+
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        production = (
+            request.headers.get("x-forwarded-proto", "").lower() == "https"
+            or os.getenv("RECEIPTLENS_HTTPS", "").strip().lower()
+            in ("1", "true", "yes")
+            or os.getenv("RECEIPTLENS_ENV", "").strip().lower() == "production"
+        )
+        headers = {
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "DENY",
+            "Referrer-Policy": "no-referrer",
+            "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+            "X-XSS-Protection": "0",
+        }
+        if production:
+            headers["Strict-Transport-Security"] = (
+                "max-age=63072000; includeSubDomains"
+            )
+            headers["Content-Security-Policy"] = (
+                "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+            )
+        for name, value in headers.items():
+            response.headers.setdefault(name, value)
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ---------------------------------------------------------------------------
 # CORS middleware — always add CORS headers to every response
 # (Starlette's built-in CORSMiddleware only adds them when an Origin header
 # is present in the request; the test suite sends requests without Origin.)
