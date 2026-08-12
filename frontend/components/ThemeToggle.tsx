@@ -6,19 +6,32 @@ import { cx } from "@/lib/utils";
 /**
  * Dark mode toggle — persists to localStorage and toggles the `dark` class
  * on <html> (Tailwind `darkMode: "class"`).
+ *
+ * Lazily initializes from localStorage / prefers-color-scheme so the
+ * first render already carries the right state (no flash of wrong theme),
+ * and a single effect keeps the class + storage in sync.
  */
-export default function ThemeToggle() {
-  const [dark, setDark] = useState(false);
-
-  useEffect(() => {
+function getInitialDark(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
     const stored = window.localStorage.getItem("receiptlens.theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    setDark(stored ? stored === "dark" : prefersDark);
-  }, []);
+    if (stored) return stored === "dark";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  } catch {
+    return false;
+  }
+}
+
+export default function ThemeToggle() {
+  const [dark, setDark] = useState<boolean>(getInitialDark);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
-    window.localStorage.setItem("receiptlens.theme", dark ? "dark" : "light");
+    try {
+      window.localStorage.setItem("receiptlens.theme", dark ? "dark" : "light");
+    } catch {
+      /* storage unavailable — class still applies */
+    }
   }, [dark]);
 
   return (
