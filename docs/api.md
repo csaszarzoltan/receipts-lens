@@ -646,10 +646,18 @@ Both subscription endpoints accept the `x-tenant-id` / `x-role` headers used by 
 ## Stored receipt endpoints
 
 - `POST /api/v1/receipts` accepts `{"image_url": "https://..."}`, validates and downloads the image, runs OCR, stores the result, and returns HTTP 201 with `receipt_id` and parsed fields.
-- `GET /api/v1/receipts` lists the current in-memory store.
+- `GET /api/v1/receipts` lists the tenant's receipts.
 - `GET /api/v1/receipts/{receipt_id}` returns one receipt or HTTP 404.
 
-The current store is process-local and is cleared when the server restarts. It is intended for development and demonstration, not durable production storage.
+All three endpoints require the product-workspace auth headers: `X-Tenant-ID`
+(required — a missing or blank value returns 401) and `X-Role` (one of
+`admin` / `reviewer` / `integrator` — anything else returns 403).
+
+Receipts are stored in the same shared product store that backs the
+`/product/*` workspace: an upload through `POST /api/v1/receipts` is
+immediately visible in `GET /product/receipts` for the same tenant, and vice
+versa. The store is tenant-scoped — a receipt created under one `X-Tenant-ID`
+is never listed or fetched under another.
 
 ## Environment Variables (v0.6.0)
 

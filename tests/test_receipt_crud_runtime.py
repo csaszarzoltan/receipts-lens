@@ -32,24 +32,26 @@ def test_store_list_all_and_get_are_thread_safe_contract() -> None:
 
 def test_receipt_routes_create_list_and_get() -> None:
     client = TestClient(app)
+    headers = {"X-Tenant-ID": "crud", "X-Role": "admin"}
     with patch("app.api.fetch_image_bytes", return_value=b"image"), patch(
         "app.api.parse_receipt_with_confidence", return_value=_receipt()
     ):
         created = client.post(
-            "/api/v1/receipts", json={"image_url": "https://example.com/r.png"}
+            "/api/v1/receipts", headers=headers, json={"image_url": "https://example.com/r.png"}
         )
     assert created.status_code == 201
     receipt_id = created.json()["receipt_id"]
 
-    listed = client.get("/api/v1/receipts")
+    listed = client.get("/api/v1/receipts", headers=headers)
     assert listed.status_code == 200
     assert any(item["receipt_id"] == receipt_id for item in listed.json()["receipts"])
 
-    fetched = client.get(f"/api/v1/receipts/{receipt_id}")
+    fetched = client.get(f"/api/v1/receipts/{receipt_id}", headers=headers)
     assert fetched.status_code == 200
     assert fetched.json()["vendor"] == "Test Shop"
 
 
 def test_get_unknown_receipt_returns_404() -> None:
-    response = TestClient(app).get("/api/v1/receipts/missing")
+    headers = {"X-Tenant-ID": "crud", "X-Role": "admin"}
+    response = TestClient(app).get("/api/v1/receipts/missing", headers=headers)
     assert response.status_code == 404

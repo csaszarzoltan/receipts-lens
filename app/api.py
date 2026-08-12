@@ -2,36 +2,38 @@
 from __future__ import annotations
 
 import json
-import os
 import logging
+import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, field_validator
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.alerts import alert_store
+from app.analytics import budget_analytics, spending_analytics
+from app.api_v2 import batch_router
+from app.budgets import budget_store
+from app.categorizer import Categorizer
 from app.dashboard import render_forecast_dashboard
+from app.forecast import forecast_router
 from app.homepage import render_homepage
 from app.ocr import ConfidenceReceipt, check_duplicates, parse_receipt_with_confidence
-from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_vision
+from app.product_api import Actor, service
 from app.product_api import router as product_router
 from app.report_generator import generate_csv, generate_pdf
 from app.reports import receipt_store
 from app.security import fetch_image_bytes
 from app.ssrf_guard import validate_scheme_and_host
-from app.categorizer import Categorizer
-from app.budgets import budget_store
-from app.analytics import budget_analytics, spending_analytics
-from app.alerts import alert_store
-from app.forecast import forecast_router
-from app.api_v2 import batch_router
 from app.subscriptions_api import router as subscriptions_router
+from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_vision
+
 logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(
@@ -197,6 +199,24 @@ def _render_receipt(parsed: ConfidenceReceipt) -> dict:
 def _as_bool(value: str | None) -> bool:
     """Parse a form-field boolean (1/true/yes/on => True)."""
     return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def api_v1_actor(
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
+) -> Actor:
+    """Strict auth for the /api/v1/receipts CRUD endpoints.
+
+    Unlike the product-workspace dependency (which defaults to ``demo``/``admin``
+    for convenience), these endpoints require an explicit tenant identity:
+    a missing/blank ``X-Tenant-ID`` yields 401 and an unrecognised role yields
+    403, matching the documented auth contract (BUG-006).
+    """
+    if x_tenant_id is None or not x_tenant_id.strip():
+        raise HTTPException(401, "Tenant identity is required")
+    if x_role is None or x_role not in {"admin", "reviewer", "integrator"}:
+        raise HTTPException(403, "Unknown role")
+    return Actor(x_tenant_id, x_role)
 
 
 def _render_ai_mode(image_bytes: bytes) -> dict:
@@ -907,36 +927,48 @@ def _resolve_date_range(
 
 
 @app.post("/api/v1/receipts", status_code=201)
-def post_receipt(body: ReceiptCreateRequest) -> dict:
-    """Fetch, parse, and store a receipt image from a validated public URL."""
+def post_receipt(body: ReceiptCreateRequest, current: Actor = Depends(api_v1_actor)) -> dict:
+    """Fetch, parse, and store a receipt image from a validated public URL.
+
+    Receipts are persisted to the shared product store (the same SQLite-backed
+    ``ProductService`` the ``/product/*`` workspace uses), so an upload here is
+    immediately visible through ``/product/receipts`` and vice versa.
+    """
     image_bytes = fetch_image_bytes(
         body.image_url,
         max_bytes=MAX_IMAGE_BYTES,
         timeout=URL_FETCH_TIMEOUT,
     )
     parsed = parse_receipt_with_confidence(image_bytes)
-    receipt_id = receipt_store.store(parsed)
-    return {"receipt_id": receipt_id, **_render_receipt(parsed)}
+    result = service.create_receipt(current, parsed, body.image_url.rsplit("/", 1)[-1] or "receipt")
+    return {"receipt_id": result["receipt_id"], **_render_receipt(parsed)}
 
 
 @app.get("/api/v1/receipts")
-def list_receipts() -> dict:
-    """List the receipts currently held by the configured receipt store."""
+def list_receipts(current: Actor = Depends(api_v1_actor)) -> dict:
+    """List the tenant's receipts from the shared product store."""
+    items = service.search_receipts(current, limit=200)["items"]
     return {
         "receipts": [
-            {"receipt_id": receipt_id, **_render_receipt(receipt)}
-            for receipt_id, receipt in receipt_store.list_all()
+            {
+                "receipt_id": item["receipt_id"],
+                "status": item["status"],
+                "created_at": item["created_at"],
+                **item["receipt"],
+            }
+            for item in items
         ]
     }
 
 
 @app.get("/api/v1/receipts/{receipt_id}")
-def get_receipt(receipt_id: str) -> dict:
+def get_receipt(receipt_id: str, current: Actor = Depends(api_v1_actor)) -> dict:
     """Get one stored receipt or return HTTP 404 when it does not exist."""
-    receipt = receipt_store.get(receipt_id)
-    if receipt is None:
-        raise HTTPException(status_code=404, detail="Receipt not found")
-    return {"receipt_id": receipt_id, **_render_receipt(receipt)}
+    try:
+        item = service.get_receipt(current, receipt_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Receipt not found") from exc
+    return {"receipt_id": receipt_id, **item["receipt"]}
 
 
 @app.post("/api/v1/reports")
