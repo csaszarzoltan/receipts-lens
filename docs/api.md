@@ -1453,3 +1453,45 @@ The QuickBooks Online integration connects a sandbox company through Intuit's OA
 - `POST /product/provider-mappings/validate` — validates a proposed mapping against the provider's active account references and returns a `snapshot_hash` to pin before saving.
 
 All product endpoints use `X-Tenant-ID` and `X-Role` demo headers (except the OAuth callback, which authenticates via the single-use state token). These headers are not a production identity system.
+
+## Household auth (F1.3, US-024)
+
+The consumer-pivot Family product (docs/plans/consumer-pivot-2026-08-13.md §2.3) needs real, password-less identity. The `X-Tenant-ID` / `X-Role` headers remain usable **in development only** (`RECEIPTLENS_ENV != production`); when a real household session is present it always wins.
+
+### Identity model
+
+- A household = a tenant. Roles: `owner` (Háztartás tulajdonosa), `adult` (Felnőtt tag), `child` (Gyermek / korlátozott tag), `view_only` (Csak megtekintés).
+- Sessions are issued by magic-link login or invite acceptance and travel as `Authorization: Bearer <session_token>`. Tokens are stored sha256-hashed; a session lasts 30 days.
+- Magic-link tokens last 15 minutes, invite tokens 7 days; both are single-use and invalidated on first use (or expiry).
+
+### `POST /auth/magic-link-request`
+
+Body: `{"email": "...", "household_id": "optional"}`. Creates a single-use magic-link token for the email and delivers it:
+
+- When SMTP is configured (`RECEIPTLENS_SMTP_HOST` set and `RECEIPTLENS_SMTP_ENABLED=1`), the link is sent via the existing `send_email_notification()` channel.
+- Otherwise, in dev mode (`RECEIPTLENS_ENV != production`) the response includes `magic_link` and `token` so the UI flow is testable without a mail server. **In production the raw token is never returned** — the response is `{"delivered": false, "detail": "Email delivery is not configured"}`.
+
+`201` with `{email, expires_at, delivered, magic_link?, token?}`. When `household_id` is supplied the resulting session is owner of that household; without it a fresh household is derived from the email at verify time.
+
+### `POST /auth/magic-link-verify`
+
+Body: `{"token": "..."}`. Consumes the token and establishes a session. `201` with `{session_token, email, household_id, role, expires_at}`. Unknown / expired / already-used tokens: `401`.
+
+### `POST /auth/session/me`
+
+Body: `{"session_token": "..."}`. Resolves a session into `{tenant_id, role, email?, ...}`; `401` on bad/expired session.
+
+### Family invites
+
+- `POST /auth/households/{household_id}/invites` — owner only. Body: `{"email": "...", "role": "adult|child|view_only"}` (role pattern enforced; `owner` is rejected on invites — a household has exactly one owner). Non-owner caller: `403`. `201` with `{invite_id, email, role, status, expires_at, delivered, magic_link?, token?}` (dev-mode link return same as magic link).
+- `GET /auth/households/{household_id}/invites` — owner only. `200` with `{items: [...]}` pending invites.
+- `POST /auth/households/{household_id}/invites/{invite_id}/accept` — body: `{"token": "..."}`. Validates the invite token matches the household+invite path, creates the membership and signs the user in. `201` with `{session_token, email, household_id, role, expires_at}`. Unknown/expired/used invite: `401`; mismatched path: `404`.
+
+### Role gates
+
+- `PATCH /product/review-items/{receipt_id}` — `child` and `view_only` roles get `403` (read-only). `owner`/`adult` may edit.
+- `POST /product/members` (invite creation) — only `owner`; any other role `403`.
+
+### Dev-mode compatibility (AC6)
+
+`actor()` (product workspace) and `api_v1_actor()` (v1) resolve identity in this order: `Authorization: Bearer` session → legacy `X-Tenant-ID`/`X-Role` headers (dev only) → `401` when nothing valid. In production the headers are rejected entirely (`401 Session required`), so the demo auth can never be used against a live deployment.

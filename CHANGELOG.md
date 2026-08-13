@@ -1,5 +1,34 @@
 # Changelog
 
+## [Unreleased] - 2026-08-13 (US-024 household auth F1.3)
+
+### Added
+- US-024: password-less household auth (F1.3 of `docs/plans/consumer-pivot-2026-08-13.md` §2.3):
+  - Magic-link login: `POST /auth/magic-link-request` creates a single-use, 15-minute token
+    (sha256-hashed at rest); `POST /auth/magic-link-verify` consumes it and issues a 30-day
+    session. Dev mode (`RECEIPTLENS_ENV != production`) returns the link in the API response;
+    production never leaks the raw token. Email delivery reuses the existing
+    `send_email_notification()` SMTP channel (`RECEIPTLENS_SMTP_HOST` +
+    `RECEIPTLENS_SMTP_ENABLED=1`).
+  - Family invites: the household owner invites members by email with a household role
+    (`adult` / `child` / `view_only`); 7-day single-use tokens; accept creates the membership
+    and signs the user in (`POST /auth/households/{id}/invites[/{invite_id}/accept]`).
+  - Role gates: `child` / `view_only` get `403` on receipt edits (`PATCH /product/review-items`)
+    and invite creation; `owner`/`adult` may edit; only the owner can invite.
+  - Sessions travel as `Authorization: Bearer <session_token>`; the legacy `X-Tenant-ID` /
+    `X-Role` headers remain valid in development only and are rejected in production (AC6).
+  - Frontend: `/auth/magic-link` + `/auth/invite` pages, session persistence in
+    `lib/auth.ts`, invite UI on the members page, magic-link entry on the login page.
+- Docs: `docs/api.md` "Household auth (F1.3, US-024)" section.
+
+### Verification
+- New contract suite `tests/test_us_024_auth_contract.py` — 25 tests (single-use, expiry 401,
+  owner-only invites, 403 role gates, dev-header compat), exercised through a real FastAPI
+  TestClient (HTTP-level, no mocks).
+- Frontend `tsc --noEmit`: 0 errors.
+- Full Python regression: 1424 passed / 10 skipped (+1 documented pre-existing flake in
+  `test_fetcher_wiring.py`, untouched by this change).
+
 ## [Unreleased] - 2026-08-13 (US-019 consumer pivot F1.1)
 
 ### Added
