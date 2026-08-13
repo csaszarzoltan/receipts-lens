@@ -7,15 +7,32 @@ import type { Preferences } from "@/lib/types";
 import { cx } from "@/lib/utils";
 
 const STEPS = [
-  { id: "welcome", icon: "👋", title: "Welcome to ReceiptLens", body: "Scan a receipt to start tracking your expenses. ReceiptLens reads the vendor, total and line items automatically." },
-  { id: "upload", icon: "📤", title: "Upload your first receipt", body: "Take a photo or drag & drop a receipt image. OCR extracts everything in seconds." },
-  { id: "review", icon: "🔍", title: "Review & confirm", body: "Check the OCR result, fix anything that looks off, and mark it complete." },
-  { id: "forecast", icon: "📈", title: "Stay ahead", body: "The forecast engine projects next month's spending and flags unusual charges." },
+  {
+    id: "what",
+    icon: "💡",
+    title: "Mi ez?",
+    body: "Fotózd le a nyugtát. Mi megmutatjuk, hol folyik el a pénzed — és hol takaríthatsz meg.",
+  },
+  {
+    id: "camera",
+    icon: "📷",
+    title: "Kamera hozzáférése",
+    body: "Az első nyugtádat fotóval vagy feltöltéssel adhatod hozzá.",
+  },
+  {
+    id: "first-receipt",
+    icon: "🧾",
+    title: "Az első nyugtád",
+    body: "Küldd be az első nyugtádat, és azonnal látod az eredményt az áttekintésben.",
+  },
 ] as const;
 
 /**
- * First-run onboarding flow — modal overlay with guided steps and a Skip
- * button. Shows only while preferences.onboarding_done is false.
+ * First-run onboarding modal (F1.5) — the consumer 3-step flow shown only
+ * while preferences.onboarding_done is false. Mirrors the dedicated
+ * /onboarding page (app/onboarding/page.tsx) with the same copy; the modal
+ * lives in the authenticated shell, so it always has the tenant/role state
+ * it needs and simply navigates to the dashboard when finished.
  */
 export default function Onboarding() {
   const router = useRouter();
@@ -32,18 +49,16 @@ export default function Onboarding() {
 
   if (preferences?.onboarding_done || dismissed) return null;
 
-  async function finish(onboardingDone: boolean) {
+  async function finish() {
     setSaving(true);
     try {
-      await savePreferences({ onboarding_done: onboardingDone });
-      setPreferences((prev) => (prev ? { ...prev, onboarding_done: true } : prev));
-      setDismissed(true);
-      if (step === STEPS.length - 1 && !onboardingDone) router.push("/upload");
+      await savePreferences({ onboarding_done: true });
     } catch {
-      setDismissed(true);
-    } finally {
-      setSaving(false);
+      // non-fatal — flow completes anyway
     }
+    setPreferences((prev) => (prev ? { ...prev, onboarding_done: true } : prev));
+    setDismissed(true);
+    router.push("/dashboard");
   }
 
   const current = STEPS[step];
@@ -56,8 +71,8 @@ export default function Onboarding() {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={STEPS[0].title}>
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" aria-hidden="true" />
       <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-card animate-fade-in dark:bg-slate-900">
-        {/* Progress indicator */}
-        <div className="flex gap-1 px-6 pt-5" role="group" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
+        {/* Sticky progress indicator */}
+        <div className="flex gap-1 px-6 pt-5" role="group" aria-label={`${step + 1}. lépés a ${STEPS.length} közül`}>
           {STEPS.map((item, index) => (
             <div
               key={item.id}
@@ -73,7 +88,7 @@ export default function Onboarding() {
             {current.icon}
           </div>
           <p className="mt-3 text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">
-            {`Step ${step + 1} of ${STEPS.length}`}
+            {`${step + 1}. lépés a ${STEPS.length} közül`}
           </p>
           <h2 className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{current.title}</h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{current.body}</p>
@@ -81,11 +96,11 @@ export default function Onboarding() {
         <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
           <button
             type="button"
-            onClick={() => finish(true)}
+            onClick={() => void finish()}
             className={cx(button, "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200")}
             disabled={saving}
           >
-            Skip
+            Kihagyás
           </button>
           <div className="flex gap-2">
             {step > 0 ? (
@@ -95,16 +110,16 @@ export default function Onboarding() {
                 className={cx(button, "border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800")}
                 disabled={saving}
               >
-                Back
+                Vissza
               </button>
             ) : null}
             <button
               type="button"
-              onClick={() => (isLast ? finish(false) : setStep((value) => value + 1))}
+              onClick={() => (isLast ? void finish() : setStep((value) => value + 1))}
               className={cx(button, "bg-brand-600 text-white hover:bg-brand-700")}
               disabled={saving}
             >
-              {isLast ? "Finish" : "Next"}
+              {isLast ? "Áttekintés megnyitása →" : "Tovább"}
             </button>
           </div>
         </div>

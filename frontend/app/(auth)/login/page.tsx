@@ -61,9 +61,9 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-          New here?{" "}
+          Új itt?{" "}
           <Link href="/onboarding" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-            Start onboarding
+            Töltsd ki a bevezetőt
           </Link>
         </p>
       </div>
