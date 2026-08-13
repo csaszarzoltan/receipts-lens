@@ -480,12 +480,24 @@ class TestDashboardBehavior:
         )
 
     def test_dashboard_has_spending_chart(self) -> None:
+        """F1.2 §3.4 block 2 — 'Mire ment el a pénzem?' (kördiagram/lista).
+
+        The consumer dashboard renders the monthly category breakdown as a
+        list (the plan allows chart OR list); a chart may also be present.
+        """
         content = _read_ts("app/(app)/dashboard/page.tsx")
         has_chart = any(
             term in content
             for term in ["Chart", "chart", "recharts", "LineChart", "BarChart", "spending"]
         )
-        assert has_chart, "Dashboard must include a spending chart component"
+        has_category_list = any(
+            term in content
+            for term in ["Mire ment el a pénzem", "categories", "monthly_by_category"]
+        )
+        assert has_chart or has_category_list, (
+            "Dashboard must include a spending chart or the category "
+            "breakdown list (F1.2 §3.4 block 2)"
+        )
 
 
 class TestReceiptUploadBehavior:

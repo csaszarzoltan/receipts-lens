@@ -22,6 +22,7 @@ import type {
   BudgetVarianceResult,
   CancelGuide,
   Connection,
+  ConsumerDashboard,
   DashboardData,
   Diagnostics,
   DuplicateCandidate,
@@ -687,6 +688,14 @@ export async function getWorkQueue(
 
 export async function getDashboard(): Promise<DashboardData> {
   return tenantRequest<DashboardData>("/product/dashboard");
+}
+
+// ---------------------------------------------------------------------------
+// Consumer dashboard (F1.2 — §3.4 of docs/plans/consumer-pivot-2026-08-13.md)
+// ---------------------------------------------------------------------------
+
+export async function getConsumerDashboard(): Promise<ConsumerDashboard> {
+  return tenantRequest<ConsumerDashboard>("/api/v1/consumer/dashboard");
 }
 
 // ---------------------------------------------------------------------------

@@ -22,6 +22,7 @@ from app.analytics import budget_analytics, spending_analytics
 from app.api_v2 import batch_router
 from app.budgets import budget_store
 from app.categorizer import Categorizer
+from app.consumer_dashboard import build_consumer_dashboard
 from app.dashboard import render_forecast_dashboard
 from app.forecast import forecast_router
 from app.homepage import render_homepage
@@ -219,6 +220,28 @@ app.include_router(product_router)
 app.include_router(forecast_router)
 app.include_router(batch_router)
 app.include_router(subscriptions_router)
+
+
+# ---------------------------------------------------------------------------
+# Consumer dashboard (F1.2 — §3.4 of docs/plans/consumer-pivot-2026-08-13.md)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/v1/consumer/dashboard")
+def consumer_dashboard(
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
+) -> dict[str, Any]:
+    """Consumer dashboard payload — all six blocks, live backend data.
+
+    Tenant/role headers follow the product-workspace auth contract: a
+    missing tenant is 401, an unknown role is 403 (SEC-003 parity).
+    """
+    if x_tenant_id is None or not x_tenant_id.strip():
+        raise HTTPException(401, "Tenant identity is required")
+    if x_role is None or x_role not in {"admin", "reviewer", "integrator"}:
+        raise HTTPException(403, "Unknown role")
+    return build_consumer_dashboard(x_tenant_id.strip())
+
 # ---------------------------------------------------------------------------
 # Configurable limits (plumbed into fetch_image_bytes defaults)
 # ---------------------------------------------------------------------------

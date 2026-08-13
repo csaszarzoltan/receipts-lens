@@ -122,6 +122,93 @@ export interface DashboardData {
 }
 
 // ---------------------------------------------------------------------------
+// Consumer dashboard (F1.2 — docs/plans/consumer-pivot-2026-08-13.md §3.4)
+// ---------------------------------------------------------------------------
+
+export interface DailyRemaining {
+  budgeted: number;
+  spent_this_month: number;
+  remaining_this_month: number;
+  days_left: number;
+  daily_remaining: number;
+  currency: string;
+  pct_used: number;
+}
+
+export interface CategorySpend {
+  key: string;
+  label: string;
+  total: number;
+  count: number;
+  pct: number;
+}
+
+export interface MonthlyByCategory {
+  month: string;
+  total_spent: number;
+  currency: string;
+  categories: CategorySpend[];
+}
+
+export interface PriceAlert {
+  merchant: string;
+  amount: number;
+  currency: string;
+  monthly_cost: number;
+  renewal_date: string;
+  message: string;
+}
+
+export interface CancellableSubscription {
+  id: string;
+  merchant: string;
+  amount: number;
+  monthly_cost: number;
+  annualized: number;
+  renewal_date: string;
+  frequency: "monthly" | "quarterly" | "annual";
+  trend: SubscriptionTrend;
+  price_increase: boolean;
+}
+
+export interface HouseholdMember {
+  member_id: string;
+  email: string;
+  role: string;
+  role_label: string;
+}
+
+export interface HouseholdStatus {
+  shared_budget: number;
+  spent: number;
+  remaining: number;
+  currency: string;
+  members: HouseholdMember[];
+  member_breakdown_note?: string;
+}
+
+export interface RecentReceipt {
+  receipt_id: string;
+  merchant: string;
+  total: number;
+  currency: string;
+  date: string;
+  status: string;
+  confidence_level?: ConfidenceLevel | null;
+}
+
+export interface ConsumerDashboard {
+  generated_at: string;
+  tenant: string;
+  daily_remaining: DailyRemaining | null;
+  monthly_by_category: MonthlyByCategory;
+  price_alerts: PriceAlert[];
+  cancellable_subscriptions: CancellableSubscription[];
+  household: HouseholdStatus;
+  recent_receipts: RecentReceipt[];
+}
+
+// ---------------------------------------------------------------------------
 // Review
 // ---------------------------------------------------------------------------
 
