@@ -30,7 +30,7 @@ export default function DuplicatesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Duplicates</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Ismétlődések</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Potential duplicate receipts detected by the matching engine.
         </p>

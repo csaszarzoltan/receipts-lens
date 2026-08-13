@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { savePreferences } from "@/lib/api";
 import { setAuthState } from "@/lib/auth";
+import { roleLabel } from "@/lib/roles";
 
 const STEPS = [
   { icon: "👋", title: "Welcome", body: "ReceiptLens scans receipts, tracks spending and forecasts your budget — fully self-hosted." },
-  { icon: "🏷️", title: "Choose a workspace", body: "Pick a tenant and role. For a personal setup, keep the demo tenant and admin role." },
+  { icon: "🏠", title: "Choose your household", body: "Pick a household and role. For a personal setup, keep the demo household and the household-owner role." },
   { icon: "📤", title: "Upload your first receipt", body: "You'll be taken to the upload page where you can photograph or drop a receipt." },
 ] as const;
 
@@ -60,7 +61,7 @@ export default function OnboardingPage() {
           <div className="mb-6 space-y-3">
             <div>
               <label htmlFor="onboard-tenant" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
-                Tenant
+                Háztartás
               </label>
               <select id="onboard-tenant" className="input" value={tenant} onChange={(event) => setTenant(event.target.value)}>
                 <option value="demo">demo</option>
@@ -70,12 +71,12 @@ export default function OnboardingPage() {
             </div>
             <div>
               <label htmlFor="onboard-role" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
-                Role
+                Szerepkör
               </label>
               <select id="onboard-role" className="input" value={role} onChange={(event) => setRole(event.target.value as typeof role)}>
-                <option value="admin">admin</option>
-                <option value="reviewer">reviewer</option>
-                <option value="integrator">integrator</option>
+                <option value="admin">{roleLabel("admin")}</option>
+                <option value="reviewer">{roleLabel("reviewer")}</option>
+                <option value="integrator">{roleLabel("integrator")}</option>
               </select>
             </div>
           </div>

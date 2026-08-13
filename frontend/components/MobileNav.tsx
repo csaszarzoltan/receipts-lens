@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { MOBILE_TABS, NAV_ITEMS } from "@/lib/nav";
+import { BUSINESS_NAV_ITEMS, MOBILE_TABS, NAV_ITEMS } from "@/lib/nav";
 import { cx } from "@/lib/utils";
 
 /**
  * Mobile navigation — bottom tab bar (5 primary destinations) plus a
  * slide-over menu (hamburger) listing every section. Hidden on lg+.
+ * The B2B features appear under a separate "Business" sub-heading so the
+ * consumer tab bar stays jargon-free (F1.1 consumer pivot).
  */
 export default function MobileNav() {
   const pathname = usePathname();
@@ -90,6 +92,27 @@ export default function MobileNav() {
                   </li>
                 ))}
               </ul>
+
+              {/* Business section — separate entry point (F1.1). */}
+              <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-800">
+                <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Business
+                </p>
+                <ul className="space-y-1">
+                  {BUSINESS_NAV_ITEMS.map((item) => (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setMenuOpen(false)}
+                        className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100"
+                      >
+                        <span aria-hidden="true">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </nav>
           </div>
         </div>

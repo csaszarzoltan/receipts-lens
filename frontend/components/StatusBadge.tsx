@@ -18,7 +18,21 @@ const TONES: Record<string, string> = {
 };
 
 function labelFor(status: string): string {
-  return status.replace(/_/g, " ");
+  const labels: Record<string, string> = {
+    needs_review: "Ellenőrzésre vár",
+    completed: "Kész",
+    pending: "Folyamatban",
+    approved: "Jóváhagyva",
+    rejected: "Elutasítva",
+    failed: "Sikertelen",
+    exportable: "Exportálható",
+    warning: "Figyelmeztetés",
+    blocked: "Blokkolt",
+    on_track: "Terv szerint",
+    over_budget: "Keret felett",
+    active: "Aktív",
+  };
+  return labels[status] ?? status.replace(/_/g, " ");
 }
 
 /** Status/readiness badge — tone mapped per status value. */

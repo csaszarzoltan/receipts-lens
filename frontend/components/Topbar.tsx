@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { getRole, getTenant, setRole, setTenant, ROLES, type Role } from "@/lib/auth";
+import { getRole, setRole, ROLES, type Role } from "@/lib/auth";
+import { roleLabel } from "@/lib/roles";
 import ThemeToggle from "@/components/ThemeToggle";
 import NotificationPanel from "@/components/NotificationPanel";
 
-/** Sticky top bar — global search, tenant selector, notifications, theme. */
+/** Sticky top bar — global search, household role, notifications, theme. */
 export default function Topbar() {
   const router = useRouter();
-  const [tenant, setTenantState] = useState(getTenant());
   const [role, setRoleState] = useState<Role>(getRole());
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -49,23 +49,9 @@ export default function Topbar() {
         </form>
 
         <div className="ml-auto flex items-center gap-2">
-          {/* Tenant/role selectors are power-user controls — hidden on phones,
-              available on the login & onboarding pages. */}
+          {/* Household role selector — consumer label shown, wire value kept.
+              The tenant selector was removed from the consumer view (F1.1). */}
           <div className="hidden items-center gap-2 md:flex">
-            <select
-              className={selectCls}
-              value={tenant}
-              onChange={(event) => {
-                setTenant(event.target.value);
-                setTenantState(event.target.value);
-              }}
-              aria-label="Tenant"
-              title="Tenant"
-            >
-              <option value="demo">Tenant: demo</option>
-              <option value="personal">Tenant: personal</option>
-              <option value="business">Tenant: business</option>
-            </select>
             <select
               className={selectCls}
               value={role}
@@ -74,12 +60,12 @@ export default function Topbar() {
                 setRole(next);
                 setRoleState(next);
               }}
-              aria-label="Role"
-              title="Role"
+              aria-label="Household role"
+              title="Household role"
             >
               {ROLES.map((option) => (
                 <option key={option} value={option}>
-                  Role: {option}
+                  {roleLabel(option)}
                 </option>
               ))}
             </select>

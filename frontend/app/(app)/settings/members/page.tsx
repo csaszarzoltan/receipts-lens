@@ -4,6 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { addMember, getMembers } from "@/lib/api";
 import type { Member } from "@/lib/types";
+import { roleLabel } from "@/lib/roles";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 
@@ -29,8 +30,8 @@ export default function MembersSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Members</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Team members and their roles.</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Családtagok</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Household members and their roles.</p>
       </div>
 
       {isLoading ? (
@@ -38,13 +39,13 @@ export default function MembersSettingsPage() {
       ) : error ? (
         <EmptyState icon="⚠️" title="Could not load members" description="Check that the backend is running." />
       ) : members.length === 0 ? (
-        <EmptyState icon="👥" title="No members yet" description="Add your first team member below." />
+        <EmptyState icon="👥" title="No members yet" description="Add your first family member below." />
       ) : (
         <ul className="card divide-y divide-slate-100 dark:divide-slate-800" aria-label="Members">
           {members.map((member) => (
             <li key={member.member_id} className="flex items-center justify-between gap-3 px-5 py-3">
               <span className="font-medium text-slate-800 dark:text-slate-100">{member.email}</span>
-              <span className="text-sm capitalize text-slate-500 dark:text-slate-400">{member.role}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{roleLabel(member.role)}</span>
               <span
                 className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                   member.active
@@ -65,15 +66,15 @@ export default function MembersSettingsPage() {
           <input
             type="email"
             className="input flex-1"
-            placeholder="teammate@example.com"
+            placeholder="csalad@example.com"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             aria-label="Member email"
           />
-          <select className="input sm:w-40" value={role} onChange={(event) => setRole(event.target.value)} aria-label="Member role">
-            <option value="admin">admin</option>
-            <option value="reviewer">reviewer</option>
-            <option value="integrator">integrator</option>
+          <select className="input sm:w-52" value={role} onChange={(event) => setRole(event.target.value)} aria-label="Member role">
+            <option value="admin">{roleLabel("admin")}</option>
+            <option value="reviewer">{roleLabel("reviewer")}</option>
+            <option value="integrator">{roleLabel("integrator")}</option>
           </select>
         </div>
         <button type="button" onClick={add} disabled={!email || busy} className="btn-primary mt-4 text-sm">

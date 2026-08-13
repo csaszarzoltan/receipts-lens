@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 const SECTIONS = [
-  { href: "/settings/profile", label: "Profile", icon: "👤" },
-  { href: "/settings/members", label: "Members", icon: "👥" },
-  { href: "/settings/permissions", label: "Permissions", icon: "🔐" },
+  { href: "/settings/profile", label: "Profil", icon: "👤" },
+  { href: "/settings/members", label: "Családtagok", icon: "👥" },
+  { href: "/settings/permissions", label: "Jogosultságok", icon: "🔐" },
   { href: "/settings/privacy", label: "Privacy", icon: "🛡️" },
   { href: "/settings/diagnostics", label: "Diagnostics", icon: "🩺" },
 ];
@@ -14,9 +14,9 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Beállítások</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Manage your workspace, team and privacy.
+          Manage your household, members and privacy.
         </p>
       </div>
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Settings sections">

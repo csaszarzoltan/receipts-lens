@@ -54,6 +54,7 @@ lib/
   api.ts                  # Typed client for ALL backend endpoints (no mocks)
   types.ts                # 36+ TypeScript interfaces mirroring the API schemas
   auth.ts                 # X-Tenant-ID / X-Role header auth (localStorage-persisted)
+  roles.ts                # F1.1 consumer-pivot: wire role -> household label mapping
   i18n.ts                 # en/hu catalogs + useTranslation
   utils.ts                # money/date/percent formatting helpers
   hooks/                  # SWR hooks (useReceipts, useDashboard, useForecast, useUpload)

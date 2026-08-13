@@ -1,12 +1,12 @@
 "use client";
 
 import useSWR from "swr";
-import { getExportRuns, searchReceipts } from "@/lib/api";
-import type { ExportRun, ReceiptItem } from "@/lib/types";
+import { searchReceipts } from "@/lib/api";
+import type { ReceiptItem } from "@/lib/types";
 import { SpendingChart, type SpendPoint } from "@/components/Charts";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
-import { formatDateTime, formatMoney } from "@/lib/utils";
+import { formatMoney } from "@/lib/utils";
 
 function monthlySpend(items: Array<{ receipt: { date: string | null; total: number | null } }>): SpendPoint[] {
   const byMonth = new Map<string, number>();
@@ -31,7 +31,6 @@ export default function ReportsPage() {
     "/product/receipts?limit=200",
     () => searchReceipts({ limit: 200 }),
   );
-  const { data: runsData } = useSWR<{ items: ExportRun[] }>("/product/export-runs", getExportRuns);
 
   const items: ReceiptItem[] = receiptsData?.items ?? [];
   const trend = monthlySpend(items);
@@ -39,9 +38,9 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Reports</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Összesítés</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Spending analytics and export activity.
+          Spending analytics for your household.
         </p>
       </div>
 
@@ -60,23 +59,6 @@ export default function ReportsPage() {
           <SpendingChart data={trend} height={280} />
         </section>
       )}
-
-      <section className="card p-5" aria-label="Export activity">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Export activity</h2>
-        {(runsData?.items ?? []).length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">No exports yet.</p>
-        ) : (
-          <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
-            {runsData?.items.map((run) => (
-              <li key={run.export_id} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <span className="font-medium text-slate-800 dark:text-slate-100">{run.format}</span>
-                <span className="text-slate-500 dark:text-slate-400">{run.status}</span>
-                <span className="text-slate-400">{formatDateTime(run.created_at)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import useSWR from "swr";
-import { getApprovals, getBudgetVariance, getDashboard, getWorkQueue, searchReceipts } from "@/lib/api";
+import { getBudgetVariance, getDashboard, getWorkQueue, searchReceipts } from "@/lib/api";
 import type { DashboardData, WorkQueueItem } from "@/lib/types";
 import KpiCard from "@/components/KpiCard";
 import { SpendingChart, type SpendPoint } from "@/components/Charts";
@@ -32,7 +32,7 @@ function monthlySpend(items: Array<{ receipt: { date: string | null; total: numb
 /**
  * Dashboard — KPI cards (total receipts, spending trend, budget status)
  * fed by the real backend APIs: /product/dashboard, /product/receipts,
- * /product/approvals, /product/work-queue and /forecasts/budget-variance.
+ * /product/work-queue and /forecasts/budget-variance.
  */
 export default function DashboardPage() {
   const { data: dashboard, error, isLoading } = useSWR<DashboardData>(
@@ -46,7 +46,6 @@ export default function DashboardPage() {
     "/product/work-queue",
     () => getWorkQueue(8),
   );
-  const { data: approvalsData } = useSWR("/product/approvals", () => getApprovals("pending"));
   const { data: budgetVariance } = useSWR("/forecasts/budget-variance?horizon=1", () =>
     getBudgetVariance({ horizon: 1 }),
   );
@@ -56,7 +55,7 @@ export default function DashboardPage() {
   if (error || !dashboard) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Áttekintés</h1>
         <EmptyState
           icon="⚠️"
           title="Could not load dashboard"
@@ -70,7 +69,6 @@ export default function DashboardPage() {
   const jobsByStatus = dashboard.usage?.jobs_by_status ?? {};
   const totalReceipts = receiptsPage?.total ?? Object.values(jobsByStatus).reduce((sum, count) => sum + (count as number), 0);
   const needsReview = dashboard.quality?.needs_review ?? 0;
-  const pendingApprovals = approvalsData?.items?.length ?? 0;
   const queue: WorkQueueItem[] = queueData?.items ?? [];
 
   const trend = monthlySpend(receiptsPage?.items ?? []);
@@ -86,7 +84,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Áttekintés</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Service status:{" "}
             <span className="font-medium text-emerald-600 dark:text-emerald-400">

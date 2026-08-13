@@ -14,12 +14,12 @@ import StatusBadge from "@/components/StatusBadge";
 import { formatDate, formatMoney } from "@/lib/utils";
 
 const STATUS_OPTIONS = [
-  { value: "needs_review", label: "Needs review" },
-  { value: "completed", label: "Completed" },
-  { value: "pending", label: "Pending" },
-  { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" },
-  { value: "failed", label: "Failed" },
+  { value: "needs_review", label: "Ellenőrzésre vár" },
+  { value: "completed", label: "Kész" },
+  { value: "pending", label: "Folyamatban" },
+  { value: "approved", label: "Jóváhagyva" },
+  { value: "rejected", label: "Elutasítva" },
+  { value: "failed", label: "Sikertelen" },
 ];
 
 function ReceiptsContent() {
@@ -80,7 +80,7 @@ function ReceiptsContent() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Receipts</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Vásárlások</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {data?.total != null ? `${data.total} receipts` : "Search your receipts"}
           </p>

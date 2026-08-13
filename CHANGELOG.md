@@ -1,5 +1,29 @@
 # Changelog
 
+## [Unreleased] - 2026-08-13 (US-019 consumer pivot F1.1)
+
+### Added
+- US-019: consumer-pivot navigation & role naming (F1.1 of `docs/plans/consumer-pivot-2026-08-13.md`):
+  - Household navigation labels (`lib/nav.ts`): Vásárlások, Nyugta hozzáadása, Ellenőrzés,
+    Háztartási keret, Előfizetések, Előrejelzés, Összesítés, Családi postafiók, Ismétlődések —
+    zero business jargon in the main navigation.
+  - Business features (Approvals, Export Center, Accounting, Integrations, Automations) are
+    **hidden, not deleted** — grouped behind a separate collapsible "Business" section in the
+    desktop sidebar and a "Business" sub-heading in the mobile slide-over (separate entry point).
+  - Household role naming (`lib/roles.ts`): admin → Háztartás tulajdonosa, reviewer → Felnőtt tag,
+    integrator → Könyvelő / tanácsadó (Business mód); target-state roles (Gyermek / korlátozott tag,
+    Csak megtekintés) carried as vocabulary for F1.3.
+  - Role surfaces (login, onboarding, topbar, members, permissions) display household labels;
+    tenant selector removed from the consumer topbar; tenant wording replaced with Háztartás.
+  - Consumer page sweep: receipt detail no longer shows cost-center input or export-readiness panel
+    (business surface), Reports page no longer shows export activity, inbox shows Családi postafiók,
+    status badges use household labels. Wire format untouched (backend schema unchanged).
+
+### Verification
+- Frontend `tsc --noEmit`: 0 errors; `next build` passes.
+- New BDD contract `tests/test_us_019_consumer_navigation.py` (5 tests) locks the nav/role mapping.
+- Full Python regression: 1342 passed / 10 skipped (unchanged).
+
 ## [Unreleased] - 2026-08-11 (BUG-007/008/010 fixes)
 
 ### Fixed

@@ -3,7 +3,7 @@ import AppShell from "@/components/AppShell";
 import Onboarding from "@/components/Onboarding";
 
 export const metadata: Metadata = {
-  title: "Dashboard",
+  title: "Áttekintés",
 };
 
 /** Authenticated shell — wraps every app page with nav + onboarding. */

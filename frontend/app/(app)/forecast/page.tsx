@@ -45,7 +45,7 @@ export default function ForecastPage() {
   if (forecastError && anomaliesError && varianceError) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Forecast</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Előrejelzés</h1>
         <EmptyState icon="⚠️" title="Could not load forecast data" description="Check that the backend is running." />
       </div>
     );
@@ -54,7 +54,7 @@ export default function ForecastPage() {
   if (!hasData) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Forecast</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Előrejelzés</h1>
         <EmptyState
           icon="📊"
           title="Not enough data"
@@ -84,7 +84,7 @@ export default function ForecastPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Forecast</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Előrejelzés</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {forecast.period} · {forecast.currency} · horizon {1} period
           {forecast.narrative ? ` — ${forecast.narrative}` : ""}

@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
-import { getReceipt, getReceiptBoxes, getReceiptHistory, getReceiptImage, updateLineItems, updateMetadata, validateReceipt } from "@/lib/api";
+import { getReceipt, getReceiptBoxes, getReceiptHistory, getReceiptImage, updateLineItems, updateMetadata } from "@/lib/api";
 import type { HistoryEntry, LineItem, OCRBox, ReceiptItem } from "@/lib/types";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import StatusBadge from "@/components/StatusBadge";
@@ -16,7 +16,6 @@ function ReceiptDetailContent({ id }: { id: string }) {
   );
   const { data: boxesData } = useSWR(id ? `/boxes/${id}` : null, () => getReceiptBoxes(id));
   const { data: historyData } = useSWR(id ? `/history/${id}` : null, () => getReceiptHistory(id));
-  const { data: validation } = useSWR(id ? `/validation/${id}` : null, () => validateReceipt(id));
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -205,10 +204,6 @@ function ReceiptDetailContent({ id }: { id: string }) {
                 <label htmlFor="project" className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Project</label>
                 <input id="project" className="input" value={project} onChange={(event) => setProject(event.target.value)} />
               </div>
-              <div>
-                <label htmlFor="cost-center" className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Cost center</label>
-                <input id="cost-center" className="input" value={costCenter} onChange={(event) => setCostCenter(event.target.value)} />
-              </div>
             </div>
             <button type="button" onClick={saveMetadata} disabled={saving} className="btn-secondary text-sm">
               {saving ? "Saving…" : "Save metadata"}
@@ -286,37 +281,8 @@ function ReceiptDetailContent({ id }: { id: string }) {
         ) : null}
       </section>
 
-      {/* Validation + OCR boxes + history */}
+      {/* OCR boxes + history */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="card" aria-label="Export validation">
-          <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
-            Export readiness
-          </h2>
-          <div className="px-5 py-4">
-            {validation ? (
-              <>
-                <StatusBadge status={validation.readiness} />
-                {validation.errors.length > 0 ? (
-                  <ul className="mt-3 space-y-1">
-                    {validation.errors.map((err, index) => (
-                      <li key={index} className="text-sm text-rose-600 dark:text-rose-400">• {err.message}</li>
-                    ))}
-                  </ul>
-                ) : null}
-                {validation.warnings.length > 0 ? (
-                  <ul className="mt-2 space-y-1">
-                    {validation.warnings.map((warn, index) => (
-                      <li key={index} className="text-sm text-amber-600 dark:text-amber-400">• {warn.message}</li>
-                    ))}
-                  </ul>
-                ) : null}
-              </>
-            ) : (
-              <p className="text-sm text-slate-400">Loading validation…</p>
-            )}
-          </div>
-        </section>
-
         <section className="card" aria-label="OCR boxes">
           <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
             OCR text ({boxes.length})

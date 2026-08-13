@@ -31,7 +31,7 @@ export default function BudgetPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Budget</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Háztartási keret</h1>
         <EmptyState icon="⚠️" title="Could not load budget data" description="Check that the backend is running." />
       </div>
     );
@@ -50,7 +50,7 @@ export default function BudgetPage() {
   if (projections.length === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Budget</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Háztartási keret</h1>
         <EmptyState
           icon="🎯"
           title="No budget set"
@@ -68,7 +68,7 @@ export default function BudgetPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Budget</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Háztartási keret</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {data.currency} · {projections.length} categories · projected end-of-period spend vs budget
         </p>

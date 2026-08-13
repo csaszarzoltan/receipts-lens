@@ -10,8 +10,8 @@ export default function RegisterPage() {
         <span className="text-3xl" aria-hidden="true">📝</span>
         <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">Create account</h1>
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Multi-tenant account creation is coming soon. For now, pick any
-          tenant and role on the sign-in page — data is isolated per tenant.
+          Account creation is coming soon. For now, pick any household and
+          role on the sign-in page — data is isolated per household.
         </p>
         <Link href="/login" className="btn-primary mt-6">
           Back to sign in

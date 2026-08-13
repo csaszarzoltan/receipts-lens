@@ -4,6 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { getPermissions, updatePermissions } from "@/lib/api";
 import type { PermissionMatrix } from "@/lib/types";
+import { roleLabel } from "@/lib/roles";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 
@@ -44,7 +45,7 @@ export default function PermissionsSettingsPage() {
             <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
               <th className="px-4 py-3">Permission</th>
               {roles.map((role) => (
-                <th key={role} className="px-4 py-3 text-center capitalize">{role}</th>
+                <th key={role} className="px-4 py-3 text-center">{roleLabel(role)}</th>
               ))}
             </tr>
           </thead>
