@@ -2,26 +2,35 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { addMember, getMembers } from "@/lib/api";
-import type { Member } from "@/lib/types";
-import { roleLabel } from "@/lib/roles";
+import { createInvite, getMembers } from "@/lib/api";
+import type { HouseholdRole, Member } from "@/lib/types";
+import { householdRoleLabel } from "@/lib/roles";
+import { getTenant } from "@/lib/auth";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 
 export default function MembersSettingsPage() {
   const { data, error, isLoading, mutate } = useSWR<{ items: Member[] }>("/product/members", getMembers);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("reviewer");
+  const [role, setRole] = useState<HouseholdRole>("adult");
   const [busy, setBusy] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   const members = data?.items ?? [];
+  const householdId = getTenant();
 
   async function add() {
     setBusy(true);
+    setInviteError(null);
+    setInviteLink(null);
     try {
-      await addMember({ email, role });
+      const invite = await createInvite(householdId, { email, role });
+      if (invite.magic_link) setInviteLink(invite.magic_link);
       setEmail("");
       mutate();
+    } catch (err: unknown) {
+      setInviteError(err instanceof Error ? err.message : "A meghívó küldése nem sikerült.");
     } finally {
       setBusy(false);
     }
@@ -45,7 +54,7 @@ export default function MembersSettingsPage() {
           {members.map((member) => (
             <li key={member.member_id} className="flex items-center justify-between gap-3 px-5 py-3">
               <span className="font-medium text-slate-800 dark:text-slate-100">{member.email}</span>
-              <span className="text-sm text-slate-500 dark:text-slate-400">{roleLabel(member.role)}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{householdRoleLabel(member.role)}</span>
               <span
                 className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                   member.active
@@ -61,7 +70,10 @@ export default function MembersSettingsPage() {
       )}
 
       <section className="card max-w-lg p-5" aria-label="Add member">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Add member</h2>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Tag meghívása</h2>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          A meghívott e-mailben kap linket (fejlesztési módban a link itt jelenik meg).
+        </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <input
             type="email"
@@ -71,15 +83,29 @@ export default function MembersSettingsPage() {
             onChange={(event) => setEmail(event.target.value)}
             aria-label="Member email"
           />
-          <select className="input sm:w-52" value={role} onChange={(event) => setRole(event.target.value)} aria-label="Member role">
-            <option value="admin">{roleLabel("admin")}</option>
-            <option value="reviewer">{roleLabel("reviewer")}</option>
-            <option value="integrator">{roleLabel("integrator")}</option>
+          <select className="input sm:w-52" value={role} onChange={(event) => setRole(event.target.value as HouseholdRole)} aria-label="Member role">
+            <option value="owner">{householdRoleLabel("owner")}</option>
+            <option value="adult">{householdRoleLabel("adult")}</option>
+            <option value="child">{householdRoleLabel("child")}</option>
+            <option value="view_only">{householdRoleLabel("view_only")}</option>
           </select>
         </div>
         <button type="button" onClick={add} disabled={!email || busy} className="btn-primary mt-4 text-sm">
-          {busy ? "Adding…" : "Add member"}
+          {busy ? "Küldés…" : "Meghívó küldése"}
         </button>
+        {inviteLink && (
+          <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            <p className="mb-1 font-medium">Fejlesztési mód — meghívó link:</p>
+            <a href={inviteLink} className="break-all text-brand-600 hover:underline dark:text-brand-400">
+              {inviteLink}
+            </a>
+          </div>
+        )}
+        {inviteError && (
+          <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">
+            {inviteError}
+          </p>
+        )}
       </section>
     </div>
   );

@@ -432,6 +432,45 @@ export interface Member {
   active: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// F1.3 household auth — magic links, sessions, invites
+// ---------------------------------------------------------------------------
+
+/** Household role vocabulary (§3.2 of the consumer-pivot plan). */
+export type HouseholdRole = "owner" | "adult" | "child" | "view_only";
+
+/** Response of POST /auth/magic-link-request. */
+export interface MagicLinkResponse {
+  delivered: boolean;
+  /** Dev-mode only (RECEIPTLENS_ENV != production): the raw one-time token. */
+  token?: string;
+  /** Dev-mode only: the full clickable login link. */
+  magic_link?: string;
+  email: string;
+  expires_at: string;
+}
+
+/** Session identity returned by verify / accept / session-me. */
+export interface SessionIdentity {
+  session_token: string;
+  email: string;
+  household_id: string;
+  role: HouseholdRole;
+  expires_at: string;
+}
+
+/** A household invite row (owner view + create response). */
+export interface HouseholdInvite {
+  invite_id: string;
+  email: string;
+  role: HouseholdRole;
+  status: "pending" | "accepted";
+  expires_at?: string;
+  token?: string;
+  magic_link?: string;
+  delivered?: boolean;
+}
+
 export interface PermissionMatrix {
   roles: Record<string, string[]>;
 }

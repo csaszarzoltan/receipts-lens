@@ -31,6 +31,10 @@ import type {
   ExportRun,
   ForecastResult,
   HistoryEntry,
+  SessionIdentity,
+  MagicLinkResponse,
+  HouseholdRole,
+  HouseholdInvite,
   InboundEmail,
   Job,
   LineItem,
@@ -981,4 +985,65 @@ export async function getDiagnostics(): Promise<Diagnostics> {
 
 export async function downloadDiagnostics(): Promise<Blob> {
   return binaryRequest("/product/diagnostics/bundle");
+}
+
+// ---------------------------------------------------------------------------
+// F1.3 household auth — magic-link login, invites, sessions
+// ---------------------------------------------------------------------------
+
+/** POST /auth/magic-link-request — request a magic link for an email. */
+export async function requestMagicLink(body: {
+  email: string;
+  household_id?: string | null;
+}): Promise<MagicLinkResponse> {
+  return request<MagicLinkResponse>("/auth/magic-link-request", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** POST /auth/magic-link-verify — exchange a token for a session. */
+export async function verifyMagicLink(token: string): Promise<SessionIdentity> {
+  return request<SessionIdentity>("/auth/magic-link-verify", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+/** POST /auth/session/me — resolve a session token. */
+export async function resolveSession(sessionToken: string): Promise<SessionIdentity> {
+  return request<SessionIdentity>("/auth/session/me", {
+    method: "POST",
+    body: JSON.stringify({ session_token: sessionToken }),
+  });
+}
+
+/** POST /auth/households/{id}/invites — owner invites a member. */
+export async function createInvite(
+  householdId: string,
+  body: { email: string; role: HouseholdRole },
+): Promise<HouseholdInvite> {
+  return tenantRequest<HouseholdInvite>(
+    `/auth/households/${householdId}/invites`,
+    { method: "POST", body: JSON.stringify(body) },
+  );
+}
+
+/** GET /auth/households/{id}/invites — list pending invites (owner only). */
+export async function listInvites(householdId: string): Promise<{ items: HouseholdInvite[] }> {
+  return tenantRequest<{ items: HouseholdInvite[] }>(
+    `/auth/households/${householdId}/invites`,
+  );
+}
+
+/** POST /auth/households/{id}/invites/{inviteId}/accept — accept + sign in. */
+export async function acceptInvite(
+  householdId: string,
+  inviteId: string,
+  token: string,
+): Promise<SessionIdentity> {
+  return request<SessionIdentity>(
+    `/auth/households/${householdId}/invites/${inviteId}/accept`,
+    { method: "POST", body: JSON.stringify({ token }) },
+  );
 }

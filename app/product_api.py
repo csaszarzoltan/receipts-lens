@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.accounting_workspace import AccountingWorkspace
 from app.advanced_workspace import AdvancedWorkspace, extract_ocr_boxes
 from app.ocr import ConfidenceReceipt, parse_receipt_with_confidence
-from app.product_service import Actor, ProductConflict, ProductService
+from app.product_service import Actor, ProductConflict, ProductService, HOUSEHOLD_ROLES, _is_production
 from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_vision
 
 router = APIRouter()
@@ -21,17 +21,27 @@ service = ProductService(os.getenv("RECEIPTLENS_PRODUCT_DB", ":memory:"))
 advanced = AdvancedWorkspace(service)
 
 
-def actor(x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
-          x_role: str | None = Header(default=None, alias="X-Role")) -> Actor:
+def actor(authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role")) -> Actor:
     """Strict auth for product-workspace endpoints (SEC-003).
 
     Tenant and role headers are REQUIRED: a missing/blank tenant yields 401
     and an unrecognised role yields 403. Previously this defaulted to
     demo/admin, letting anyone act as an admin without headers.
     """
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        try:
+            identity = service.resolve_session(token)
+        except KeyError as exc:
+            raise HTTPException(401, "Invalid or expired session") from exc
+        return Actor(identity["tenant_id"], identity["role"])
+    if _is_production:
+        raise HTTPException(401, "Session required")
     if x_tenant_id is None or not x_tenant_id.strip():
         raise HTTPException(401, "Tenant identity is required")
-    if x_role is None or x_role not in {"admin", "reviewer", "integrator"}:
+    if x_role is None or x_role not in {"admin", "reviewer", "integrator", *HOUSEHOLD_ROLES}:
         raise HTTPException(403, "Unknown role")
     return Actor(x_tenant_id.strip(), x_role)
 
@@ -175,7 +185,7 @@ def reviews(confidence_field: str | None = None, confidence_lt: float | None = N
 
 @router.patch("/product/review-items/{receipt_id}")
 def correct(receipt_id: str, body: CorrectionRequest, if_match: int = Header(alias="If-Match"), current: Actor = Depends(actor)) -> dict[str, Any]:
-    if current.role not in {"admin","reviewer"}: raise HTTPException(403,"Reviewer role required")
+    if not service.can_write(current): raise HTTPException(403,"Read-only role cannot edit receipts")
     try:
         row = service._db.execute("SELECT payload FROM receipts WHERE tenant_id=? AND receipt_id=?",
                                   (current.tenant_id, receipt_id)).fetchone()

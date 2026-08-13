@@ -65,6 +65,10 @@ export default function LoginPage() {
           <Link href="/onboarding" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
             Töltsd ki a bevezetőt
           </Link>
+          {" · "}
+          <Link href="/auth/magic-link" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+            Belépés e-mail linkkel
+          </Link>
         </p>
       </div>
     </div>

@@ -1,14 +1,13 @@
 import type { Role } from "@/lib/auth";
+import type { HouseholdRole } from "@/lib/types";
 
 /**
- * F1.1 consumer-pivot role naming (§3.2 of
+ * F1.1 + F1.3 consumer-pivot role naming (§3.2 of
  * docs/plans/consumer-pivot-2026-08-13.md).
  *
- * The backend wire format still speaks `admin | reviewer | integrator`
- * (X-Role header — backend schema change is explicitly out of scope for
- * F1.1, real household auth lands in F1.3). This module maps those wire
- * roles to the household-facing labels the UI must display, and carries the
- * target-state role vocabulary (§3.2) ready for F1.3 to activate.
+ * The legacy wire roles (admin | reviewer | integrator) map to household
+ * labels for the dev-mode header flow; the F1.3 household roles
+ * (owner | adult | child | view_only) are the real auth vocabulary.
  */
 export const ROLE_LABELS: Record<Role, string> = {
   admin: "Háztartás tulajdonosa",
@@ -22,9 +21,24 @@ export function roleLabel(role: Role | string): string {
 }
 
 /**
- * Target-state consumer roles (§3.2) — NOT wired to any backend value yet.
- * F1.3 (auth) introduces the real household roles; until then these labels
- * exist as vocabulary so the UI copy can reference them.
+ * Household role labels (§3.2) — the F1.3 auth vocabulary. `viewer` was the
+ * earlier draft name for the restricted member; F1.3 ships the final wire
+ * values `child` and `view_only`.
+ */
+export const HOUSEHOLD_ROLE_LABELS: Record<HouseholdRole, string> = {
+  owner: "Háztartás tulajdonosa",
+  adult: "Felnőtt tag",
+  child: "Gyermek / korlátozott tag",
+  view_only: "Csak megtekintés",
+};
+
+export function householdRoleLabel(role: HouseholdRole | string): string {
+  return HOUSEHOLD_ROLE_LABELS[role as HouseholdRole] ?? role;
+}
+
+/**
+ * Target-state consumer roles (§3.2) — retained for compatibility with
+ * existing copy that references the draft vocabulary.
  */
 export const TARGET_ROLE_LABELS = {
   viewer: "Gyermek / korlátozott tag",

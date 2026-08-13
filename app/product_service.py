@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import secrets
 import sqlite3
 import threading
@@ -28,6 +29,24 @@ class Actor:
     role: str
 
 
+
+# F1.3 — household auth vocabulary (docs/plans/consumer-pivot-2026-08-13.md §3.2).
+HOUSEHOLD_ROLES = {"owner", "adult", "child", "view_only"}
+WRITE_ROLES = {"owner", "adult"}
+LEGACY_HEADER_ROLES = {"admin", "reviewer", "integrator"}
+MAGIC_LINK_TTL_SECONDS = 15 * 60
+INVITE_TTL_SECONDS = 7 * 24 * 60 * 60
+SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
+
+
+def _sha256(value: str) -> str:
+    """SHA-256 hex digest — used to store tokens without keeping the raw secret."""
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+# F1.3: the X-Tenant-ID/X-Role demo auth is only valid in development mode.
+# Defined here (not in a downstream module) to avoid circular imports.
+_is_production = os.getenv("RECEIPTLENS_ENV", "").strip().lower() == "production"
 class ProductService:
     """Tenant-safe workflow service backed by SQLite."""
 
@@ -83,6 +102,17 @@ class ProductService:
               history_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, subject_id TEXT NOT NULL,
               action TEXT NOT NULL, before_json TEXT, after_json TEXT,
               actor_role TEXT NOT NULL, created_at TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS auth_tokens(
+              token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, purpose TEXT NOT NULL,
+              tenant_id TEXT, role TEXT, invite_id TEXT,
+              expires_at TEXT NOT NULL, consumed_at TEXT, created_at TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS household_invites(
+              invite_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, email TEXT NOT NULL,
+              role TEXT NOT NULL, invited_by TEXT NOT NULL, status TEXT NOT NULL,
+              token_hash TEXT, created_at TEXT NOT NULL, accepted_at TEXT);
+            CREATE TABLE IF NOT EXISTS sessions(
+              session_token TEXT PRIMARY KEY, email TEXT NOT NULL, tenant_id TEXT NOT NULL,
+              role TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
             """)
 
     @staticmethod
@@ -144,6 +174,8 @@ class ProductService:
         return {"items":items[offset:offset+limit],"total":len(items),"limit":limit,"offset":offset}
 
     def correct(self, actor: Actor, receipt_id: str, changes: dict[str, Any], expected_version: int, complete: bool) -> dict[str, Any]:
+        if not self.can_write(actor):
+            raise PermissionError("read-only household role")
         with self._lock, self._db:
             row = self._db.execute("SELECT * FROM receipts WHERE tenant_id=? AND receipt_id=?", (actor.tenant_id, receipt_id)).fetchone()
             if not row: raise KeyError(receipt_id)
@@ -176,7 +208,8 @@ class ProductService:
             return {"job_id": job_id, "status": "cancelled"}
 
     def add_member(self, actor: Actor, email: str, role: str) -> dict[str, Any]:
-        if actor.role != "admin": raise PermissionError
+        if not self.can_manage_household(actor): raise PermissionError
+        if role not in {"admin", "reviewer", "integrator", *HOUSEHOLD_ROLES}: raise ValueError("invalid role")
         if role not in {"admin", "reviewer", "integrator"}: raise ValueError("invalid role")
         member_id = str(uuid.uuid4())
         with self._db:
@@ -632,6 +665,203 @@ class ProductService:
         return {"items": items[:limit], "total": len(items),
                 "counts": {kind: sum(i["type"] == kind for i in items)
                            for kind in ("failed_job", "review", "export_blocker", "approval")}}
+    # --- F1.3 magic-link lifecycle -------------------------------------------
+    def create_magic_link(
+        self,
+        email: str,
+        *,
+        tenant_id: str | None = None,
+        role: str | None = None,
+        ttl_seconds: int = MAGIC_LINK_TTL_SECONDS,
+    ) -> dict[str, Any]:
+        """Create a single-use, expiring magic-link token for *email*."""
+        token = secrets.token_urlsafe(32)
+        now = self._now()
+        expires = datetime.fromisoformat(now).timestamp() + ttl_seconds
+        with self._db:
+            self._db.execute(
+                "INSERT INTO auth_tokens(token_hash,email,purpose,tenant_id,role,invite_id,"
+                "expires_at,consumed_at,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                (_sha256(token), email.strip().lower(), "login", tenant_id, role, None,
+                 datetime.fromtimestamp(expires, UTC).isoformat(), None, now),
+            )
+            self._audit(tenant_id or "unclaimed", "auth.magic_link_created", email.strip().lower())
+        return {"token": token, "email": email.strip().lower(), "expires_at": datetime.fromtimestamp(expires, UTC).isoformat()}
+
+    def verify_magic_link(self, token: str) -> dict[str, Any]:
+        """Consume a magic-link token and return its payload (KeyError on bad)."""
+        digest = _sha256(token)
+        now = self._now()
+        with self._lock, self._db:
+            row = self._db.execute(
+                "SELECT * FROM auth_tokens WHERE token_hash=? AND purpose='login'",
+                (digest,),
+            ).fetchone()
+            if not row:
+                raise KeyError("unknown magic-link token")
+            if row["consumed_at"] is not None:
+                raise KeyError("magic-link token already used")
+            if row["expires_at"] <= now:
+                raise KeyError("magic-link token expired")
+            self._db.execute(
+                "UPDATE auth_tokens SET consumed_at=? WHERE token_hash=?",
+                (now, digest),
+            )
+            self._audit(row["tenant_id"] or "unclaimed", "auth.magic_link_verified", row["email"])
+            return {
+                "email": row["email"],
+                "tenant_id": row["tenant_id"],
+                "role": row["role"],
+                "invite_id": row["invite_id"],
+            }
+
+    # --- F1.3 sessions -------------------------------------------------------
+    def create_session(
+        self,
+        email: str,
+        tenant_id: str,
+        role: str,
+        *,
+        ttl_seconds: int = SESSION_TTL_SECONDS,
+    ) -> dict[str, Any]:
+        """Create a session token bound to a household role."""
+        token = secrets.token_urlsafe(32)
+        now = self._now()
+        expires = datetime.fromisoformat(now).timestamp() + ttl_seconds
+        with self._db:
+            self._db.execute(
+                "INSERT INTO sessions(session_token,email,tenant_id,role,expires_at,created_at)"
+                " VALUES(?,?,?,?,?,?)",
+                (token, email.strip().lower(), tenant_id, role,
+                 datetime.fromtimestamp(expires, UTC).isoformat(), now),
+            )
+            self._audit(tenant_id, "auth.session_created", email.strip().lower())
+        return {"session_token": token, "email": email.strip().lower(), "tenant_id": tenant_id,
+                "role": role, "expires_at": datetime.fromtimestamp(expires, UTC).isoformat()}
+
+    def resolve_session(self, session_token: str) -> dict[str, Any]:
+        """Resolve a session token into an identity or raise ``KeyError``."""
+        row = self._db.execute(
+            "SELECT * FROM sessions WHERE session_token=?",
+            (session_token,),
+        ).fetchone()
+        if not row:
+            raise KeyError("unknown session")
+        if row["expires_at"] <= self._now():
+            raise KeyError("session expired")
+        return {"email": row["email"], "tenant_id": row["tenant_id"], "role": row["role"]}
+
+    # --- F1.3 household invites ----------------------------------------------
+    def create_invite(
+        self,
+        actor: Actor,
+        email: str,
+        role: str,
+        *,
+        ttl_seconds: int = INVITE_TTL_SECONDS,
+    ) -> dict[str, Any]:
+        """Create a family invite (owner only).  Returns the raw invite token once."""
+        if actor.role not in {"owner", "admin"}:
+            raise PermissionError("only the household owner can invite members")
+        if role not in HOUSEHOLD_ROLES:
+            raise ValueError("invalid household role")
+        token = secrets.token_urlsafe(32)
+        now = self._now()
+        expires = datetime.fromisoformat(now).timestamp() + ttl_seconds
+        invite_id = str(uuid.uuid4())
+        with self._db:
+            self._db.execute(
+                "INSERT INTO household_invites(invite_id,tenant_id,email,role,invited_by,status,"
+                "token_hash,created_at,accepted_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                (invite_id, actor.tenant_id, email.strip().lower(), role, actor.tenant_id,
+                 "pending", _sha256(token), now, None),
+            )
+            self._db.execute(
+                "INSERT INTO auth_tokens(token_hash,email,purpose,tenant_id,role,invite_id,"
+                "expires_at,consumed_at,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+                (_sha256(token), email.strip().lower(), "invite", actor.tenant_id, role, invite_id,
+                 datetime.fromtimestamp(expires, UTC).isoformat(), None, now),
+            )
+            self._audit(actor.tenant_id, "invite.created", invite_id)
+        return {"invite_id": invite_id, "email": email.strip().lower(), "role": role,
+                "status": "pending", "expires_at": datetime.fromtimestamp(expires, UTC).isoformat(),
+                "token": token}
+
+    def list_invites(self, actor: Actor) -> list[dict[str, Any]]:
+        """List the household's pending invites (owner only)."""
+        if actor.role not in {"owner", "admin"}:
+            raise PermissionError("only the household owner can list invites")
+        rows = self._db.execute(
+            "SELECT invite_id,email,role,status,created_at,accepted_at FROM household_invites "
+            "WHERE tenant_id=? ORDER BY created_at DESC",
+            (actor.tenant_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def accept_invite(self, token: str) -> dict[str, Any]:
+        """Accept a family invite: creates a membership + a session in one step."""
+        digest = _sha256(token)
+        now = self._now()
+        with self._lock, self._db:
+            row = self._db.execute(
+                "SELECT * FROM auth_tokens WHERE token_hash=? AND purpose='invite'",
+                (digest,),
+            ).fetchone()
+            if not row:
+                raise KeyError("unknown invite token")
+            if row["consumed_at"] is not None:
+                raise KeyError("invite token already used")
+            if row["expires_at"] <= now:
+                raise KeyError("invite token expired")
+            tenant_id, role, email, invite_id = row["tenant_id"], row["role"], row["email"], row["invite_id"]
+            self._db.execute("UPDATE auth_tokens SET consumed_at=? WHERE token_hash=?", (now, digest))
+            self._db.execute(
+                "UPDATE household_invites SET status='accepted', accepted_at=? WHERE invite_id=?",
+                (now, invite_id),
+            )
+            existing = self._db.execute(
+                "SELECT member_id FROM members WHERE tenant_id=? AND email=?",
+                (tenant_id, email),
+            ).fetchone()
+            if existing:
+                self._db.execute(
+                    "UPDATE members SET role=?, active=1 WHERE member_id=?",
+                    (role, existing["member_id"]),
+                )
+                member_id = existing["member_id"]
+            else:
+                member_id = str(uuid.uuid4())
+                self._db.execute(
+                    "INSERT INTO members(member_id,tenant_id,email,role,active) VALUES(?,?,?,?,1)",
+                    (member_id, tenant_id, email, role),
+                )
+            self._audit(tenant_id, "invite.accepted", invite_id)
+        session = self.create_session(email, tenant_id, role)
+        return {**session, "invite_id": invite_id, "member_id": member_id}
+
+    # --- F1.3 role helpers ---------------------------------------------------
+    @staticmethod
+    def household_role_of(actor: Actor) -> str:
+        """Map a wire role (legacy header or household) to a household role."""
+        role = actor.role
+        if role in HOUSEHOLD_ROLES:
+            return role
+        if role == "admin":
+            return "owner"
+        if role == "reviewer":
+            return "adult"
+        return "child"
+
+    @staticmethod
+    def can_write(actor: Actor) -> bool:
+        """True when the actor may mutate household data (edit/upload)."""
+        return ProductService.household_role_of(actor) in WRITE_ROLES
+
+    @staticmethod
+    def can_manage_household(actor: Actor) -> bool:
+        """True when the actor may invite members / manage household settings."""
+        return ProductService.household_role_of(actor) == "owner"
+
     def dashboard(self, actor: Actor) -> dict[str, Any]:
         jobs=self.list_jobs(actor); total=len(jobs)
         statuses={}

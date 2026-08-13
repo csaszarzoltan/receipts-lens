@@ -20,6 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.alerts import alert_store
 from app.analytics import budget_analytics, spending_analytics
 from app.api_v2 import batch_router
+from app.auth_api import router as auth_router
 from app.budgets import budget_store
 from app.categorizer import Categorizer
 from app.consumer_dashboard import build_consumer_dashboard
@@ -220,6 +221,7 @@ app.include_router(product_router)
 app.include_router(forecast_router)
 app.include_router(batch_router)
 app.include_router(subscriptions_router)
+app.include_router(auth_router)
 
 
 # ---------------------------------------------------------------------------
@@ -320,6 +322,7 @@ def _as_bool(value: str | None) -> bool:
 
 
 def api_v1_actor(
+    authorization: str | None = Header(default=None, alias="Authorization"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
     x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> Actor:
@@ -334,6 +337,15 @@ def api_v1_actor(
         raise HTTPException(401, "Tenant identity is required")
     if x_role is None or x_role not in {"admin", "reviewer", "integrator"}:
         raise HTTPException(403, "Unknown role")
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        try:
+            identity = service.resolve_session(token)
+        except KeyError as exc:
+            raise HTTPException(401, "Invalid or expired session") from exc
+        return Actor(identity["tenant_id"], identity["role"])
+    if _is_production:
+        raise HTTPException(401, "Session required")
     return Actor(x_tenant_id, x_role)
 
 
