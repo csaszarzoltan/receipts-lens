@@ -11,6 +11,20 @@ import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatMoney } from "@/lib/utils";
 
+/** Receipts with an uncertain OCR extraction land in review. */
+const LOW_CONFIDENCE_LEVELS = new Set(["low", "medium"]);
+
+function isWeakMatch(item: ReviewItem): boolean {
+  const level = item.receipt.confidence_level;
+  if (level && LOW_CONFIDENCE_LEVELS.has(level)) return true;
+  const conf = item.receipt.confidence ?? {};
+  const values = Object.values(conf).filter(
+    (v): v is number => typeof v === "number",
+  );
+  if (values.length === 0) return false;
+  return values.reduce((a, b) => a + b, 0) / values.length < 0.6;
+}
+
 function ReviewWorkspace() {
   const { data, error, isLoading, mutate } = useSWR<{ items: ReviewItem[] }>(
     "/product/review-items",
@@ -61,6 +75,7 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
   const [saving, setSaving] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
+  const weak = isWeakMatch(item);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -134,7 +149,22 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
             <span className="text-sm text-slate-500 dark:text-slate-400">
               {item.receipt.line_items?.length ?? 0} line items
             </span>
+            {item.receipt.confidence_level ? (
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                {item.receipt.confidence_level} confidence
+              </span>
+            ) : null}
           </div>
+          {weak ? (
+            <div
+              role="alert"
+              className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+            >
+              ⚠️ Uncertain amount — please verify the total against the receipt
+              image before confirming. A misread total would corrupt your
+              spending history.
+            </div>
+          ) : null}
           <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div>
               <dt className="text-xs uppercase tracking-wide text-slate-400">Total</dt>
@@ -153,8 +183,13 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
             <Link href={`/receipts/${item.receipt_id}`} className="btn-secondary text-sm">
               Open full detail
             </Link>
-            <button type="button" onClick={complete} disabled={saving} className="btn-primary text-sm">
-              {saving ? "Saving…" : "✓ Looks good — complete"}
+            <button
+              type="button"
+              onClick={complete}
+              disabled={saving}
+              className="btn-primary text-sm"
+            >
+              {saving ? "Saving…" : weak ? "✓ Confirm amount — complete" : "✓ Looks good — complete"}
             </button>
             {message ? (
               <span className="text-xs text-emerald-600 dark:text-emerald-400" role="status">

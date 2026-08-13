@@ -27,6 +27,11 @@ _LOCALE_DECIMAL_MAP: dict[str, str] = {
     "por": ",",
 }
 
+# Confidence thresholds for the per-receipt confidence level.
+_CONF_LEVEL_HIGH = 0.85  # >= high
+_CONF_LEVEL_MEDIUM = 0.60  # >= medium, < high
+# below medium => "low"
+
 # Default currency per locale
 _CURRENCY_LOCALE_HINTS: dict[str, str] = {
     "eng": "USD",
@@ -63,6 +68,7 @@ class ParsedReceipt:
 @dataclass
 class ConfidenceReceipt(ParsedReceipt):
     confidence: dict[str, float | None] = field(default_factory=dict)
+    confidence_level: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -575,9 +581,15 @@ def parse_receipt(image_bytes: bytes, *, lang: str | None = None) -> ParsedRecei
 
 
 def parse_receipt_with_confidence(image_bytes: bytes, *, lang: str | None = None) -> ConfidenceReceipt:
-    """Extract structured receipt data + per-field confidence scores."""
+    """Extract structured receipt data + per-field confidence scores.
+
+    Also computes the per-receipt ``confidence_level`` ("high" | "medium" |
+    "low") from the overall OCR word confidence, so weak/low-quality images
+    are explicitly flagged as uncertain (BUG-001 / consumer-pivot F1.4).
+    """
     parsed = parse_receipt(image_bytes, lang=lang)
     confidence = _confidence_from_data(image_bytes)
+    level = _confidence_level(confidence)
     return ConfidenceReceipt(
         merchant=parsed.merchant,
         date=parsed.date,
@@ -587,7 +599,26 @@ def parse_receipt_with_confidence(image_bytes: bytes, *, lang: str | None = None
         currency=parsed.currency,
         raw_text=parsed.raw_text,
         confidence=confidence,
+        confidence_level=level,
     )
+
+
+def _confidence_level(confidence: dict[str, float | None]) -> str:
+    """Map the per-field confidence dict to a single receipt-level band.
+
+    Uses the mean of the non-None per-field confidences. When no field has
+    a measurable confidence (e.g. OCR produced no words at all) the receipt
+    is ``"low"`` — the extraction cannot be trusted.
+    """
+    values = [v for v in confidence.values() if v is not None]
+    if not values:
+        return "low"
+    avg = sum(values) / len(values)
+    if avg >= _CONF_LEVEL_HIGH:
+        return "high"
+    if avg >= _CONF_LEVEL_MEDIUM:
+        return "medium"
+    return "low"
 
 
 def _normalize_date(raw: str) -> str | None:

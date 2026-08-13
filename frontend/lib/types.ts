@@ -39,6 +39,8 @@ export interface AiExtraction {
   line_items: LineItem[];
   /** Per-field confidence, e.g. { merchant: 0.97, date: 0.92, total: 0.99 } */
   confidence: Record<string, number>;
+  /** Per-receipt OCR confidence band (high/medium/low). */
+  confidence_level?: ConfidenceLevel | null;
 }
 
 /**
@@ -52,6 +54,9 @@ export interface AiScanUploadResponse extends ReceiptItem {
   tesseract_result?: AiExtraction;
 }
 
+/** Per-receipt OCR confidence band — how much the extraction can be trusted. */
+export type ConfidenceLevel = "high" | "medium" | "low";
+
 export interface Receipt {
   vendor: string;
   total: number | null;
@@ -60,6 +65,7 @@ export interface Receipt {
   currency: string | null;
   line_items: LineItem[];
   confidence: Record<string, number>;
+  confidence_level?: ConfidenceLevel | null;
   category?: string;
 }
 
