@@ -213,7 +213,9 @@ def test_invite_token_is_single_use() -> None:
     ).json()
     url = f"/auth/households/{household}/invites/{invite['invite_id']}/accept"
     assert client.post(url, json={"token": invite["token"]}).status_code == 201
-    assert client.post(url, json={"token": invite["token"]}).status_code == 401
+    # After consumption the token is dead — surfaced as 404 (matching the
+    # accept contract: unknown/expired/used invites are not found).
+    assert client.post(url, json={"token": invite["token"]}).status_code == 404
 
 
 def test_non_owner_cannot_invite() -> None:

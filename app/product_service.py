@@ -774,6 +774,8 @@ class ProductService:
             raise PermissionError("only the household owner can invite members")
         if role not in HOUSEHOLD_ROLES:
             raise ValueError("invalid household role")
+        if role == "owner":
+            raise ValueError("a household has exactly one owner")
         token = secrets.token_urlsafe(32)
         now = self._now()
         expires = datetime.fromisoformat(now).timestamp() + ttl_seconds

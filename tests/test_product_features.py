@@ -20,7 +20,8 @@ def parsed(confidence: float = 0.95) -> ConfidenceReceipt:
     return ConfidenceReceipt(
         merchant="Test Shop", date="2026-07-29",
         items=[ReceiptItem(name="Coffee", price=5.5)], total=5.5, tax=0.5,
-        currency="USD", raw_text="TEST SHOP", confidence={"merchant": confidence, "total": confidence},
+        currency="USD", raw_text="TEST SHOP",
+        confidence={"merchant": confidence, "total": confidence},
     )
 
 
@@ -53,7 +54,10 @@ def test_upload_history_review_correction_retry_and_cancel() -> None:
     assert corrected.status_code == 200
     assert corrected.json()["receipt"]["total"] == 6.0
 
-    retried = client.post(f"/product/jobs/{job_id}/retry", headers={**HEADERS, "Idempotency-Key": "retry-1"})
+    retried = client.post(
+        f"/product/jobs/{job_id}/retry",
+        headers={**HEADERS, "Idempotency-Key": "retry-1"},
+    )
     assert retried.status_code == 200
     assert client.post(f"/product/jobs/{job_id}/cancel", headers=HEADERS).status_code == 409
 
@@ -72,10 +76,12 @@ def test_tenant_isolation_members_keys_connections_exports_and_dashboard() -> No
 
     connection = client.post(
         "/product/connections", headers=HEADERS,
-        json={"name": "CSV Ledger", "provider": "csv", "mapping": {"vendor": "vendor", "total": "total", "currency": "currency"}},
+        json={"name": "CSV Ledger", "provider": "csv",
+              "mapping": {"vendor": "vendor", "total": "total", "currency": "currency"}},
     )
     assert connection.status_code == 201
-    assert client.post(f"/product/connections/{connection.json()['connection_id']}/test", headers=HEADERS).json()["status"] == "ok"
+    test_url = f"/product/connections/{connection.json()['connection_id']}/test"
+    assert client.post(test_url, headers=HEADERS).json()["status"] == "ok"
 
     dashboard = client.get("/product/dashboard", headers=HEADERS)
     assert dashboard.status_code == 200

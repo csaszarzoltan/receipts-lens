@@ -272,7 +272,11 @@ def accept_invite(
         payload = service.accept_invite(body.token, expected_tenant_id=household_id,
                                         expected_invite_id=invite_id)
     except KeyError as exc:
-        raise HTTPException(401, "Invalid, expired or already-used invite") from exc
+        # Unknown/expired/used token, or a path mismatch (wrong household or
+        # wrong invite id).  A path mismatch must NOT consume the token, so
+        # the service rejects it before consumption — surfaced as 404 to
+        # match the documented contract.
+        raise HTTPException(404, "Invite not found") from exc
     return {
         "session_token": payload["session_token"],
         "email": payload["email"],

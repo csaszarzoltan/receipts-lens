@@ -23,8 +23,8 @@ RED (contract promised, behaviour missing):
 GREEN (regression pins — must stay green after the gaps are fixed):
   * PATCH /product/receipts/{id}/workspace is already gated (403).
   * Expired sessions are rejected on /auth/session/me and /product/*.
-  * A magic-link token created with ``household_id`` verifies as owner of
-    that household.
+  * A magic-link token created with ``household_id`` still derives a FRESH
+    household from the email at verify (CRITICAL-1 — the id is ignored).
   * Accept with a wrong *invite_id* (same household) is already 404.
 
 All flows run through the real FastAPI TestClient (HTTP-level, no mocks —
@@ -297,8 +297,10 @@ def test_expired_session_rejected_everywhere() -> None:
 
 
 def test_magic_link_with_household_binds_owner() -> None:
-    """A magic-link token created with household_id must verify as owner of
-    exactly that household (no fresh household derivation)."""
+    """F1.3 review CRITICAL-1 pin: a caller-supplied ``household_id`` must
+    NOT bind the session — the link always derives a fresh household from
+    the email at verify time (no owner session can be minted for an
+    arbitrary household)."""
     requested = client.post(
         "/auth/magic-link-request",
         json={"email": "kotott@pelda.hu", "household_id": "hh-kotott-1"},
@@ -311,7 +313,9 @@ def test_magic_link_with_household_binds_owner() -> None:
     assert verified.status_code == 201
     identity = verified.json()
     assert identity["role"] == "owner"
-    assert identity["household_id"] == "hh-kotott-1"
+    # Fresh household derived from the email — the supplied id is ignored.
+    assert identity["household_id"].startswith("hh-")
+    assert identity["household_id"] != "hh-kotott-1"
 
 
 def test_accept_wrong_invite_id_same_household_is_404() -> None:
