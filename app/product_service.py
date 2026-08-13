@@ -99,6 +99,7 @@ class ProductService:
             "tax": receipt.tax, "currency": receipt.currency,
             "line_items": [{"name": i.name, "price": i.price} for i in receipt.items],
             "confidence": dict(receipt.confidence),
+            "confidence_level": getattr(receipt, "confidence_level", None),
         }
 
     def create_receipt(self, actor: Actor, parsed: Any, filename: str) -> dict[str, Any]:

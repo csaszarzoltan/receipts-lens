@@ -55,6 +55,7 @@ def _ai_extraction(parsed: ConfidenceReceipt) -> dict[str, Any]:
         "currency": parsed.currency,
         "line_items": [{"name": item.name, "price": item.price} for item in parsed.items],
         "confidence": dict(parsed.confidence),
+        "confidence_level": parsed.confidence_level,
     }
 
 

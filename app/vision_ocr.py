@@ -30,6 +30,7 @@ from app.ocr import (
     ConfidenceReceipt,
     ParsedReceipt,
     ReceiptItem,
+    _confidence_level,
     parse_receipt_with_confidence,
 )
 
@@ -209,6 +210,7 @@ class VisionOcrProvider:
         """Extract structured receipt data + per-field confidence via vision LLM."""
         data = self._call_with_retry(image_bytes, lang=lang)
         parsed = self._parse_vision_json(data)
+        confidence = _confidence_from_json(data)
         return ConfidenceReceipt(
             merchant=parsed.merchant,
             date=parsed.date,
@@ -217,7 +219,8 @@ class VisionOcrProvider:
             tax=parsed.tax,
             currency=parsed.currency,
             raw_text=parsed.raw_text,
-            confidence=_confidence_from_json(data),
+            confidence=confidence,
+            confidence_level=_confidence_level(confidence),
         )
 
     def _call_vision(self, image_bytes: bytes, *, lang: str | None = None) -> dict:
