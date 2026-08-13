@@ -31,7 +31,7 @@ from app.product_api import service
 from app.product_service import (
     HOUSEHOLD_ROLES,
     Actor,
-    _is_production,
+    is_production,
 )
 
 logger = logging.getLogger("uvicorn.error")
@@ -43,7 +43,7 @@ SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
 MAGIC_LINK_TTL_SECONDS = 15 * 60
 
 LOGIN_LINK_TEMPLATE = "{base_url}/auth/magic-link?token={token}"
-INVITE_LINK_TEMPLATE = "{base_url}/auth/invite?token={token}"
+INVITE_LINK_TEMPLATE = "{base_url}/auth/invite?token={token}&household={household_id}&invite={invite_id}"
 AUTH_BASE_URL = os.getenv(
     "RECEIPTLENS_AUTH_BASE_URL", "http://localhost:3000"
 ).rstrip("/")
@@ -51,7 +51,11 @@ AUTH_BASE_URL = os.getenv(
 
 class MagicLinkRequest(BaseModel):
     email: str = Field(min_length=3)
-    household_id: str | None = None
+    # ``household_id`` is deliberately NOT accepted: binding a magic link to
+    # an arbitrary household without proof of membership would mint an owner
+    # session for that household (F1.3 review CRITICAL-1).  A fresh household
+    # is derived from the email at verify time; joining an existing household
+    # goes through the owner-issued invite flow instead.
 
 
 class MagicLinkVerifyRequest(BaseModel):
@@ -102,7 +106,7 @@ def _deliver_or_return(token: str, link: str, email: str, subject: str, body: st
                 return {"delivered": True}
         except (OSError, RuntimeError) as exc:
             logger.warning("magic-link email delivery failed: %s", exc)
-    if _is_production:
+    if is_production():
         return {"delivered": False, "detail": "Email delivery is not configured"}
     return {"delivered": False, "magic_link": link, "token": token}
 
@@ -125,7 +129,7 @@ def household_actor(
         except KeyError as exc:
             raise HTTPException(401, "Invalid or expired session") from exc
         return Actor(identity["tenant_id"], identity["role"])
-    if _is_production:
+    if is_production():
         raise HTTPException(401, "Session required")
     if x_tenant_id is None or not x_tenant_id.strip():
         raise HTTPException(401, "Tenant identity is required")
@@ -143,16 +147,13 @@ def household_actor(
 def magic_link_request(body: MagicLinkRequest) -> dict[str, Any]:
     """Create a magic-link token for *email* and deliver/return the link.
 
-    When ``household_id`` is supplied the token is bound to that household
-    (owner-style session on verify); without it, the token carries no tenant
-    so a fresh household is created at verify time.
+    The token carries no tenant — at verify time a fresh household is
+    derived from the email.  Caller-supplied households are rejected
+    (CRITICAL-1): binding a link to an arbitrary household without
+    membership proof would mint an owner session for that household.
     """
     email = str(body.email).strip().lower()
-    created = service.create_magic_link(
-        email,
-        tenant_id=body.household_id,
-        role="owner" if body.household_id else None,
-    )
+    created = service.create_magic_link(email)
     token = created["token"]
     link = LOGIN_LINK_TEMPLATE.format(base_url=AUTH_BASE_URL, token=token)
     subject = "ReceiptLens — belépés"
@@ -222,7 +223,10 @@ def create_invite(
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     token = invite["token"]
-    link = INVITE_LINK_TEMPLATE.format(base_url=AUTH_BASE_URL, token=token)
+    link = INVITE_LINK_TEMPLATE.format(
+        base_url=AUTH_BASE_URL, token=token,
+        household_id=household_id, invite_id=invite["invite_id"],
+    )
     subject = "ReceiptLens — családi meghívó"
     body_text = (
         f"Csatlakozz a ReceiptLens háztartáshoz ({household_id}):\n\n"
@@ -265,11 +269,10 @@ def accept_invite(
 ) -> dict[str, Any]:
     """Accept a family invite: creates the membership and signs the user in."""
     try:
-        payload = service.accept_invite(body.token)
+        payload = service.accept_invite(body.token, expected_tenant_id=household_id,
+                                        expected_invite_id=invite_id)
     except KeyError as exc:
         raise HTTPException(401, "Invalid, expired or already-used invite") from exc
-    if payload["tenant_id"] != household_id or payload["invite_id"] != invite_id:
-        raise HTTPException(404, "Invite not found")
     return {
         "session_token": payload["session_token"],
         "email": payload["email"],

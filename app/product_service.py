@@ -44,9 +44,16 @@ def _sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-# F1.3: the X-Tenant-ID/X-Role demo auth is only valid in development mode.
-# Defined here (not in a downstream module) to avoid circular imports.
-_is_production = os.getenv("RECEIPTLENS_ENV", "").strip().lower() == "production"
+def is_production() -> bool:
+    """True when the deployment is production.
+
+    Reads the environment per call so a test or CLI can flip
+    ``RECEIPTLENS_ENV`` after import.  Legacy header auth is only
+    honored in non-production environments.
+    """
+    return os.getenv("RECEIPTLENS_ENV", "").strip().lower() == "production"
+
+
 class ProductService:
     """Tenant-safe workflow service backed by SQLite."""
 
@@ -210,7 +217,6 @@ class ProductService:
     def add_member(self, actor: Actor, email: str, role: str) -> dict[str, Any]:
         if not self.can_manage_household(actor): raise PermissionError
         if role not in {"admin", "reviewer", "integrator", *HOUSEHOLD_ROLES}: raise ValueError("invalid role")
-        if role not in {"admin", "reviewer", "integrator"}: raise ValueError("invalid role")
         member_id = str(uuid.uuid4())
         with self._db:
             self._db.execute("INSERT INTO members VALUES(?,?,?,?,1)", (member_id, actor.tenant_id, email.lower(), role))
@@ -508,8 +514,8 @@ class ProductService:
         All validation happens before the transaction so users never receive a
         partially saved receipt when one section is invalid.
         """
-        if actor.role not in {"admin", "reviewer"}:
-            raise PermissionError("reviewer role required")
+        if not self.can_write(actor):
+            raise PermissionError("write role required (owner/adult)")
         allowed = {"vendor", "date", "total", "tax", "currency"}
         fields = dict(fields or {})
         if set(fields) - allowed:
@@ -761,7 +767,7 @@ class ProductService:
         ttl_seconds: int = INVITE_TTL_SECONDS,
     ) -> dict[str, Any]:
         """Create a family invite (owner only).  Returns the raw invite token once."""
-        if actor.role not in {"owner", "admin"}:
+        if not self.can_manage_household(actor):
             raise PermissionError("only the household owner can invite members")
         if role not in HOUSEHOLD_ROLES:
             raise ValueError("invalid household role")
@@ -789,7 +795,7 @@ class ProductService:
 
     def list_invites(self, actor: Actor) -> list[dict[str, Any]]:
         """List the household's pending invites (owner only)."""
-        if actor.role not in {"owner", "admin"}:
+        if not self.can_manage_household(actor):
             raise PermissionError("only the household owner can list invites")
         rows = self._db.execute(
             "SELECT invite_id,email,role,status,created_at,accepted_at FROM household_invites "
@@ -798,8 +804,20 @@ class ProductService:
         ).fetchall()
         return [dict(r) for r in rows]
 
-    def accept_invite(self, token: str) -> dict[str, Any]:
-        """Accept a family invite: creates a membership + a session in one step."""
+    def accept_invite(
+        self,
+        token: str,
+        *,
+        expected_tenant_id: str | None = None,
+        expected_invite_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Accept a family invite: creates a membership + a session in one step.
+
+        ``expected_tenant_id``/``expected_invite_id`` are the ids carried in
+        the accept URL.  When supplied, they are validated BEFORE the token
+        is consumed, so a wrong-household path (404) never burns a valid
+        invite token (F1.3 review MED-6).
+        """
         digest = _sha256(token)
         now = self._now()
         with self._lock, self._db:
@@ -814,6 +832,10 @@ class ProductService:
             if row["expires_at"] <= now:
                 raise KeyError("invite token expired")
             tenant_id, role, email, invite_id = row["tenant_id"], row["role"], row["email"], row["invite_id"]
+            if expected_tenant_id is not None and tenant_id != expected_tenant_id:
+                raise KeyError("invite token does not match the household path")
+            if expected_invite_id is not None and invite_id != expected_invite_id:
+                raise KeyError("invite token does not match the invite path")
             self._db.execute("UPDATE auth_tokens SET consumed_at=? WHERE token_hash=?", (now, digest))
             self._db.execute(
                 "UPDATE household_invites SET status='accepted', accepted_at=? WHERE invite_id=?",
@@ -842,13 +864,18 @@ class ProductService:
     # --- F1.3 role helpers ---------------------------------------------------
     @staticmethod
     def household_role_of(actor: Actor) -> str:
-        """Map a wire role (legacy header or household) to a household role."""
+        """Map a wire role (legacy header or household) to a household role.
+
+        Legacy dev-header roles map to RESTRICTED household roles — the
+        demo headers must never grant owner-equivalent power (F1.3 review
+        CRITICAL-2): ``admin``/``reviewer`` -> ``adult`` (can write), and
+        ``integrator`` -> ``child`` (read-mostly).  Household roles pass
+        through unchanged.
+        """
         role = actor.role
         if role in HOUSEHOLD_ROLES:
             return role
-        if role == "admin":
-            return "owner"
-        if role == "reviewer":
+        if role in {"admin", "reviewer"}:
             return "adult"
         return "child"
 

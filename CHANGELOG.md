@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased] - 2026-08-13 (F1.3 auth review fixes — t_313a4ac0)
+
+### Fixed
+- **CRITICAL-1 (account takeover)**: `POST /auth/magic-link-request` no longer accepts/honors a caller-supplied `household_id` — a magic link can never mint an owner session for an arbitrary household. A fresh household is always derived from the email at verify time; joining an existing household requires the owner-issued invite flow.
+- **CRITICAL-2**: legacy `X-Role` dev headers map to RESTRICTED household roles (`admin`→`adult`, `reviewer`→`adult`, `integrator`→`child`) — the demo header auth no longer grants owner-equivalent power (invite/member management stays owner-only).
+- **HIGH-3**: every mutating `/product` endpoint is now write-gated (`child`/`view_only` get `403`): upload, metadata PUT, connections POST, approval request, job retry/cancel, line-items PUT, exports/export-runs/export-commands, saved-views, notifications, automation-rules (+preview/activate/runs), duplicates decision, preferences, inbound emails, approval-flows, recurring feedback, exchange-rates, currency convert, permissions, quality benchmarks/profiles, rollbacks, QBO oauth start/refresh/disconnect/mappings, provider-mappings validate, accounting-projection refresh.
+- **HIGH-4**: `PATCH /product/receipts/{id}/workspace` now allows `owner`/`adult` (was admin/reviewer only); `child`/`view_only` stay blocked with `403`.
+- **HIGH-5**: the invite email link now embeds the ids the accept page requires — `{base}/auth/invite?token=...&household={household_id}&invite={invite_id}`.
+- **MED-6**: invite accept validates the household+invite path BEFORE consuming the token, so a wrong path no longer burns a valid invite token.
+- **MED-7**: `_is_production` became `is_production()` — the env is re-read per request instead of at import time.
+- **LOW-8**: `add_member` no longer rejects household roles via the stale second role check (owner-managed households can roster `adult`/`child`/`view_only` members).
+
 ## [Unreleased] - 2026-08-13 (US-024 household auth F1.3)
 
 ### Added
@@ -13,8 +25,10 @@
   - Family invites: the household owner invites members by email with a household role
     (`adult` / `child` / `view_only`); 7-day single-use tokens; accept creates the membership
     and signs the user in (`POST /auth/households/{id}/invites[/{invite_id}/accept]`).
-  - Role gates: `child` / `view_only` get `403` on receipt edits (`PATCH /product/review-items`)
-    and invite creation; `owner`/`adult` may edit; only the owner can invite.
+  - Role gates: `child` / `view_only` get `403` on receipt edits (`PATCH /product/review-items`),
+    the receipt workspace (`PATCH /product/receipts/{id}/workspace`) and invite creation;
+    `owner`/`adult` may edit; only the owner can invite. (Hardened in the F1.3 review-fix
+    pass: header roles are restricted and every mutating `/product` endpoint is write-gated.)
   - Sessions travel as `Authorization: Bearer <session_token>`; the legacy `X-Tenant-ID` /
     `X-Role` headers remain valid in development only and are rejected in production (AC6).
   - Frontend: `/auth/magic-link` + `/auth/invite` pages, session persistence in
@@ -24,7 +38,9 @@
 ### Verification
 - New contract suite `tests/test_us_024_auth_contract.py` — 25 tests (single-use, expiry 401,
   owner-only invites, 403 role gates, dev-header compat), exercised through a real FastAPI
-  TestClient (HTTP-level, no mocks).
+  TestClient (HTTP-level, no mocks); extended to 31 tests with the F1.3 review regressions
+  (magic-link household binding, invite-link ids, accept token reuse, workspace role gates,
+  write-gate matrix, add_member household roles).
 - Frontend `tsc --noEmit`: 0 errors.
 - Full Python regression: 1424 passed / 10 skipped (+1 documented pre-existing flake in
   `test_fetcher_wiring.py`, untouched by this change).

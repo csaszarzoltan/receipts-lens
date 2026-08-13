@@ -8,6 +8,8 @@ from fastapi.testclient import TestClient
 
 from app.api import app
 from app.ocr import ConfidenceReceipt, ReceiptItem
+from app.product_api import service
+from app.product_service import Actor
 
 client = TestClient(app)
 HEADERS = {"X-Tenant-ID": "team-a", "X-Role": "admin"}
@@ -57,8 +59,14 @@ def test_upload_history_review_correction_retry_and_cancel() -> None:
 
 
 def test_tenant_isolation_members_keys_connections_exports_and_dashboard() -> None:
-    member = client.post("/product/members", headers=HEADERS, json={"email": "reviewer@example.com", "role": "reviewer"})
-    assert member.status_code == 201
+    # HEADERS (X-Role: admin) maps to the household role ``adult`` after the
+    # CRITICAL-2 fix — it can write receipts but cannot manage the household
+    # roster.  Household management (add_member) requires the owner role, so
+    # this test seeds the member via the service layer as the household owner.
+    service.add_member(Actor("team-a", "owner"), "reviewer@example.com", "reviewer")
+    member = client.get("/product/members", headers=HEADERS)
+    assert member.status_code == 200
+    assert any(m["email"] == "reviewer@example.com" for m in member.json()["items"])
     key = client.post("/product/api-keys", headers=HEADERS, json={"name": "integration"})
     assert key.status_code == 201 and key.json()["secret"].startswith("rl_")
 

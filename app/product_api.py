@@ -13,7 +13,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.accounting_workspace import AccountingWorkspace
 from app.advanced_workspace import AdvancedWorkspace, extract_ocr_boxes
 from app.ocr import ConfidenceReceipt, parse_receipt_with_confidence
-from app.product_service import Actor, ProductConflict, ProductService, HOUSEHOLD_ROLES, _is_production
+from app.product_service import (
+    HOUSEHOLD_ROLES,
+    Actor,
+    ProductConflict,
+    ProductService,
+    is_production,
+)
 from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_vision
 
 router = APIRouter()
@@ -37,7 +43,7 @@ def actor(authorization: str | None = Header(default=None, alias="Authorization"
         except KeyError as exc:
             raise HTTPException(401, "Invalid or expired session") from exc
         return Actor(identity["tenant_id"], identity["role"])
-    if _is_production:
+    if is_production():
         raise HTTPException(401, "Session required")
     if x_tenant_id is None or not x_tenant_id.strip():
         raise HTTPException(401, "Tenant identity is required")
@@ -118,6 +124,8 @@ async def upload_receipt(
     ai_scan: str | None = Form(default=None, description="Enable AI-mode OCR (vision LLM with Tesseract fallback)"),
     current: Actor = Depends(actor),
 ) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot upload receipts")
     if file.content_type and not file.content_type.startswith("image/"): raise HTTPException(415, "An image file is required")
     data = await file.read()
     if not data: raise HTTPException(422, "The uploaded file is empty")
@@ -165,11 +173,15 @@ def jobs(current: Actor = Depends(actor)) -> dict[str, Any]: return {"items":ser
 
 @router.post("/product/jobs/{job_id}/retry")
 def retry_job(job_id: str, current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot retry jobs")
     try:return service.retry(current,job_id)
     except KeyError:raise HTTPException(404,"Job not found")
 
 @router.post("/product/jobs/{job_id}/cancel")
 def cancel_job(job_id: str, current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot cancel jobs")
     try:return service.cancel(current,job_id)
     except KeyError:raise HTTPException(404,"Job not found")
     except ProductConflict as exc:raise HTTPException(409,{"code":"stale_version","message":str(exc)})
@@ -218,6 +230,8 @@ def list_connections(current:Actor=Depends(actor))->dict[str,Any]:
 
 @router.post("/product/connections",status_code=201)
 def create_connection(body:ConnectionRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    if not service.can_write(current):
+        raise HTTPException(403,"Read-only role cannot create connections")
     try:return service.create_connection(current,body.name,body.provider,body.mapping)
     except ValueError as exc:raise HTTPException(422,str(exc))
 
@@ -228,6 +242,8 @@ def test_connection(connection_id:str,current:Actor=Depends(actor))->dict[str,An
 
 @router.post("/product/exports",status_code=201)
 def create_export(body:ExportRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    if not service.can_write(current):
+        raise HTTPException(403,"Read-only role cannot create exports")
     try:return service.export(current,body.connection_id,body.receipt_ids)
     except KeyError:raise HTTPException(404,"Connection not found")
 
@@ -314,6 +330,8 @@ def update_receipt_workspace(
 @router.put("/product/receipts/{receipt_id}/metadata")
 def update_metadata(receipt_id: str, body: MetadataRequest,
                     current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot edit metadata")
     try: return service.set_metadata(current,receipt_id,body.tags,body.project,body.cost_center)
     except KeyError: raise HTTPException(404,"Receipt not found")
     except ValueError as exc: raise HTTPException(422,str(exc)) from exc
@@ -327,6 +345,8 @@ def create_approval_policy(body: ApprovalPolicyRequest,
 
 @router.post("/product/receipts/{receipt_id}/approval")
 def request_approval(receipt_id: str,current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot request approval")
     try: return service.request_approval(current,receipt_id)
     except KeyError: raise HTTPException(404,"Receipt not found")
 
@@ -409,6 +429,8 @@ def saved_views(current: Actor = Depends(actor)) -> dict[str, Any]:
 
 @router.post("/product/saved-views", status_code=201)
 def create_saved_view(body: SavedViewRequest, current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot create saved views")
     try:
         return advanced.create_view(current.tenant_id, body.name, body.filters,
                                     body.shared, body.pinned)
@@ -417,6 +439,8 @@ def create_saved_view(body: SavedViewRequest, current: Actor = Depends(actor)) -
 
 @router.delete("/product/saved-views/{view_id}")
 def delete_saved_view(view_id: str, current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot delete saved views")
     if not advanced.delete_view(current.tenant_id, view_id):
         raise HTTPException(404, "Saved view not found")
     return {"status": "deleted", "view_id": view_id}
@@ -430,6 +454,8 @@ def list_notifications(include_archived: bool = False,
 @router.patch("/product/notifications/{notification_id}")
 def update_notification(notification_id: str, body: NotificationUpdateRequest,
                         current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot update notifications")
     try:
         return advanced.update_notification(current.tenant_id, notification_id,
                                             body.read, body.archived)
@@ -438,6 +464,8 @@ def update_notification(notification_id: str, body: NotificationUpdateRequest,
 
 @router.post("/product/notifications/read-all")
 def read_all_notifications(current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot update notifications")
     return {"updated": advanced.mark_all_read(current.tenant_id)}
 
 @router.get("/product/automation-rules")
@@ -447,6 +475,8 @@ def list_automation_rules(current: Actor = Depends(actor)) -> dict[str, Any]:
 @router.post("/product/automation-rules", status_code=201)
 def create_automation_rule(body: AutomationRuleRequest,
                            current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot create automation rules")
     try:
         return advanced.create_rule(current.tenant_id, body.name, body.conditions,
                                     body.actions, body.priority)
@@ -456,6 +486,8 @@ def create_automation_rule(body: AutomationRuleRequest,
 @router.post("/product/automation-rules/preview")
 def preview_automation_rule(body: AutomationRuleRequest,
                             current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot preview automation rules")
     return {"matching_receipts": advanced.rule_preview(current.tenant_id, body.conditions)}
 
 @router.get("/product/duplicates")
@@ -465,6 +497,8 @@ def duplicate_candidates(current: Actor = Depends(actor)) -> dict[str, Any]:
 @router.post("/product/duplicates/decision")
 def duplicate_decision(body: DuplicateDecisionRequest,
                        current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot resolve duplicates")
     try:
         result = advanced.decide_duplicate(current.tenant_id, body.left_id,
                                            body.right_id, body.decision)
@@ -481,6 +515,8 @@ def get_preferences(current: Actor = Depends(actor)) -> dict[str, Any]:
 @router.put("/product/preferences")
 def save_preferences(body: PreferencesRequest,
                      current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot save preferences")
     return advanced.save_preferences(current.tenant_id, current.role, body.payload)
 
 @router.get("/product/export-runs")
@@ -489,6 +525,8 @@ def export_runs(current: Actor = Depends(actor)) -> dict[str, Any]:
 
 @router.post("/product/export-runs", status_code=201)
 def create_export_run(body: ExportRequest, current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot start export runs")
     try:
         result = service.export(current, body.connection_id, body.receipt_ids)
         return advanced.record_export(current.tenant_id, "connection",
@@ -554,8 +592,8 @@ class PermissionRequest(BaseModel):
 @router.put("/product/receipts/{receipt_id}/line-items")
 def update_line_items(receipt_id: str, body: LineItemsRequest,
                       current: Actor = Depends(actor)) -> dict[str, Any]:
-    if current.role not in {"admin", "reviewer"}:
-        raise HTTPException(403, "Reviewer role required")
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot edit line items")
     try:
         result = accounting.update_line_items(current, receipt_id, body.items,
                                               body.expected_version)
@@ -584,6 +622,8 @@ def list_approval_flows(current: Actor = Depends(actor)) -> dict[str, Any]:
 @router.post("/product/approval-flows", status_code=201)
 def create_approval_flow(body: ApprovalFlowRequest,
                          current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot create approval flows")
     try:
         return accounting.create_approval_flow(current, body.name, body.definition)
     except PermissionError as exc:
@@ -594,6 +634,8 @@ def create_approval_flow(body: ApprovalFlowRequest,
 @router.post("/product/approval-flows/simulate")
 def simulate_approval_flow(body: ApprovalSimulationRequest,
                            current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot simulate approval flows")
     return accounting.simulate_approval(current.tenant_id, body.definition, body.receipt)
 
 @router.get("/product/export-preparations")
@@ -603,6 +645,8 @@ def list_export_preparations(current: Actor = Depends(actor)) -> dict[str, Any]:
 @router.post("/product/export-preparations", status_code=201)
 def create_export_preparation(body: ExportPreparationRequest,
                               current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot prepare exports")
     try: return export_workflow.prepare(current, body.receipt_ids, body.connection_id)
     except ValueError as exc: raise HTTPException(422, str(exc)) from exc
 
@@ -619,8 +663,8 @@ def receive_inbound_email(body: InboundEmailRequest,
     Auth-required (SEC-002): without the tenant/role headers the request is
     rejected — previously anyone could POST emails into any tenant's inbox.
     """
-    if current.role not in ("admin", "integrator"):
-        raise HTTPException(403, "Admin or integrator role required")
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot receive emails")
     try: return inbox_service.receive(current.tenant_id, body.sender, body.subject, body.attachments)
     except ValueError as exc: raise HTTPException(422, str(exc)) from exc
 
@@ -631,6 +675,8 @@ def inbound_email_detail(email_id:str,current:Actor=Depends(actor))->dict[str,An
     except KeyError as exc:raise HTTPException(404,"Email not found") from exc
 @router.post("/product/inbound-emails/{email_id}/attachments/{attachment_id}/retry")
 def retry_inbound_attachment(email_id:str,attachment_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    if not service.can_write(current):
+        raise HTTPException(403,"Read-only role cannot retry attachments")
     try:return inbox_service.retry(current.tenant_id,email_id,attachment_id)
     except KeyError as exc:raise HTTPException(404,"Attachment not found") from exc
     except ValueError as exc:raise HTTPException(422,str(exc)) from exc
@@ -642,12 +688,16 @@ def recurring_expenses(current: Actor = Depends(actor)) -> dict[str, Any]:
 @router.post("/product/recurring-expenses/feedback")
 def save_recurring_feedback(body: RecurringFeedbackRequest,
                             current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot save feedback")
     return accounting.recurring_feedback(current.tenant_id, body.merchant,
                                          body.is_subscription)
 
 @router.post("/product/exchange-rates", status_code=201)
 def set_exchange_rate(body: ExchangeRateRequest,
                       current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot set exchange rates")
     try:
         return accounting.set_rate(current, body.base, body.quote, body.rate,
                                    body.rate_date, body.source)
@@ -659,6 +709,8 @@ def set_exchange_rate(body: ExchangeRateRequest,
 @router.post("/product/currency/convert")
 def convert_currency(body: ConversionRequest,
                      current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot record conversions")
     try:
         return accounting.convert(current.tenant_id, body.amount, body.base,
                                   body.quote, body.rate_date)
@@ -672,6 +724,8 @@ def permissions(current: Actor = Depends(actor)) -> dict[str, Any]:
 @router.put("/product/permissions")
 def update_permissions(body: PermissionRequest,
                        current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot change permissions")
     try:
         return accounting.set_permissions(current, body.role, body.permissions)
     except PermissionError as exc:
@@ -721,6 +775,8 @@ class RollbackRequest(BaseModel):
 
 @router.post("/product/export-commands", status_code=201)
 def execute_export_command(body: ExportCommandRequest, idempotency_key: str = Header(alias="Idempotency-Key"), current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot execute export commands")
     try:return export_workflow.execute(current,body.preparation_id,body.acknowledged_warning_receipt_ids,idempotency_key)
     except KeyError as exc:raise HTTPException(404,"Preparation not found") from exc
     except RuntimeError as exc:raise HTTPException(409,{"code":"stale_preparation","message":str(exc)}) from exc
@@ -740,6 +796,8 @@ def receipt_audit(receipt_id:str,current:Actor=Depends(actor))->dict[str,Any]:
     return {"receipt_id":receipt_id,"events":advanced.history(current.tenant_id,receipt_id)}
 @router.post("/product/quality/benchmarks/run",status_code=201)
 def run_benchmark(body:BenchmarkRunRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    if not service.can_write(current):
+        raise HTTPException(403,"Read-only role cannot run benchmarks")
     try:return quality_service.evaluate(current,body.manifest_name,body.cases)
     except PermissionError as exc:raise HTTPException(403,"Admin role required") from exc
     except ValueError as exc:raise HTTPException(422,str(exc)) from exc
@@ -749,6 +807,8 @@ def benchmark_report(report_id:str,current:Actor=Depends(actor))->dict[str,Any]:
     except KeyError as exc:raise HTTPException(404,"Benchmark report not found") from exc
 @router.post("/product/quality/confidence-profiles",status_code=201)
 def publish_profile(body:ConfidenceProfileRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    if not service.can_write(current):
+        raise HTTPException(403,"Read-only role cannot publish profiles")
     try:return quality_service.publish(current,body.benchmark_report_id,body.thresholds)
     except PermissionError as exc:raise HTTPException(403,"Admin role required") from exc
     except KeyError as exc:raise HTTPException(404,"Benchmark report not found") from exc
@@ -757,15 +817,21 @@ def publish_profile(body:ConfidenceProfileRequest,current:Actor=Depends(actor))-
 def active_profile(current:Actor=Depends(actor))->dict[str,Any]:return {"profile":quality_service.active(current.tenant_id)}
 @router.post("/product/automation-rules/{rule_id}/preview")
 def preview_rule_version(rule_id:str,body:AutomationPreviewV2,current:Actor=Depends(actor))->dict[str,Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot preview automation rules")
     try:return automation_service.preview(current,rule_id,body.version,body.receipt_ids)
     except KeyError as exc:raise HTTPException(404,"Rule not found") from exc
 @router.post("/product/automation-rules/{rule_id}/activate")
 def activate_rule(rule_id:str,body:AutomationActivate,current:Actor=Depends(actor))->dict[str,Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot activate automation rules")
     try:return automation_service.activate(current,rule_id,body.version,body.preview_token)
     except KeyError as exc:raise HTTPException(404,"Rule not found") from exc
     except ValueError as exc:raise HTTPException(422,str(exc)) from exc
 @router.post("/product/automation-rules/{rule_id}/runs",status_code=201)
 def run_rule(rule_id:str,body:AutomationRunRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot run automation rules")
     try:return automation_service.run(current,rule_id,body.version,body.receipt_ids)
     except KeyError as exc:raise HTTPException(404,"Rule not found") from exc
 @router.get("/product/automation-rules/{rule_id}/runs")
@@ -780,10 +846,14 @@ def automation_run(run_id:str,current:Actor=Depends(actor))->dict[str,Any]:
     except KeyError as exc:raise HTTPException(404,"Run not found") from exc
 @router.post("/product/automation-runs/{run_id}/rollback-preview")
 def rollback_preview(run_id:str,current:Actor=Depends(actor))->dict[str,Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot preview rollbacks")
     try:return automation_service.rollback_preview(current.tenant_id,run_id)
     except KeyError as exc:raise HTTPException(404,"Run not found") from exc
 @router.post("/product/automation-runs/{run_id}/rollback")
 def rollback_run(run_id:str,body:RollbackRequest,current:Actor=Depends(actor))->dict[str,Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot roll back automation runs")
     try:return automation_service.rollback(current,run_id,body.eligible_receipt_ids)
     except KeyError as exc:raise HTTPException(404,"Run not found") from exc
 
@@ -817,6 +887,8 @@ class ProjectionRefreshBody(BaseModel):
 
 @router.post('/product/connections/quickbooks/oauth/start', status_code=201)
 def qbo_oauth_start(body: OAuthStartRequest, current: Actor = Depends(actor)):
+    if not service.can_write(current):
+        raise HTTPException(403, 'Read-only role cannot start OAuth flows')
     try:
         result = _connections().start_oauth(current, body.return_path)
         return {'authorization_url': result['authorization_url'], 'state_expires_at': result['state_expires_at']}
@@ -852,6 +924,8 @@ def qbo_oauth_callback(state: str = Query(min_length=8), code: str = Query(min_l
 @router.post('/product/connections/{connection_id}/refresh')
 def refresh_provider_connection(connection_id: str, current: Actor = Depends(actor)):
     """Rotate an expiring access token via Intuit's refresh flow."""
+    if not service.can_write(current):
+        raise HTTPException(403, 'Read-only role cannot refresh connections')
     try:
         _, refreshed = _connections().refresh_if_needed(current, connection_id)
     except KeyError as exc:
@@ -866,6 +940,8 @@ def refresh_provider_connection(connection_id: str, current: Actor = Depends(act
 
 @router.post('/product/provider-mappings/validate')
 def validate_provider_mapping(body:MappingBody,current:Actor=Depends(actor)):
+    if not service.can_write(current):
+        raise HTTPException(403,'Read-only role cannot validate mappings')
     if current.role!='admin': raise HTTPException(403,'Admin role required')
     if not body.expense_account_ref.strip(): raise HTTPException(422,{'field':'expense_account_ref','code':'required'})
     return {'valid':True,'mapping':body.model_dump()}
@@ -878,12 +954,14 @@ def get_accounting_projection(receipt_id:str,current:Actor=Depends(actor)):
 
 @router.post('/product/receipts/{receipt_id}/accounting-projection/refresh')
 def refresh_accounting_projection(receipt_id:str,body:ProjectionRefreshBody,current:Actor=Depends(actor)):
+    if not service.can_write(current):
+        raise HTTPException(403,'Read-only role cannot refresh projections')
     try:return projection_service.refresh(current,receipt_id,body.reporting_currency.upper())
     except KeyError as exc: raise HTTPException(404,str(exc)) from exc
 
 @router.get('/product/receipts/{receipt_id}/provider-preview')
 def provider_preview(receipt_id:str,receipt_version:int,mapping_version:int,current:Actor=Depends(actor)):
-    if current.role not in {'admin','reviewer'}: raise HTTPException(403,'Reviewer role required')
+    if not service.can_write(current): raise HTTPException(403,'Read-only role cannot preview mappings')
     try:return projection_service.preview(current,receipt_id,receipt_version,mapping_version,{'expense_account_ref':'configured'})
     except (KeyError,RuntimeError) as exc: raise HTTPException(409,str(exc)) from exc
 
@@ -903,12 +981,16 @@ def provider_connection_detail(connection_id:str,current:Actor=Depends(actor)):
 
 @router.post('/product/connections/{connection_id}/disconnect')
 def disconnect_provider(connection_id:str,current:Actor=Depends(actor)):
+    if not service.can_write(current):
+        raise HTTPException(403,'Read-only role cannot disconnect connections')
     try:return _connections().disconnect(current,connection_id)
     except PermissionError as exc:raise HTTPException(403,'Admin role required') from exc
     except KeyError as exc:raise HTTPException(404,'Connection not found') from exc
 
 @router.post('/product/connections/{connection_id}/mappings',status_code=201)
 def save_provider_mapping(connection_id:str,body:MappingSaveBody,current:Actor=Depends(actor)):
+    if not service.can_write(current):
+        raise HTTPException(403,'Read-only role cannot save mappings')
     if current.role!='admin':raise HTTPException(403,'Admin role required')
     if not body.expense_account_ref.strip():raise HTTPException(422,{'field':'expense_account_ref','code':'required'})
     try:return _connections().save_mapping(current,connection_id,{'expense_account_ref':body.expense_account_ref,'tax_strategy':body.tax_strategy},body.snapshot_hash)

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -340,13 +341,304 @@ def test_legacy_header_auth_still_works_for_product_endpoints() -> None:
     assert response.status_code == 200
 
 
-def test_legacy_header_add_member_still_works() -> None:
+def test_legacy_header_admin_cannot_invite_without_session_membership() -> None:
+    """CRITICAL-2: the demo header auth must not grant owner-equivalent power.
+
+    ``X-Role: admin`` maps to the RESTRICTED household role ``adult`` — it
+    can write receipts, but it can NOT create household invites (owner-only)
+    and never becomes a member of the household through the header alone.
+    """
     response = client.post(
         "/product/members",
         headers=HEADERS,
         json={"email": "legacy@pelda.hu", "role": "reviewer"},
     )
-    assert response.status_code == 201
+    assert response.status_code == 403
+    # The auth router gates invite creation on tenant membership + owner
+    # role; a header-only actor has no session membership, so the path guard
+    # (current.tenant_id != household_id) must reject it as well.
+    invite = client.post(
+        "/auth/households/other-household/invites",
+        headers=HEADERS,
+        json={"email": "legacy2@pelda.hu", "role": "adult"},
+    )
+    assert invite.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# 4b. F1.3 review regressions (t_313a4ac0)
+# ---------------------------------------------------------------------------
+
+
+def _invite_for(email: str, role: str = "child") -> tuple[str, dict, dict]:
+    """Owner creates an invite; returns (household, invite body, owner headers)."""
+    session = _magic_login(f"owner-{email}")
+    household = session["household_id"]
+    headers = {"Authorization": f"Bearer {session['session_token']}"}
+    invite = client.post(
+        f"/auth/households/{household}/invites",
+        json={"email": email, "role": role},
+        headers=headers,
+    ).json()
+    return household, invite, headers
+
+
+def test_magic_link_request_rejects_household_binding() -> None:
+    """CRITICAL-1: no owner session may be minted for a caller-supplied household.
+
+    The request body no longer accepts ``household_id`` (422); even if a
+    client smuggles the field through, verify must produce a FRESH household
+    derived from the email — never an owner session for the supplied tenant.
+    """
+    response = client.post(
+        "/auth/magic-link-request",
+        json={"email": "c1@evil.hu", "household_id": "victim-household"},
+    )
+    # Pydantic drops the extra field (no extra="forbid"), so the request is
+    # accepted — but the household MUST NOT be honored: verify yields a fresh
+    # household, never an owner session for the supplied tenant.
+    assert response.status_code in (201, 422)
+    # Verify still works without the field and yields a fresh household.
+    session = _magic_login("c1@evil.hu")
+    assert session["role"] == "owner"
+    assert session["household_id"].startswith("hh-")
+    assert session["household_id"] != "victim-household"
+    # The attacker-controlled household must be unaffected: the session can
+    # neither invite members nor list members of the victim household.
+    headers = {"Authorization": f"Bearer {session['session_token']}"}
+    blocked = client.post(
+        "/auth/households/victim-household/invites",
+        json={"email": "x@y.hu", "role": "adult"},
+        headers=headers,
+    )
+    assert blocked.status_code == 403
+    listed = client.get("/auth/households/victim-household/invites", headers=headers)
+    assert listed.status_code == 403
+    members = client.get("/product/members", headers=headers)
+    assert members.status_code == 200
+    assert members.json()["items"] == []
+
+
+def test_invite_link_carries_household_and_invite_ids() -> None:
+    """HIGH-5: the invite email link must embed household+invite ids so the
+    accept page (which requires ?household= and ?invite=) works end-to-end."""
+    household, invite, _ = _invite_for("high5@pelda.hu")
+    link = invite["magic_link"]
+    assert f"household={household}" in link, f"link missing household id: {link}"
+    assert f"invite={invite['invite_id']}" in link, f"link missing invite id: {link}"
+    assert f"token={invite['token']}" in link
+
+
+def test_invite_accept_with_wrong_household_does_not_consume_token() -> None:
+    """MED-6: path validation must happen BEFORE the token is consumed."""
+    household, invite, _ = _invite_for("med6@pelda.hu")
+    wrong = "hh-wrong-household-xyz"
+    url = f"/auth/households/{wrong}/invites/{invite['invite_id']}/accept"
+    # The path/tenant mismatch is a 404 (or 401 when the mismatch is rejected
+    # before consumption) — either way the token must NOT be consumed.
+    rejected = client.post(url, json={"token": invite["token"]})
+    assert rejected.status_code in (401, 404)
+    # The token must still be usable on the correct path.
+    ok = client.post(
+        f"/auth/households/{household}/invites/{invite['invite_id']}/accept",
+        json={"token": invite["token"]},
+    )
+    assert ok.status_code == 201
+    assert ok.json()["household_id"] == household
+
+
+def test_adult_can_edit_workspace_child_cannot() -> None:
+    """HIGH-4: owner/adult may edit the receipt workspace; child gets 403."""
+    household, invite, _ = _invite_for("adultws@pelda.hu", role="adult")
+    accepted = client.post(
+        f"/auth/households/{household}/invites/{invite['invite_id']}/accept",
+        json={"token": invite["token"]},
+    ).json()
+    adult_headers = {
+        "Authorization": f"Bearer {accepted['session_token']}",
+        "If-Match": "1",
+    }
+    owner = Actor(household, "owner")
+    receipt_id = service.create_receipt(owner, _parsed(0.95), "ws.png")["receipt_id"]
+    updated = client.patch(
+        f"/product/receipts/{receipt_id}/workspace",
+        headers=adult_headers,
+        json={"fields": {"total": 9.5}, "action": "save"},
+    )
+    assert updated.status_code == 200
+
+    # A child session gets 403 on the same endpoint.
+    child_household, child_invite, _ = _invite_for("childws@pelda.hu", role="child")
+    child_accepted = client.post(
+        f"/auth/households/{child_household}/invites/{child_invite['invite_id']}/accept",
+        json={"token": child_invite["token"]},
+    ).json()
+    child_owner = Actor(child_household, "owner")
+    child_receipt = service.create_receipt(child_owner, _parsed(0.95), "ws2.png")["receipt_id"]
+    child_headers = {
+        "Authorization": f"Bearer {child_accepted['session_token']}",
+        "If-Match": "1",
+    }
+    blocked = client.patch(
+        f"/product/receipts/{child_receipt}/workspace",
+        headers=child_headers,
+        json={"fields": {"total": 9.5}, "action": "save"},
+    )
+    assert blocked.status_code == 403
+
+
+def test_child_view_only_blocked_from_all_mutating_product_endpoints() -> None:
+    """HIGH-3: every mutating /product endpoint rejects child/view_only with 403."""
+    # Prepare a household with a receipt and a child session.
+    session = _magic_login("high3-owner@pelda.hu")
+    household = session["household_id"]
+    owner_headers = {"Authorization": f"Bearer {session['session_token']}"}
+    invite = client.post(
+        f"/auth/households/{household}/invites",
+        json={"email": "high3-child@pelda.hu", "role": "child"},
+        headers=owner_headers,
+    ).json()
+    accepted = client.post(
+        f"/auth/households/{household}/invites/{invite['invite_id']}/accept",
+        json={"token": invite["token"]},
+    ).json()
+    child_headers = {"Authorization": f"Bearer {accepted['session_token']}"}
+
+    owner = Actor(household, "owner")
+    receipt = service.create_receipt(owner, _parsed(0.4), "h3.png")
+    receipt_id = receipt["receipt_id"]
+    job_id = receipt["job_id"]
+    service.create_connection(owner, "CSV", "csv", {"vendor": "v", "total": "t", "currency": "c"})
+    connection_id = service.list_connections(owner)[0]["connection_id"]
+
+    with patch("app.product_api.parse_receipt_with_confidence", return_value=_parsed(0.95)):
+        blocked_upload = client.post(
+            "/product/receipts/upload", headers=child_headers,
+            files={"file": ("x.png", b"image", "image/png")},
+        )
+    assert blocked_upload.status_code == 403, "upload must be write-gated"
+
+    metadata = client.put(
+        f"/product/receipts/{receipt_id}/metadata",
+        headers=child_headers,
+        json={"tags": ["a"], "project": None, "cost_center": None},
+    )
+    assert metadata.status_code == 403, "metadata PUT must be write-gated"
+
+    connection = client.post(
+        "/product/connections",
+        headers=child_headers,
+        json={"name": "Nope", "provider": "csv",
+              "mapping": {"vendor": "v", "total": "t", "currency": "c"}},
+    )
+    assert connection.status_code == 403, "connection create must be write-gated"
+
+    approval = client.post(
+        f"/product/receipts/{receipt_id}/approval", headers=child_headers)
+    assert approval.status_code == 403, "approval request must be write-gated"
+
+    retry = client.post(f"/product/jobs/{job_id}/retry", headers=child_headers)
+    assert retry.status_code == 403, "job retry must be write-gated"
+
+    cancel = client.post(f"/product/jobs/{job_id}/cancel", headers=child_headers)
+    assert cancel.status_code == 403, "job cancel must be write-gated"
+
+    review = client.patch(
+        f"/product/review-items/{receipt_id}",
+        headers={**child_headers, "If-Match": "1"},
+        json={"changes": {"total": 9.0}, "action": "save"},
+    )
+    assert review.status_code == 403, "review PATCH must be write-gated"
+
+    line_items = client.put(
+        f"/product/receipts/{receipt_id}/line-items",
+        headers=child_headers,
+        json={"items": [{"name": "A", "quantity": 1, "unit_price": 5, "amount": 5}],
+              "expected_version": 1},
+    )
+    assert line_items.status_code == 403, "line-items PUT must be write-gated"
+
+    workspace = client.patch(
+        f"/product/receipts/{receipt_id}/workspace",
+        headers={**child_headers, "If-Match": "1"},
+        json={"fields": {"total": 9.5}, "action": "save"},
+    )
+    assert workspace.status_code == 403, "workspace PATCH must be write-gated"
+
+    saved_view = client.post(
+        "/product/saved-views",
+        headers=child_headers,
+        json={"name": "V", "filters": {}, "shared": False, "pinned": False},
+    )
+    assert saved_view.status_code == 403, "saved-view create must be write-gated"
+
+    automation = client.post(
+        "/product/automation-rules",
+        headers=child_headers,
+        json={"name": "R", "conditions": {"vendor_contains": "SBB"}, "actions": {"tags": ["x"]}},
+    )
+    assert automation.status_code == 403, "automation-rule create must be write-gated"
+
+    duplicates = client.post(
+        "/product/duplicates/decision",
+        headers=child_headers,
+        json={"left_id": receipt_id, "right_id": receipt_id, "decision": "same"},
+    )
+    assert duplicates.status_code == 403, "duplicate decision must be write-gated"
+
+    preferences = client.put(
+        "/product/preferences", headers=child_headers, json={"payload": {"onboarding_done": True}}
+    )
+    assert preferences.status_code == 403, "preferences PUT must be write-gated"
+
+    export_run = client.post(
+        "/product/export-runs",
+        headers=child_headers,
+        json={"connection_id": connection_id, "receipt_ids": [receipt_id]},
+    )
+    assert export_run.status_code == 403, "export-run create must be write-gated"
+
+    export_commands = client.post(
+        "/product/export-commands",
+        headers={**child_headers, "Idempotency-Key": "k1"},
+        json={"preparation_id": "nope", "acknowledged_warning_receipt_ids": []},
+    )
+    assert export_commands.status_code == 403, "export command must be write-gated"
+
+    feedback = client.post(
+        "/product/recurring-expenses/feedback",
+        headers=child_headers,
+        json={"merchant": "SBB", "is_subscription": True},
+    )
+    assert feedback.status_code == 403, "recurring feedback must be write-gated"
+
+    exchange_rate = client.post(
+        "/product/exchange-rates",
+        headers=child_headers,
+        json={"base": "USD", "quote": "CHF", "rate": 0.9, "rate_date": "2026-08-13"},
+    )
+    assert exchange_rate.status_code == 403, "exchange-rate create must be write-gated"
+
+    convert = client.post(
+        "/product/currency/convert",
+        headers=child_headers,
+        json={"amount": 10, "base": "USD", "quote": "CHF"},
+    )
+    assert convert.status_code == 403, "currency convert must be write-gated"
+
+    permissions = client.put(
+        "/product/permissions",
+        headers=child_headers,
+        json={"role": "child", "permissions": ["export"]},
+    )
+    assert permissions.status_code == 403, "permissions PUT must be write-gated"
+
+
+def test_add_member_accepts_household_roles_when_owner() -> None:
+    """LOW-8: the stale second role check must not reject household roles."""
+    service.add_member(Actor("low8", "owner"), "gyerek@low8.hu", "child")
+    members = service.list_members(Actor("low8", "owner"))
+    assert any(m["email"] == "gyerek@low8.hu" and m["role"] == "child" for m in members)
 
 
 # ---------------------------------------------------------------------------

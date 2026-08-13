@@ -78,9 +78,9 @@ def test_assets_are_allowlisted():
 
 
 def test_gui_supporting_list_apis_are_tenant_scoped():
-    service=ProductService(":memory:")
-    a=Actor("a","admin"); b=Actor("b","admin")
-    service.add_member(a,"a@example.com","reviewer")
+    service = ProductService(":memory:")
+    a = Actor("a", "owner"); b = Actor("b", "owner")
+    service.add_member(a, "a@example.com", "reviewer")
     service.add_member(b,"b@example.com","reviewer")
     service.create_connection(a,"CSV","csv",{"vendor":"v","total":"t","currency":"c"})
     assert [x["email"] for x in service.list_members(a)]==["a@example.com"]

@@ -1466,12 +1466,12 @@ The consumer-pivot Family product (docs/plans/consumer-pivot-2026-08-13.md §2.3
 
 ### `POST /auth/magic-link-request`
 
-Body: `{"email": "...", "household_id": "optional"}`. Creates a single-use magic-link token for the email and delivers it:
+Body: `{"email": "..."}`. Creates a single-use magic-link token for the email and delivers it:
 
 - When SMTP is configured (`RECEIPTLENS_SMTP_HOST` set and `RECEIPTLENS_SMTP_ENABLED=1`), the link is sent via the existing `send_email_notification()` channel.
 - Otherwise, in dev mode (`RECEIPTLENS_ENV != production`) the response includes `magic_link` and `token` so the UI flow is testable without a mail server. **In production the raw token is never returned** — the response is `{"delivered": false, "detail": "Email delivery is not configured"}`.
 
-`201` with `{email, expires_at, delivered, magic_link?, token?}`. When `household_id` is supplied the resulting session is owner of that household; without it a fresh household is derived from the email at verify time.
+`201` with `{email, expires_at, delivered, magic_link?, token?}`. A caller-supplied `household_id` is **not honored** (the field is rejected/ignored): binding a magic link to an arbitrary household without proof of membership would mint an owner session for that household (CRITICAL-1). A fresh household is always derived from the email at verify time; joining an existing household goes through the owner-issued invite flow.
 
 ### `POST /auth/magic-link-verify`
 
@@ -1483,14 +1483,15 @@ Body: `{"session_token": "..."}`. Resolves a session into `{tenant_id, role, ema
 
 ### Family invites
 
-- `POST /auth/households/{household_id}/invites` — owner only. Body: `{"email": "...", "role": "adult|child|view_only"}` (role pattern enforced; `owner` is rejected on invites — a household has exactly one owner). Non-owner caller: `403`. `201` with `{invite_id, email, role, status, expires_at, delivered, magic_link?, token?}` (dev-mode link return same as magic link).
+- `POST /auth/households/{household_id}/invites` — owner only. Body: `{"email": "...", "role": "adult|child|view_only"}` (role pattern enforced; `owner` is rejected on invites — a household has exactly one owner). Non-owner caller: `403`. The email link embeds the household + invite ids: `{base}/auth/invite?token=...&household={household_id}&invite={invite_id}`. `201` with `{invite_id, email, role, status, expires_at, delivered, magic_link?, token?}` (dev-mode link return same as magic link).
 - `GET /auth/households/{household_id}/invites` — owner only. `200` with `{items: [...]}` pending invites.
-- `POST /auth/households/{household_id}/invites/{invite_id}/accept` — body: `{"token": "..."}`. Validates the invite token matches the household+invite path, creates the membership and signs the user in. `201` with `{session_token, email, household_id, role, expires_at}`. Unknown/expired/used invite: `401`; mismatched path: `404`.
+- `POST /auth/households/{household_id}/invites/{invite_id}/accept` — body: `{"token": "..."}`. Validates the invite token matches the household+invite path **before** the token is consumed (a wrong path returns `401`/`404` without burning the token), creates the membership and signs the user in. `201` with `{session_token, email, household_id, role, expires_at}`. Unknown/expired/used invite: `401`; mismatched path: `401`/`404`.
 
 ### Role gates
 
-- `PATCH /product/review-items/{receipt_id}` — `child` and `view_only` roles get `403` (read-only). `owner`/`adult` may edit.
-- `POST /product/members` (invite creation) — only `owner`; any other role `403`.
+Write-gated endpoints (`child`/`view_only` get `403`): `POST /product/receipts/upload`, `PATCH /product/review-items/{receipt_id}`, `PATCH /product/receipts/{receipt_id}/workspace`, `PUT /product/receipts/{receipt_id}/metadata`, `PUT /product/receipts/{receipt_id}/line-items`, `POST /product/connections`, `POST /product/exports`, `POST /product/export-runs`, `POST /product/export-commands`, `POST /product/export-preparations`, `POST /product/receipts/{receipt_id}/approval`, `POST /product/jobs/{job_id}/retry`, `POST /product/jobs/{job_id}/cancel`, `POST /product/saved-views`, `DELETE /product/saved-views/{view_id}`, `POST /product/notifications/read-all`, `PATCH /product/notifications/{notification_id}`, `POST /product/automation-rules`, `POST /product/automation-rules/preview`, `POST /product/duplicates/decision`, `PUT /product/preferences`, `POST /product/inbound-emails`, `POST /product/approval-flows`, `POST /product/approval-flows/simulate`, `POST /product/recurring-expenses/feedback`, `POST /product/exchange-rates`, `POST /product/currency/convert`, `PUT /product/permissions`, `POST /product/quality/benchmarks/run`, `POST /product/quality/confidence-profiles`, `POST /product/automation-rules/{id}/preview|activate|runs`, `POST /product/automation-runs/{id}/rollback-preview|rollback`, `POST /product/connections/quickbooks/oauth/start`, `POST /product/connections/{id}/refresh|disconnect|mappings`, `POST /product/provider-mappings/validate`, `POST /product/receipts/{id}/accounting-projection/refresh` — `owner`/`adult` may write; `child`/`view_only` get `403`.
+- `POST /product/members` (invite creation) — only the household owner may add members; any other role `403`.
+- Legacy `X-Role: admin|reviewer|integrator` dev headers map to the RESTRICTED household roles `adult`/`adult`/`child` — the demo header auth never grants owner-equivalent power (CRITICAL-2): header actors can write receipts but cannot manage the household roster.
 
 ### Dev-mode compatibility (AC6)
 
