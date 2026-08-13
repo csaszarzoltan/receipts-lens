@@ -72,12 +72,32 @@ test("dashboard renders all six consumer blocks with live data", async ({
   await seedAuth(page);
 
   // Seed live data through the real backend: a monthly household budget
-  // (block 1 + 5) and a receipt (blocks 2 + 6) so the blocks render
-  // concrete numbers, not just empty states.
+  // (block 1 + 5) and a receipt uploaded through the REAL /product/receipts/
+  // upload path (blocks 2 + 6) so the blocks render concrete numbers that
+  // prove live-data wiring, not just empty states. The upload leg is what
+  // makes the "live numbers" assertion meaningful: it writes to the tenant
+  // SQLite store — the same store blocks 1/2/5 aggregate.
   await page.request.post(`${API_BASE}/api/v1/budgets`, {
     headers: { "X-Tenant-ID": "demo", "X-Role": "admin" },
     data: { category: "Háztartás", amount: 600, currency: "USD", period: "monthly" },
   });
+
+  const upload = await page.request.post(
+    `${API_BASE}/product/receipts/upload`,
+    {
+      headers: { "X-Tenant-ID": "demo", "X-Role": "admin" },
+      multipart: {
+        file: {
+          name: "test-receipt-coop.jpg",
+          mimeType: "image/jpeg",
+          buffer: require("fs").readFileSync(
+            "e2e/fixtures/test-receipt-coop.jpg",
+          ),
+        },
+      },
+    },
+  );
+  expect(upload.status(), "receipt upload via real path must succeed").toBe(201);
 
   await page.goto("/dashboard");
   await page.waitForLoadState("domcontentloaded");
