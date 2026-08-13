@@ -702,3 +702,9 @@ The Integrations QuickBooks action now calls the tenant-scoped OAuth-start endpo
 
 ### Provider connection administration
 Provider connections can now be listed tenant-safely, inspected, disconnected with active ciphertext deletion, and assigned immutable mapping versions through the `/product/provider-connections` and `/product/connections/{id}/mappings` APIs. Historical connection metadata remains after disconnect while active credentials are removed.
+
+## Dokumentáció
+
+- [Engineering Standards](docs/engineering-standards.md) — kötelező olvasmány kódírás előtt
+- [Döntések / tanulságok](docs/decisions/) — javított hibák és anti-minták
+- [Specifikációk](docs/specs/) — feature-ök kanonikus követelményei
