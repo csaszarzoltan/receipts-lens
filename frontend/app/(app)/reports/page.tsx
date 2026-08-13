@@ -28,8 +28,8 @@ function monthlySpend(items: Array<{ receipt: { date: string | null; total: numb
 
 export default function ReportsPage() {
   const { data: receiptsData, error: receiptsError, isLoading: receiptsLoading } = useSWR(
-    "/product/receipts?limit=500",
-    () => searchReceipts({ limit: 500 }),
+    "/product/receipts?limit=200",
+    () => searchReceipts({ limit: 200 }),
   );
   const { data: runsData } = useSWR<{ items: ExportRun[] }>("/product/export-runs", getExportRuns);
 
