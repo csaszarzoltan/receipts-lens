@@ -134,7 +134,10 @@ class ProductService:
         return {
             "vendor": receipt.merchant, "date": receipt.date, "total": receipt.total,
             "tax": receipt.tax, "currency": receipt.currency,
-            "line_items": [{"name": i.name, "price": i.price} for i in receipt.items],
+            "line_items": [
+                {"name": i.name, "price": i.price, "category": getattr(i, "category", None)}
+                for i in receipt.items
+            ],
             "confidence": dict(receipt.confidence),
             "confidence_level": getattr(receipt, "confidence_level", None),
         }

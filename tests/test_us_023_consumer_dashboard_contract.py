@@ -68,14 +68,23 @@ def _clean_store() -> None:
     # clear its tables so tenant receipts do not leak across tests.
     try:
         with product_service._lock, product_service._db:
-            product_service._db.execute("DELETE FROM receipts")
-            product_service._db.execute("DELETE FROM jobs")
+            for table in ("receipts", "jobs", "members", "receipt_metadata",
+                          "approvals", "approval_policies", "audit",
+                          "activity_history", "receipt_assets", "exports",
+                          "connections", "api_keys", "retention_settings",
+                          "auth_tokens", "household_invites", "sessions"):
+                product_service._db.execute(f"DELETE FROM {table}")
     except Exception:  # noqa: BLE001, S110 — best-effort reset
         pass
 
 
-def _seed_budget(amount: float = 600.0, category: str = "Háztartás") -> None:
-    budget_store.create(category=category, amount=amount, currency="USD")
+def _seed_budget(
+    amount: float = 600.0,
+    category: str = "Háztartás",
+    tenant: str = "us023",
+) -> None:
+    budget_store.create(category=category, amount=amount, currency="USD",
+                        tenant_id=tenant)
 
 
 def _seed_receipt(
@@ -103,6 +112,41 @@ def _seed_receipt(
         # Mirror into the product store so the recent-receipts block is live.
         product_service.create_receipt(_Actor(tenant), receipt, f"{merchant}.jpg")
     return rid  # type: ignore[return-value]
+
+
+def _seed_receipt_via_service(
+    tenant: str,
+    merchant: str,
+    total: float,
+    day: int,
+    *,
+    category: str | None = None,
+) -> str:
+    """Create a receipt through the REAL upload path (product_service.create_receipt).
+
+    This is the same code path /product/receipts/upload uses — it writes ONLY
+    to the tenant SQLite store, never to the global in-memory receipt_store.
+    Regression test for B1 (blocks 1/2/5 must aggregate the tenant receipts).
+    """
+    today = datetime.now(UTC).date()
+    items = (
+        [ReceiptItem(name=merchant, price=total, category=category)]
+        if category is not None
+        else []
+    )
+    receipt = ConfidenceReceipt(
+        merchant=merchant,
+        date=f"{today.year:04d}-{today.month:02d}-{day:02d}",
+        items=items,
+        total=total,
+        tax=0.0,
+        currency="USD",
+        raw_text="",
+        confidence={"total": 0.9},
+        confidence_level="high",
+    )
+    result = product_service.create_receipt(_Actor(tenant), receipt, f"{merchant}.jpg")
+    return result["receipt_id"]
 
 
 class _Actor:
@@ -153,7 +197,7 @@ class TestSixBlocksLive:
 
     def test_blocks_are_live_not_placeholder(self, client: TestClient) -> None:
         """With seeded data every block carries concrete numbers/items."""
-        _seed_budget(600.0)
+        _seed_budget(600.0, tenant="us023")
         today = datetime.now(UTC).date()
         _seed_receipt("Péküzlet", 12.5, today.day, category="Étkezés", tenant="us023")
         _seed_receipt("Közlekedés", 45.0, today.day, category="Közlekedés", tenant="us023")
@@ -194,7 +238,7 @@ class TestSixBlocksLive:
 
     def test_daily_remaining_uses_budget_countdown(self, client: TestClient) -> None:
         """Block 1 is the budget back-count (existing budget motor)."""
-        _seed_budget(620.0)
+        _seed_budget(620.0, tenant="us023")
         payload = client.get("/api/v1/consumer/dashboard", headers=_headers()).json()
         daily = payload["daily_remaining"]
         assert daily is not None
@@ -246,7 +290,7 @@ class TestEmptyStates:
         assert payload["household"]["shared_budget"] == 0.0
 
     def test_no_receipts_yields_empty_category_list(self, client: TestClient) -> None:
-        _seed_budget(300.0)
+        _seed_budget(300.0, tenant="us023-empty")
         payload = client.get(
             "/api/v1/consumer/dashboard", headers=_headers("us023-empty")
         ).json()
@@ -306,7 +350,7 @@ class TestFrontendContract:
 class TestIntegration:
     def test_full_round_trip_with_seeded_data(self, client: TestClient) -> None:
         """One real request returns all six blocks populated end-to-end."""
-        _seed_budget(500.0)
+        _seed_budget(500.0, tenant="us023-i")
         today = datetime.now(UTC).date()
         _seed_receipt("Péküzlet", 10.0, today.day, category="Étkezés", tenant="us023-i")
         _seed_receipt("Péküzlet", 10.5, today.day, category="Étkezés", tenant="us023-i")
@@ -331,6 +375,121 @@ class TestIntegration:
             "/api/v1/consumer/dashboard", headers=_headers("us023-other")
         ).json()
         assert other["recent_receipts"] == []
+
+    def test_live_blocks_aggregate_receipts_created_via_real_path(
+        self, client: TestClient
+    ) -> None:
+        """B1 regression: blocks 1/2/5 read the TENANT SQLite receipts.
+
+        Receipts are created through product_service.create_receipt — the
+        exact path /product/receipts/upload uses — which writes only to the
+        tenant SQLite store. The global in-memory receipt_store must NOT be
+        seeded (it is a module seed, never a production write path).
+        """
+        today = datetime.now(UTC).date()
+        # Budget seeded through the REAL API path (tenant-scoped now).
+        created = client.post(
+            "/api/v1/budgets",
+            headers=_headers("us023-real"),
+            json={
+                "category": "Háztartás",
+                "amount": 900.0,
+                "currency": "USD",
+                "period": "monthly",
+            },
+        )
+        assert created.status_code == 200
+        _seed_receipt_via_service(
+            "us023-real", "Probe Store", 42.0, today.day, category="Étkezés"
+        )
+
+        payload = client.get(
+            "/api/v1/consumer/dashboard", headers=_headers("us023-real")
+        ).json()
+
+        # Block 2 — category aggregation from the tenant store.
+        monthly = payload["monthly_by_category"]
+        assert monthly["total_spent"] == 42.0, (
+            f"block 2 total_spent={monthly['total_spent']} — not reading "
+            f"tenant SQLite (global store empty in this test)"
+        )
+        assert any(c["total"] == 42.0 for c in monthly["categories"])
+
+        # Block 5 — household spent from the tenant store.
+        assert payload["household"]["spent"] == 42.0
+        assert payload["household"]["shared_budget"] == 900.0
+
+        # Block 1 — spent_this_month from the tenant store.
+        daily = payload["daily_remaining"]
+        assert daily is not None
+        assert daily["spent_this_month"] == 42.0
+        assert daily["budgeted"] == 900.0
+        assert daily["remaining_this_month"] == 858.0
+
+        # Block 6 keeps working (same store as block 1/2/5 now).
+        recent = payload["recent_receipts"]
+        assert len(recent) == 1
+        assert recent[0]["merchant"] == "Probe Store"
+        assert recent[0]["total"] == 42.0
+
+    def test_cross_tenant_isolation_for_blocks_1_2_5(self, client: TestClient) -> None:
+        """B2 regression: tenantA budget+receipts are invisible to tenantB.
+
+        tenantA POSTs a 900 USD monthly budget and uploads a 42.0 receipt.
+        tenantB's dashboard must see: block 1 null (no own budget), block 5
+        shared_budget 0, block 2 empty — the process-global budget_store and
+        receipt_store must NOT leak across tenants.
+        """
+        today = datetime.now(UTC).date()
+
+        # tenantA seeds its budget through the real API path…
+        created = client.post(
+            "/api/v1/budgets",
+            headers=_headers("tenantA"),
+            json={
+                "category": "Háztartás",
+                "amount": 900.0,
+                "currency": "USD",
+                "period": "monthly",
+            },
+        )
+        assert created.status_code == 200
+
+        # …and uploads a receipt through the real service path.
+        _seed_receipt_via_service(
+            "tenantA", "Probe Store", 42.0, today.day, category="Étkezés"
+        )
+
+        a_payload = client.get(
+            "/api/v1/consumer/dashboard", headers=_headers("tenantA")
+        ).json()
+        assert a_payload["daily_remaining"] is not None
+        assert a_payload["daily_remaining"]["budgeted"] == 900.0
+        assert a_payload["daily_remaining"]["spent_this_month"] == 42.0
+        assert a_payload["household"]["shared_budget"] == 900.0
+        assert a_payload["household"]["spent"] == 42.0
+        assert a_payload["monthly_by_category"]["total_spent"] == 42.0
+
+        # tenantB must see NONE of tenantA's budget or receipts.
+        b_payload = client.get(
+            "/api/v1/consumer/dashboard", headers=_headers("tenantB")
+        ).json()
+        assert b_payload["daily_remaining"] is None, (
+            "tenantB sees tenantA's budget — budget store must be tenant-scoped"
+        )
+        assert b_payload["household"]["shared_budget"] == 0.0
+        assert b_payload["household"]["spent"] == 0.0
+        assert b_payload["monthly_by_category"]["total_spent"] == 0.0
+        assert b_payload["monthly_by_category"]["categories"] == []
+        assert b_payload["recent_receipts"] == []
+
+        # The legacy header-less tenant must not see tenantA's budget either.
+        legacy = client.get(
+            "/api/v1/consumer/dashboard", headers=_headers("other-legacy")
+        ).json()
+        assert legacy["daily_remaining"] is None
+        assert legacy["household"]["shared_budget"] == 0.0
+        assert legacy["monthly_by_category"]["total_spent"] == 0.0
 
     def test_price_alerts_use_existing_motor(self) -> None:
         """Block 3 delegates to the subscription price-increase motor."""

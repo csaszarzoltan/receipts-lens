@@ -20,11 +20,11 @@ roles); the *presentation* layer (labels) is consumer vocabulary only.
 from __future__ import annotations
 
 import calendar
+import json
 from datetime import UTC, date, datetime
 from typing import Any
 
 from app.budgets import BudgetPeriod, budget_store
-from app.reports import receipt_store
 from app.subscriptions_api import _build_subscriptions
 
 # Cap the number of blocks rendered to keep the payload bounded.
@@ -58,23 +58,57 @@ def _money(value: float, currency: str = "USD") -> float:
     return round(float(value), 2)
 
 
-def _daily_remaining(today: date) -> dict[str, Any] | None:
+def _tenant_receipt_payloads(tenant_id: str) -> list[dict[str, Any]]:
+    """All of a tenant's stored receipt payloads (SQLite — the real write path).
+
+    Block 1/2/5 must aggregate the receipts the product store actually holds
+    (product_service.create_receipt → tenant SQLite), NOT the global
+    in-memory ``receipt_store`` which production never writes to (F1.2 B1).
+    """
+    from app.product_api import service as product_service
+
+    rows = product_service._db.execute(
+        "SELECT payload FROM receipts WHERE tenant_id=?",
+        (tenant_id,),
+    ).fetchall()
+    return [json.loads(row["payload"]) for row in rows]
+
+
+def _tenant_monthly_budgets(tenant_id: str) -> list[Any]:
+    """Monthly budgets owned by *tenant_id* (tenant-scoped — F1.2 B2)."""
+    return [
+        b for b in budget_store.list(tenant_id=tenant_id)
+        if b.period == BudgetPeriod.MONTHLY
+    ]
+
+
+def _tenant_spent_this_month(
+    tenant_id: str, today: date, payloads: list[dict[str, Any]] | None = None
+) -> float:
+    """Sum the tenant's receipt totals whose ISO date falls in the current month."""
+    date_from, date_to = _month_bounds(today)
+    payloads = _tenant_receipt_payloads(tenant_id) if payloads is None else payloads
+    return sum(
+        float(p.get("total") or 0.0)
+        for p in payloads
+        if date_from <= str(p.get("date") or "") <= date_to
+    )
+
+
+def _daily_remaining(today: date, tenant_id: str) -> dict[str, Any] | None:
     """Block 1 — „Mennyit költhetek még ma?" (budget countdown).
 
     Monthly budgets only (the household-facing period). The daily remaining
     is (monthly budget − spent this month) / days left in month. Returns
     ``None`` when no monthly budget exists (the UI shows the empty state).
+    Both the budget and the spent figure are tenant-scoped.
     """
-    date_from, date_to = _month_bounds(today)
-    budgets = [b for b in budget_store.list() if b.period == BudgetPeriod.MONTHLY]
+    budgets = _tenant_monthly_budgets(tenant_id)
     if not budgets:
         return None
 
     total_budget = sum(b.amount for b in budgets)
-    spent = sum(
-        float(r.total or 0.0)
-        for r in receipt_store.list(date_from=date_from, date_to=date_to)
-    )
+    spent = _tenant_spent_this_month(tenant_id, today)
     days_in_month = calendar.monthrange(today.year, today.month)[1]
     days_left = max(0, days_in_month - today.day + 1)
     remaining = max(0.0, total_budget - spent)
@@ -91,33 +125,54 @@ def _daily_remaining(today: date) -> dict[str, Any] | None:
     }
 
 
-def _monthly_by_category(today: date) -> dict[str, Any]:
-    """Block 2 — „Mire ment el a pénzem" (spending analytics, live)."""
-    date_from, date_to = _month_bounds(today)
-    from app.analytics import spending_analytics
+def _monthly_by_category(today: date, tenant_id: str) -> dict[str, Any]:
+    """Block 2 — „Mire ment el a pénzem" (spending analytics, live).
 
-    result = spending_analytics.by_category(date_from, date_to)
-    groups = result["groups"]
-    total = float(result["total_spent"] or 0.0)
+    Aggregates the tenant's stored receipts by line-item category (falling
+    back to ``Uncategorized`` for receipts without categorized line items).
+    """
+    date_from, date_to = _month_bounds(today)
+    payloads = _tenant_receipt_payloads(tenant_id)
+    group_totals: dict[str, float] = {}
+    group_counts: dict[str, int] = {}
+    for payload in payloads:
+        if not (date_from <= str(payload.get("date") or "") <= date_to):
+            continue
+        items = payload.get("line_items") or []
+        if not items:
+            key = "Uncategorized"
+            group_totals[key] = group_totals.get(key, 0.0) + float(payload.get("total") or 0.0)
+            group_counts[key] = group_counts.get(key, 0) + 1
+            continue
+        for item in items:
+            key = str(item.get("category") or "Uncategorized") or "Uncategorized"
+            group_totals[key] = group_totals.get(key, 0.0) + float(item.get("price", item.get("amount", 0)) or 0.0)
+            group_counts[key] = group_counts.get(key, 0) + 1
+
+    total = round(sum(group_totals.values()), 2)
+    groups = sorted(group_totals.items(), key=lambda kv: kv[1], reverse=True)
 
     # Highest first, capped, with consumer labels.
-    groups.sort(key=lambda g: g["total"], reverse=True)
     top = []
-    for g in groups[:_MAX_CATEGORIES]:
-        key = str(g["key"])
+    for key, group_total in groups[:_MAX_CATEGORIES]:
         top.append(
             {
                 "key": key,
                 "label": _CATEGORY_LABELS.get(key, key),
-                "total": _money(g["total"]),
-                "count": int(g["count"]),
-                "pct": round((g["total"] / total * 100) if total > 0 else 0.0, 1),
+                "total": _money(group_total),
+                "count": int(group_counts[key]),
+                "pct": round((group_total / total * 100) if total > 0 else 0.0, 1),
             }
         )
+    currency = "USD"
+    for payload in payloads:
+        if str(payload.get("date") or "")[:7] == date_from[:7] and payload.get("currency"):
+            currency = str(payload["currency"])
+            break
     return {
         "month": date_from[:7],
         "total_spent": _money(total),
-        "currency": str(result.get("currency") or "USD"),
+        "currency": currency,
         "categories": top,
     }
 
@@ -185,13 +240,9 @@ def _household(today: date, tenant_id: str) -> dict[str, Any]:
     """
     from app.product_api import service as product_service
 
-    date_from, date_to = _month_bounds(today)
-    budgets = [b for b in budget_store.list() if b.period == BudgetPeriod.MONTHLY]
+    budgets = _tenant_monthly_budgets(tenant_id)
     total_budget = sum(b.amount for b in budgets)
-    spent = sum(
-        float(r.total or 0.0)
-        for r in receipt_store.list(date_from=date_from, date_to=date_to)
-    )
+    spent = _tenant_spent_this_month(tenant_id, today)
     currency = budgets[0].currency if budgets else "USD"
 
     members = []
@@ -266,8 +317,8 @@ def build_consumer_dashboard(tenant_id: str, today: date | None = None) -> dict[
     return {
         "generated_at": datetime.now(UTC).isoformat(),
         "tenant": tenant_id,
-        "daily_remaining": _daily_remaining(anchor),
-        "monthly_by_category": _monthly_by_category(anchor),
+        "daily_remaining": _daily_remaining(anchor, tenant_id),
+        "monthly_by_category": _monthly_by_category(anchor, tenant_id),
         "price_alerts": _price_alerts(anchor, tenant_id),
         "cancellable_subscriptions": _cancellable(anchor, tenant_id),
         "household": _household(anchor, tenant_id),

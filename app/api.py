@@ -1216,8 +1216,15 @@ class BudgetUpdateRequest(BaseModel):
 
 
 @app.post("/api/v1/budgets", response_model=dict)
-def create_budget_route(body: BudgetCreateRequest) -> dict:
-    """Create a new budget definition."""
+def create_budget_route(
+    body: BudgetCreateRequest,
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+) -> dict:
+    """Create a new budget definition scoped to the caller's tenant.
+
+    F1.2 B2: without tenant scoping, a budget created by tenant A is
+    visible in tenant B's consumer dashboard — a cross-tenant leak.
+    """
     try:
         record = budget_store.create(
             category=body.category,
@@ -1225,6 +1232,7 @@ def create_budget_route(body: BudgetCreateRequest) -> dict:
             currency=body.currency,
             period=body.period,
             alert_threshold=body.alert_threshold,
+            tenant_id=(x_tenant_id or "").strip(),
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -1232,24 +1240,33 @@ def create_budget_route(body: BudgetCreateRequest) -> dict:
 
 
 @app.get("/api/v1/budgets", response_model=dict)
-def list_budgets_route() -> dict:
-    """List all budget definitions with computed spend fields."""
-    records = budget_store.list()
+def list_budgets_route(
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+) -> dict:
+    """List the caller's budget definitions with computed spend fields."""
+    records = budget_store.list(tenant_id=(x_tenant_id or "").strip())
     return {"budgets": [r.to_dict() for r in records]}
 
 
 @app.get("/api/v1/budgets/{id}", response_model=dict)
-def get_budget_route(id: str) -> dict:
-    """Get a single budget by id."""
+def get_budget_route(
+    id: str,
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+) -> dict:
+    """Get a single budget by id (tenant-scoped: 404 for other tenants' budgets)."""
     record = budget_store.get(id)
-    if record is None:
+    if record is None or record.tenant_id != (x_tenant_id or "").strip():
         raise HTTPException(status_code=404, detail="Budget not found")
     return record.to_dict()
 
 
 @app.put("/api/v1/budgets/{id}", response_model=dict)
-def update_budget_route(id: str, body: BudgetUpdateRequest) -> dict:
-    """Update fields on an existing budget."""
+def update_budget_route(
+    id: str,
+    body: BudgetUpdateRequest,
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+) -> dict:
+    """Update fields on an existing budget (tenant-scoped: 404 for others)."""
     kwargs = {}
     if body.category is not None:
         kwargs["category"] = body.category
@@ -1262,6 +1279,10 @@ def update_budget_route(id: str, body: BudgetUpdateRequest) -> dict:
     if body.alert_threshold is not None:
         kwargs["alert_threshold"] = body.alert_threshold
 
+    existing = budget_store.get(id)
+    if existing is None or existing.tenant_id != (x_tenant_id or "").strip():
+        raise HTTPException(status_code=404, detail="Budget not found")
+
     try:
         record = budget_store.update(id, **kwargs)
     except ValueError as exc:
@@ -1273,8 +1294,14 @@ def update_budget_route(id: str, body: BudgetUpdateRequest) -> dict:
 
 
 @app.delete("/api/v1/budgets/{id}", response_model=dict)
-def delete_budget_route(id: str) -> dict:
-    """Delete a budget definition."""
+def delete_budget_route(
+    id: str,
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+) -> dict:
+    """Delete a budget definition (tenant-scoped: 404 for other tenants' budgets)."""
+    record = budget_store.get(id)
+    if record is None or record.tenant_id != (x_tenant_id or "").strip():
+        raise HTTPException(status_code=404, detail="Budget not found")
     deleted = budget_store.delete(id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Budget not found")

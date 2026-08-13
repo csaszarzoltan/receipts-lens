@@ -30,6 +30,7 @@ class BudgetRecord:
         currency: str = "USD",
         period: BudgetPeriod = BudgetPeriod.MONTHLY,
         alert_threshold: float = 0.8,
+        tenant_id: str = "",
         created_at: str | None = None,
         updated_at: str | None = None,
     ) -> None:
@@ -39,6 +40,7 @@ class BudgetRecord:
         self.currency = currency
         self.period = period
         self.alert_threshold = alert_threshold
+        self.tenant_id = tenant_id
         self.created_at = created_at or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         self.updated_at = updated_at or self.created_at
 
@@ -56,6 +58,7 @@ class BudgetRecord:
             "currency": self.currency,
             "period": self.period.value if isinstance(self.period, BudgetPeriod) else self.period,
             "alert_threshold": self.alert_threshold,
+            "tenant_id": self.tenant_id,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "spent": self.spent,
@@ -105,6 +108,7 @@ class BudgetStore:
             currency=kwargs.get("currency", "USD"),
             period=period,
             alert_threshold=alert_threshold,
+            tenant_id=str(kwargs.get("tenant_id") or "").strip(),
         )
 
         # Compute spend fields from receipt store data
@@ -123,10 +127,17 @@ class BudgetStore:
             self._recompute(record)
         return record
 
-    def list(self) -> list[BudgetRecord]:
-        """Return all budget definitions with computed spend fields."""
+    def list(self, tenant_id: str | None = None) -> list[BudgetRecord]:
+        """Return all budget definitions with computed spend fields.
+
+        When ``tenant_id`` is given, only that tenant's budgets are returned
+        (F1.2 B2: budget records are tenant-scoped — a process-global budget
+        store must never leak budgets across tenants).
+        """
         with self._lock:
             records = list(self._data.values())
+        if tenant_id is not None:
+            records = [r for r in records if r.tenant_id == tenant_id]
         for r in records:
             self._recompute(r)
         return records
