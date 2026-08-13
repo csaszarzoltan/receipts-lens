@@ -708,3 +708,5 @@ Provider connections can now be listed tenant-safely, inspected, disconnected wi
 - [Engineering Standards](docs/engineering-standards.md) — kötelező olvasmány kódírás előtt
 - [Döntések / tanulságok](docs/decisions/) — javított hibák és anti-minták
 - [Specifikációk](docs/specs/) — feature-ök kanonikus követelményei
+
+- [Módszertan](docs/METHODOLOGY.md) — a lab fejlesztési módszertana (kötelező olvasmány)
