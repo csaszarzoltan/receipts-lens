@@ -4,7 +4,7 @@ import base64,json,os
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 class CredentialStore:
  def __init__(self,key:bytes|None=None):
-  key=key or self.key_from_env();
+  key=key or self.key_from_env()
   if len(key)!=32: raise ValueError('credential key must be 32 bytes')
   self.key=key
  @staticmethod

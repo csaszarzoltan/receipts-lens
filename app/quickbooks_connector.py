@@ -11,6 +11,6 @@ class QuickBooksConnector:
  def create_purchase(self,payload:dict[str,Any],dedupe_key:str):
   body={**payload,'PrivateNote':f'ReceiptLens:{dedupe_key}'};r=self.client.post(f'{self.base}/v3/company/{self.realm_id}/purchase',json=body,headers=self._headers());r.raise_for_status();return r.json()['Purchase']
  def get_purchase(self,provider_id:str):
-  r=self.client.get(f'{self.base}/v3/company/{self.realm_id}/purchase/{provider_id}',headers=self._headers());
+  r=self.client.get(f'{self.base}/v3/company/{self.realm_id}/purchase/{provider_id}',headers=self._headers())
   if r.status_code==404:raise KeyError(provider_id)
   r.raise_for_status();return r.json()['Purchase']
