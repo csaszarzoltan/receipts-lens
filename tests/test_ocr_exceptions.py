@@ -8,17 +8,17 @@ Covers P1 gap identified in analysis brief t_9bfd006a.
 from __future__ import annotations
 
 import io
+
 import pytest
 from PIL import Image, ImageDraw, ImageFont
 
-from app.exceptions import (
-    OCRError,
-    InvalidImageError,
-    UnsupportedImageFormatError,
-    CorruptImageError,
-)
 from app import ocr
-
+from app.exceptions import (
+    CorruptImageError,
+    InvalidImageError,
+    OCRError,
+    UnsupportedImageFormatError,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -32,7 +32,7 @@ def _make_receipt_bytes() -> bytes:
         font = ImageFont.truetype(
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20
         )
-    except (OSError, IOError):
+    except OSError:
         font = ImageFont.load_default()
     draw.text((100, 20), "GROCERY STORE", fill="black", font=font)
     draw.text((10, 80), "Date: 21/07/2026", fill="black", font=font)

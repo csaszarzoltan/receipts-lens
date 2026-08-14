@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import threading
 import uuid
-from typing import Optional
 
 from app.ocr import ConfidenceReceipt, ReceiptItem
 
@@ -26,7 +25,7 @@ class ReceiptStore:
             self._data[receipt_id] = receipt
         return receipt_id
 
-    def get(self, receipt_id: str) -> Optional[ConfidenceReceipt]:
+    def get(self, receipt_id: str) -> ConfidenceReceipt | None:
         """Retrieve a receipt by id; return ``None`` for an unknown id."""
         with self._lock:
             return self._data.get(receipt_id)
@@ -56,9 +55,8 @@ class ReceiptStore:
                     continue
                 if receipt.date < date_from or receipt.date > date_to:
                     continue
-                if merchant is not None:
-                    if merchant.lower() not in (receipt.merchant or "").lower():
-                        continue
+                if merchant is not None and merchant.lower() not in (receipt.merchant or "").lower():
+                    continue
                 results.append(receipt)
         return results
 

@@ -139,9 +139,6 @@ def test_new_api_routes_are_registered():
     assert expected <= paths
 
 
-def test_asset_api_rejects_cross_tenant_access(monkeypatch):
-    from app import product_api
-
 def get_all_paths(app):
     paths = set()
     for route in app.routes:
@@ -153,13 +150,25 @@ def get_all_paths(app):
                     paths.add(sub.path)
     return paths
 
-    service=ProductService(":memory:"); advanced=AdvancedWorkspace(service); actor=Actor("a","admin")
-    rid=service.create_receipt(actor,parsed(),"r.png")["receipt_id"]
-    advanced.store_asset("a",rid,b"abc","image/png","r.png")
-    monkeypatch.setattr(product_api,"advanced",advanced)
-    assert client.get(f"/product/receipts/{rid}/image",headers={"X-Tenant-ID":"b"}).status_code==404
-    ok=client.get(f"/product/receipts/{rid}/image",headers={"X-Tenant-ID":"a"})
-    assert ok.status_code==200 and ok.content==b"abc" and ok.headers["cache-control"]=="private, no-store"
+
+def test_asset_api_rejects_cross_tenant_access(monkeypatch):
+    from app import product_api
+
+    service = ProductService(":memory:")
+    advanced = AdvancedWorkspace(service)
+    actor = Actor("a", "admin")
+    rid = service.create_receipt(actor, parsed(), "r.png")["receipt_id"]
+    advanced.store_asset("a", rid, b"abc", "image/png", "r.png")
+    monkeypatch.setattr(product_api, "advanced", advanced)
+    assert client.get(
+        f"/product/receipts/{rid}/image",
+        headers={"X-Tenant-ID": "b", "X-Role": "admin"},
+    ).status_code == 404
+    ok = client.get(
+        f"/product/receipts/{rid}/image",
+        headers={"X-Tenant-ID": "a", "X-Role": "admin"},
+    )
+    assert ok.status_code == 200 and ok.content == b"abc" and ok.headers["cache-control"] == "private, no-store"
 
 
 def test_workspace_javascript_contains_real_workflows():

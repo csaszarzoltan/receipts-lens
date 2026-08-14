@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -41,7 +41,7 @@ class BudgetRecord:
         self.period = period
         self.alert_threshold = alert_threshold
         self.tenant_id = tenant_id
-        self.created_at = created_at or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        self.created_at = created_at or datetime.now(UTC).isoformat().replace("+00:00", "Z")
         self.updated_at = updated_at or self.created_at
 
         # Computed fields (set by store)
@@ -177,7 +177,7 @@ class BudgetStore:
                     raise ValueError("alert_threshold must be between 0.0 and 1.0")
                 record.alert_threshold = val
 
-            record.updated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            record.updated_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
         # Recompute spend fields outside the lock
         self._recompute(record)
@@ -196,7 +196,7 @@ class BudgetStore:
         from app.reports import receipt_store
 
         # Determine date range based on budget period
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if record.period == BudgetPeriod.WEEKLY:
             # Current ISO week (Monday start)
             monday = now.date() - __import__("datetime").timedelta(days=now.weekday())
@@ -226,11 +226,9 @@ class BudgetStore:
             # (approximate matching based on receipt items)
             if hasattr(receipt, "items") and receipt.items:
                 for item in receipt.items:
-                    if hasattr(item, "category"):
-                        # Item-level category matching
-                        if item.category and record.category.lower() in item.category.lower():
-                            spent += item.price
-                            continue
+                    if hasattr(item, "category") and item.category and record.category.lower() in item.category.lower():
+                        spent += item.price
+                        continue
 
         record.spent = spent
         record.remaining = max(0.0, record.amount - spent)

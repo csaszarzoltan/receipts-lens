@@ -30,7 +30,7 @@ def generate_pdf(
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
     c.setTitle(title)
-    width, height = A4
+    _width, height = A4
     y = height - 30 * mm
     margin = 30 * mm
 

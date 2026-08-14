@@ -6,13 +6,13 @@ Behavioral tests must fail clearly (NotImplementedError from stub).
 Covers P0 SSRF hardening gap identified in analysis brief t_9bfd006a.
 """
 from __future__ import annotations
+
 import inspect
 from typing import get_type_hints
 
-
 import pytest
-from app.preprocessing import validate_magic_bytes
 
+from app.preprocessing import validate_magic_bytes
 
 # ---------------------------------------------------------------------------
 # Helpers — minimal file-content byte arrays

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.api import app
 from app.product_service import Actor, ProductConflict, ProductService
+
 
 def get_all_paths(app):
     paths = set()
@@ -73,7 +74,7 @@ def test_retention_purges_only_expired_tenant_data(svc,admin):
     old=svc.create_receipt(admin,parsed(),"old.png")["receipt_id"]
     fresh=svc.create_receipt(admin,parsed(),"fresh.png")["receipt_id"]
     other=svc.create_receipt(Actor("tenant-b","admin"),parsed(),"other.png")["receipt_id"]
-    old_date=(datetime.now(timezone.utc)-timedelta(days=40)).isoformat()
+    old_date=(datetime.now(UTC)-timedelta(days=40)).isoformat()
     svc._db.execute("UPDATE receipts SET created_at=? WHERE receipt_id=?",(old_date,old))
     svc.set_retention(admin,30)
     result=svc.purge_expired(admin)

@@ -54,8 +54,7 @@ import httpx
 import pytest
 from httpx import ASGITransport
 
-from app import api
-from app import ssrf_guard
+from app import api, ssrf_guard
 
 # ---------------------------------------------------------------------------
 # Guarded imports: the interface under test must exist for these to be GREEN.

@@ -11,7 +11,7 @@ import sqlite3
 import threading
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -96,7 +96,7 @@ class SqliteDataPlane:
 
     @staticmethod
     def _now() -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     def submit_receipt(self, tenant_id: str, payload: dict[str, Any], idempotency_key: str,
                        blob_ref: str) -> Submission:

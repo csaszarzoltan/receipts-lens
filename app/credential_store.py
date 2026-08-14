@@ -1,7 +1,13 @@
 """Authenticated encryption for provider credentials."""
 from __future__ import annotations
-import base64,json,os
+
+import base64
+import json
+import os
+
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+
 class CredentialStore:
  def __init__(self,key:bytes|None=None):
   key=key or self.key_from_env()

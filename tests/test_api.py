@@ -28,7 +28,6 @@ from PIL import Image
 from app import api
 from app.security import fetch_image_bytes
 
-
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
 # ---------------------------------------------------------------------------
@@ -129,7 +128,7 @@ def test_rejects_non_image_content_type() -> None:
     transport = httpx.MockTransport(_handler)
 
     with (
-        patch.object(httpx, "Client", lambda *a, **kw: real_client(transport=transport, *a, **kw)),
+        patch.object(httpx, "Client", lambda *a, **kw: real_client(*a, transport=transport, **kw)),
         patch.object(socket, "getaddrinfo", _fake_getaddrinfo),
     ):
         with pytest.raises(HTTPException) as exc_info:
@@ -170,7 +169,7 @@ def test_rejects_oversized_response() -> None:
     transport = httpx.MockTransport(_handler)
 
     with (
-        patch.object(httpx, "Client", lambda *a, **kw: real_client(transport=transport, *a, **kw)),
+        patch.object(httpx, "Client", lambda *a, **kw: real_client(*a, transport=transport, **kw)),
         patch.object(socket, "getaddrinfo", _fake_getaddrinfo),
     ):
         with pytest.raises(HTTPException) as exc_info:

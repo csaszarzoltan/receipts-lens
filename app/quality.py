@@ -1,8 +1,10 @@
 """Deterministic OCR benchmark, confidence calibration and review contracts."""
 from __future__ import annotations
+
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
+
 
 @dataclass(frozen=True)
 class BenchmarkCase:
@@ -52,4 +54,4 @@ class ReviewPolicy:
     def correct(self,case:BenchmarkCase,changes:dict[str,Any],actor:str)->Correction:
         if not actor or not changes: raise ValueError("actor and changes required")
         corrected={**case.prediction,**changes}
-        return Correction(case.case_id,dict(case.prediction),corrected,actor,datetime.now(timezone.utc).isoformat())
+        return Correction(case.case_id,dict(case.prediction),corrected,actor,datetime.now(UTC).isoformat())

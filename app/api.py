@@ -6,7 +6,7 @@ import logging
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 import httpx
@@ -266,7 +266,7 @@ class JobStore:
         self._jobs[job_id] = {
             "job_id": job_id,
             "status": "queued",
-            "created_at": datetime.utcnow().isoformat() + "Z",
+            "created_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "webhook_url": webhook_url,
             "result": None,
             "error": None,
@@ -1007,7 +1007,7 @@ def _resolve_date_range(
         )
 
     if range_preset is not None:
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         if range_preset == "today":
             d = now.strftime("%Y-%m-%d")
             return d, d
@@ -1039,8 +1039,8 @@ def _resolve_date_range(
 
     # Validate date format
     try:
-        datetime.strptime(date_from, "%Y-%m-%d")
-        datetime.strptime(date_to, "%Y-%m-%d")
+        date.fromisoformat(date_from)
+        date.fromisoformat(date_to)
     except ValueError:
         raise HTTPException(
             status_code=422,

@@ -6,7 +6,7 @@ import json
 import sqlite3
 import uuid
 import zipfile
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any
 
 
@@ -20,7 +20,7 @@ class AccountingWorkspace:
 
     @staticmethod
     def now() -> str:
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
     def _schema(self) -> None:
         with self.db:
@@ -107,7 +107,7 @@ class AccountingWorkspace:
                        warnings: list[dict[str, str]]) -> None:
         """Check the receipt date format and future dates."""
         try:
-            if payload.get("date") and date.fromisoformat(payload["date"]) > date.today():
+            if payload.get("date") and date.fromisoformat(payload["date"]) > datetime.now(UTC).date():
                 warnings.append({"code": "future_date", "field": "date",
                                  "message": "A dátum a jövőben van."})
         except ValueError:
@@ -293,7 +293,7 @@ class AccountingWorkspace:
                     "base": base.upper(), "quote": quote.upper(), "source": "identity"}
         row = self.db.execute("SELECT rate,rate_date,source FROM exchange_rates WHERE tenant_id=? "
                               "AND base=? AND quote=? AND rate_date<=? ORDER BY rate_date DESC LIMIT 1",
-                              (tenant, base.upper(), quote.upper(), rate_date or date.today().isoformat())).fetchone()
+                              (tenant, base.upper(), quote.upper(), rate_date or datetime.now(UTC).date().isoformat())).fetchone()
         if not row:
             raise KeyError("exchange rate not found")
         return {"original": amount, "converted": round(amount * row["rate"], 2),

@@ -60,7 +60,7 @@ def _read(rel: str) -> str:
 
 def _extract_items(src: str, const_name: str) -> list[tuple[str, str]]:
     """Parse `{ href: "...", label: "...", icon: "..." }` entries of a const array."""
-    block = re.search(rf"export const {const_name}[^=]*= \[\n(.*?)\n\];", src, re.S)
+    block = re.search(rf"export const {const_name}[^=]*= \[\n(.*?)\n\];", src, re.DOTALL)
     assert block, f"export const {const_name} not found"
     return re.findall(r'href:\s*"([^"]+)",\s*label:\s*"([^"]+)"', block.group(1))
 

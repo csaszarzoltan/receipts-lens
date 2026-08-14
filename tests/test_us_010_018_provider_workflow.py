@@ -1,14 +1,17 @@
+import json
 from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
-import json
+
 import pytest
-from app.product_service import ProductService, Actor
-from app.credential_store import CredentialStore
-from app.connection_service import ConnectionService
+
 from app.accounting_projection import AccountingProjectionService
+from app.connection_service import ConnectionService
+from app.credential_store import CredentialStore
+from app.product_service import Actor, ProductService
 from app.provider_export_service import ProviderExportService
 from app.reconciliation_service import ReconciliationService
+
 
 class FakeProvider:
  def __init__(self): self.created=[]; self.remote={}; self.failures={}
@@ -68,8 +71,8 @@ def test_us_016_017_018_currency_tax_and_preview(tmp_path):
  s=ProductService(tmp_path/'db.sqlite');a=Actor('t','admin');rid=s.create_receipt(a,parsed(12,'EUR',2),'r')['receipt_id'];svc=AccountingProjectionService(s)
  svc.set_rate(a,'EUR','CHF',Decimal('0.95'),date(2026,8,1),'manual')
  projection=svc.refresh(a,rid,'CHF');assert projection['original_total']=='12.00' and projection['reporting_total']=='11.40'
- assert svc.validate_tax(Decimal('10'),Decimal('2'),Decimal('12'))['valid']
- with pytest.raises(ValueError):svc.validate_tax(Decimal('10'),Decimal('-1'),Decimal('9'))
+ assert svc.validate_tax(Decimal(10),Decimal(2),Decimal(12))['valid']
+ with pytest.raises(ValueError):svc.validate_tax(Decimal(10),Decimal(-1),Decimal(9))
  preview=svc.preview(a,rid,1,1,{'expense_account_ref':'acct-1'});assert preview['snapshot_hash']==svc.preview(a,rid,1,1,{'expense_account_ref':'acct-1'})['snapshot_hash']
  assert 'cipher' not in json.dumps(preview).lower()
 

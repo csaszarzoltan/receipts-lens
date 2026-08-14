@@ -1,9 +1,13 @@
 """Decimal source-currency, tax and deterministic preview projections."""
 from __future__ import annotations
-import hashlib,json
+
+import hashlib
+import json
 from datetime import date
-from decimal import Decimal,ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
+
+
 class AccountingProjectionService:
  def __init__(self,service:Any):
   self.db=service._db
@@ -15,7 +19,7 @@ class AccountingProjectionService:
   row=self.db.execute('SELECT payload,version FROM receipts WHERE tenant_id=? AND receipt_id=?',(actor.tenant_id,rid)).fetchone()
   if not row:raise KeyError(rid)
   src=json.loads(row['payload']);base=src.get('currency');total=Decimal(str(src.get('total')))
-  if base==reporting_currency:rate=Decimal('1');source='identity';rdate=src.get('date')
+  if base==reporting_currency:rate=Decimal(1);source='identity';rdate=src.get('date')
   else:
    rr=self.db.execute('SELECT rate,rate_date,source FROM projection_rates WHERE tenant_id=? AND base=? AND quote=? AND rate_date<=? ORDER BY rate_date DESC LIMIT 1',(actor.tenant_id,base,reporting_currency,src.get('date'))).fetchone()
    if not rr:raise KeyError('exchange_rate_missing')

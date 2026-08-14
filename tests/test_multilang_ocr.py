@@ -125,35 +125,29 @@ class TestExtractTextLang:
 
     def test_extract_text_with_lang_deu(self):
         """Verify lang param is passed to pytesseract."""
-        with _mock_patch("app.ocr.pytesseract.image_to_string", return_value="REWE\nSumme 4,48 EUR"):
-            with _mock_patch("app.ocr.preprocess_image", return_value="fake_img"):
-                result = ocr.extract_text(SAMPLE_BYTES, lang="deu")
+        with _mock_patch("app.ocr.pytesseract.image_to_string", return_value="REWE\nSumme 4,48 EUR"), _mock_patch("app.ocr.preprocess_image", return_value="fake_img"):
+            result = ocr.extract_text(SAMPLE_BYTES, lang="deu")
         assert isinstance(result, str)
 
     def test_extract_text_with_lang_fra(self):
-        with _mock_patch("app.ocr.pytesseract.image_to_string", return_value="CARREFOUR\nTotal 4,48 EUR"):
-            with _mock_patch("app.ocr.preprocess_image", return_value="fake_img"):
-                result = ocr.extract_text(SAMPLE_BYTES, lang="fra")
+        with _mock_patch("app.ocr.pytesseract.image_to_string", return_value="CARREFOUR\nTotal 4,48 EUR"), _mock_patch("app.ocr.preprocess_image", return_value="fake_img"):
+            result = ocr.extract_text(SAMPLE_BYTES, lang="fra")
         assert isinstance(result, str)
 
     def test_extract_text_with_invalid_lang_raises(self):
         """GREEN-phase: lang validation implemented. Should raise ValueError for invalid lang."""
-        with pytest.raises(ValueError):
-            with _mock_patch("app.ocr.pytesseract.image_to_string", return_value=""):
-                with _mock_patch("app.ocr.preprocess_image", return_value="fake_img"):
-                    ocr.extract_text(SAMPLE_BYTES, lang="xyz")
+        with pytest.raises(ValueError), _mock_patch("app.ocr.pytesseract.image_to_string", return_value=""), _mock_patch("app.ocr.preprocess_image", return_value="fake_img"):
+            ocr.extract_text(SAMPLE_BYTES, lang="xyz")
 
     def test_extract_text_default_lang_is_eng(self):
-        with _mock_patch("app.ocr.pytesseract.image_to_string", return_value="WALMART\nTotal $4.48"):
-            with _mock_patch("app.ocr.preprocess_image", return_value="fake_img"):
-                result = ocr.extract_text(SAMPLE_BYTES)
+        with _mock_patch("app.ocr.pytesseract.image_to_string", return_value="WALMART\nTotal $4.48"), _mock_patch("app.ocr.preprocess_image", return_value="fake_img"):
+            result = ocr.extract_text(SAMPLE_BYTES)
         assert isinstance(result, str)
 
     def test_extract_text_with_combined_langs(self):
         """Multiple languages: 'eng+deu' for mixed documents."""
-        with _mock_patch("app.ocr.pytesseract.image_to_string", return_value="mixed text"):
-            with _mock_patch("app.ocr.preprocess_image", return_value="fake_img"):
-                result = ocr.extract_text(SAMPLE_BYTES, lang="eng+deu")
+        with _mock_patch("app.ocr.pytesseract.image_to_string", return_value="mixed text"), _mock_patch("app.ocr.preprocess_image", return_value="fake_img"):
+            result = ocr.extract_text(SAMPLE_BYTES, lang="eng+deu")
         assert isinstance(result, str)
 
 

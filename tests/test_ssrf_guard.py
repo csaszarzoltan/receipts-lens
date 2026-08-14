@@ -5,11 +5,11 @@ cover hostname validation and IP rejections without needing external DNS/network
 """
 from __future__ import annotations
 
+import socket
 from unittest.mock import patch
 
 import httpx
 import pytest
-import socket
 
 from app.ssrf_guard import (
     _SSRFGuardClient,
@@ -65,9 +65,8 @@ def test_rejects_blocked_hosts(url):
 
 @pytest.mark.parametrize("addr", ["127.0.0.1", "10.0.0.1", "192.168.1.1", "169.254.169.254", "172.16.0.1", "100.64.0.1", "::1", "fc00::1", "224.0.0.1", "0.0.0.1"])
 def test_rejects_reserved_ips(addr):
-    with patch("app.ssrf_guard.socket.getaddrinfo", return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", (addr, 80))]):
-        with pytest.raises(ValueError, match="reserved ip rejected|unresolvable host"):
-            resolve_and_validate("http://example.com/image.jpg")
+    with patch("app.ssrf_guard.socket.getaddrinfo", return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", (addr, 80))]), pytest.raises(ValueError, match="reserved ip rejected|unresolvable host"):
+        resolve_and_validate("http://example.com/image.jpg")
 
 
 def test_allows_public_ip():
@@ -81,22 +80,20 @@ def test_fetch_allows_successful_response():
     request = validate_url("http://example.com/image.jpg")
     client = _SSRFGuardClient()
     response = _mock_response(content=b"ok", headers={"Content-Type": "image/png"})
-    with patch("app.ssrf_guard.socket.getaddrinfo", return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 80))]):
-        with patch.object(httpx.Client, "send", return_value=response):
-            out = client.fetch(request)
+    with patch("app.ssrf_guard.socket.getaddrinfo", return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 80))]), patch.object(httpx.Client, "send", return_value=response):
+        out = client.fetch(request)
     assert out == b"ok"
 
 
 def test_response_size_capped():
     request = validate_url("http://example.com/image.jpg")
     client = _SSRFGuardClient()
-    with patch("app.ssrf_guard.socket.getaddrinfo", return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 80))]):
-        with patch.object(httpx.Client, "send") as send_mock:
-            stream_response = _mock_response(content=b"a" * 15, headers={"Content-Type": "image/png"})
-            stream_response.is_redirect = False
-            send_mock.return_value = stream_response
-            with pytest.raises(ValueError, match="response exceeds max bytes"):
-                client.fetch(request, max_bytes=10)
+    with patch("app.ssrf_guard.socket.getaddrinfo", return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 80))]), patch.object(httpx.Client, "send") as send_mock:
+        stream_response = _mock_response(content=b"a" * 15, headers={"Content-Type": "image/png"})
+        stream_response.is_redirect = False
+        send_mock.return_value = stream_response
+        with pytest.raises(ValueError, match="response exceeds max bytes"):
+            client.fetch(request, max_bytes=10)
 
 
 def test_redirect_to_internal_blocked():
@@ -114,10 +111,8 @@ def test_redirect_to_internal_blocked():
             addr = "93.184.216.34"
         return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (addr, port or 80))]
 
-    with patch("app.ssrf_guard.socket.getaddrinfo", side_effect=_smart_getaddrinfo):
-        with patch.object(httpx.Client, "send", return_value=redirect_response):
-            with pytest.raises(ValueError, match="reserved ip rejected"):
-                client.fetch(request)
+    with patch("app.ssrf_guard.socket.getaddrinfo", side_effect=_smart_getaddrinfo), patch.object(httpx.Client, "send", return_value=redirect_response), pytest.raises(ValueError, match="reserved ip rejected"):
+        client.fetch(request)
 
 
 def test_redirect_to_valid_host_allowed():
@@ -125,9 +120,8 @@ def test_redirect_to_valid_host_allowed():
     client = _SSRFGuardClient()
     redirect_response = _mock_response(status_code=302, headers={"Location": "http://93.184.216.34/image.jpg"}, is_redirect=True)
     final_response = _mock_response(content=b"ok", headers={"Content-Type": "image/png"})
-    with patch("app.ssrf_guard.socket.getaddrinfo", return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 80))]):
-        with patch.object(httpx.Client, "send", side_effect=[redirect_response, final_response]):
-            out = client.fetch(request)
+    with patch("app.ssrf_guard.socket.getaddrinfo", return_value=[(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 80))]), patch.object(httpx.Client, "send", side_effect=[redirect_response, final_response]):
+        out = client.fetch(request)
     assert out == b"ok"
 
 

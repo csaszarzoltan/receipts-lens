@@ -66,8 +66,8 @@ def _probe(env_override: dict | None = None) -> dict:
         capture_output=True,
         text=True,
         timeout=120,
+        check=True,
     )
-    assert proc.returncode == 0, f"probe failed: {proc.stderr}"
     return json.loads(proc.stdout.strip().splitlines()[-1])
 
 

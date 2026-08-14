@@ -1,5 +1,7 @@
 """Accounting provider protocol used by export and reconciliation services."""
-from typing import Protocol,Any
+from typing import Any, Protocol
+
+
 class AccountingProvider(Protocol):
  def company(self,token:str)->dict[str,Any]:...
  def references(self,kind:str)->list[dict[str,Any]]:...

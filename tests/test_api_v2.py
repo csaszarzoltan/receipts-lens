@@ -192,6 +192,7 @@ class TestBatchRouterMountedOnApp:
 
     def test_export_formats_reachable_through_app(self):
         from fastapi.testclient import TestClient
+
         from app.api import app
 
         resp = TestClient(app).get("/api/v1/receipts/export/formats")
@@ -203,6 +204,7 @@ class TestBatchRouterMountedOnApp:
 
     def test_export_quickbooks_reachable_through_app(self):
         from fastapi.testclient import TestClient
+
         from app.api import app
 
         resp = TestClient(app).get("/api/v1/receipts/export/quickbooks")
@@ -211,6 +213,7 @@ class TestBatchRouterMountedOnApp:
 
     def test_export_generic_reachable_through_app(self):
         from fastapi.testclient import TestClient
+
         from app.api import app
 
         resp = TestClient(app).get("/api/v1/receipts/export/generic")
@@ -219,6 +222,7 @@ class TestBatchRouterMountedOnApp:
 
     def test_batch_post_route_exists_through_app(self):
         from fastapi.testclient import TestClient
+
         from app.api import app
 
         # Route must exist: 200 (accepted) or 422 (validation) — never 404/405.
@@ -227,6 +231,7 @@ class TestBatchRouterMountedOnApp:
 
     def test_batch_status_route_exists_through_app(self):
         from fastapi.testclient import TestClient
+
         from app.api import app
 
         resp = TestClient(app).get("/api/v1/receipts/batch/nonexistent-job")

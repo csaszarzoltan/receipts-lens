@@ -1,7 +1,7 @@
 """Tests each ReceiptLens 1.1 UI capability and its tenant-safe service."""
-from types import SimpleNamespace
 import io
 import zipfile
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -76,6 +76,13 @@ def test_08_dashboard_preferences_are_persisted_by_role():
     # Existing advanced preferences back the visual dashboard editor.
     from app.advanced_workspace import AdvancedWorkspace
 
+    service = ProductService(":memory:")
+    advanced = AdvancedWorkspace(service)
+    advanced.save_preferences("a", "reviewer", {"dashboard_widgets": ["actions", "quality"]})
+    assert advanced.preferences("a", "reviewer")["dashboard_widgets"] == ["actions", "quality"]
+    assert advanced.preferences("a", "admin")["dashboard_widgets"] != ["actions", "quality"]
+
+
 def get_all_paths(app):
     paths = set()
     for route in app.routes:
@@ -87,10 +94,6 @@ def get_all_paths(app):
                     paths.add(sub.path)
     return paths
 
-    service=ProductService(":memory:"); advanced=AdvancedWorkspace(service)
-    advanced.save_preferences("a","reviewer",{"dashboard_widgets":["actions","quality"]})
-    assert advanced.preferences("a","reviewer")["dashboard_widgets"]==["actions","quality"]
-    assert advanced.preferences("a","admin")["dashboard_widgets"]!=["actions","quality"]
 
 def test_09_localization_catalog_and_language_controls_exist():
     html=client.get("/workspace").text; js=client.get("/assets/workspace.js").text

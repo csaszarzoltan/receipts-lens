@@ -78,7 +78,6 @@ from httpx import ASGITransport
 from app import api
 from app.main import app
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -199,7 +198,7 @@ def test_single_async_returns_queued_immediately_for_valid_url(ocr_stub, monkeyp
         assert resp.status_code == 200
         body = resp.json()
         assert body["status"] == "queued"
-        assert "job_id" in body and body["job_id"]
+        assert body.get("job_id")
 
     asyncio.run(do())
 

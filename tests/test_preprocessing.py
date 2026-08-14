@@ -7,13 +7,12 @@ import pytest
 from PIL import Image, ImageDraw, ImageFont
 
 from app.preprocessing import (
-    _auto_rotate_exif,
     _adaptive_threshold,
-    _detect_skew_angle,
+    _auto_rotate_exif,
     _deskew,
+    _detect_skew_angle,
     preprocess_image,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -36,7 +35,7 @@ def _make_receipt_image_bytes() -> bytes:
     try:
         font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
         font_large = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
-    except (OSError, IOError):
+    except OSError:
         font = ImageFont.load_default()
         font_large = font
 
@@ -60,7 +59,7 @@ def _make_rotated_receipt_bytes(angle: float) -> bytes:
     draw = ImageDraw.Draw(img)
     try:
         font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
-    except (OSError, IOError):
+    except OSError:
         font = ImageFont.load_default()
     draw.text((100, 100), "GROCERY STORE", fill="black", font=font)
     draw.text((10, 200), "Total: $5.00", fill="black", font=font)

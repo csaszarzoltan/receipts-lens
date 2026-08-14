@@ -1,17 +1,24 @@
 """Authentication, quota, webhook integrity and tamper-evident audit primitives."""
 from __future__ import annotations
-import hashlib, hmac, json, threading, time
+
+import hashlib
+import hmac
+import json
+import threading
+import time
 from collections import defaultdict, deque
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
+
 
 @dataclass(frozen=True)
 class AuthContext:
     tenant_id: str
     role: str
     @classmethod
-    def from_api_key(cls, key: str, keys: Mapping[str, tuple[str, str]]) -> "AuthContext":
+    def from_api_key(cls, key: str, keys: Mapping[str, tuple[str, str]]) -> AuthContext:
         for candidate, context in keys.items():
             if hmac.compare_digest(candidate, key): return cls(*context)
         raise PermissionError("invalid API key")

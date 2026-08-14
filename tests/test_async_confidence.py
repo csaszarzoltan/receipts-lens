@@ -58,6 +58,7 @@ def test_async_returns_job_id_immediately():
     """Async endpoint should return immediately with a job_id."""
     import httpx
     from httpx import ASGITransport
+
     from app.main import app
 
     transport = ASGITransport(app=app)
@@ -111,6 +112,7 @@ def test_job_status_endpoint_returns_not_found():
     """Polling a non-existent job_id must return 404."""
     import httpx
     from httpx import ASGITransport
+
     from app.main import app
 
     transport = ASGITransport(app=app)

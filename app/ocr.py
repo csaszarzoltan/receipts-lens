@@ -8,7 +8,7 @@ import re
 from difflib import SequenceMatcher
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any
 
 import pytesseract
 
@@ -114,12 +114,12 @@ def _clean_text(text: str) -> str:
     return "\n".join(lines)
 
 
-def _find_first(pattern: re.Pattern, text: str) -> Optional[str]:
+def _find_first(pattern: re.Pattern, text: str) -> str | None:
     m = pattern.search(text)
     return m.group(1) if m else None
 
 
-def _parse_float(raw: str | None) -> Optional[float]:
+def _parse_float(raw: str | None) -> float | None:
     if not raw:
         return None
     cleaned = re.sub(r"[^\d.,]", "", raw)

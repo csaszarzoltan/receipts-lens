@@ -18,8 +18,8 @@ Run with:
 """
 from __future__ import annotations
 
-import io
 import inspect
+import io
 import socket
 import typing
 from typing import get_type_hints
@@ -31,7 +31,6 @@ from PIL import Image
 
 from app import api
 from app.security import fetch_image_bytes
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -176,7 +175,7 @@ def test_successful_image_download_and_ocr():
     transport = httpx.MockTransport(_handler)
 
     with (
-        patch.object(httpx, "Client", lambda *a, **kw: real_client(transport=transport, *a, **kw)),
+        patch.object(httpx, "Client", lambda *a, **kw: real_client(*a, transport=transport, **kw)),
         patch.object(socket, "getaddrinfo", _fake_getaddrinfo),
     ):
         result = fetch_image_bytes("http://images.example.com/receipt.png")
@@ -199,7 +198,7 @@ def test_invalid_content_type_rejected():
     transport = httpx.MockTransport(_handler)
 
     with (
-        patch.object(httpx, "Client", lambda *a, **kw: real_client(transport=transport, *a, **kw)),
+        patch.object(httpx, "Client", lambda *a, **kw: real_client(*a, transport=transport, **kw)),
         patch.object(socket, "getaddrinfo", _fake_getaddrinfo),
     ):
         with pytest.raises(HTTPException) as exc_info:
@@ -209,7 +208,9 @@ def test_invalid_content_type_rejected():
 
 def test_invalid_url_handled():
     """Malformed/non-resolvable URL → graceful error (no 500)."""
-    with pytest.raises(Exception):
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException):
         fetch_image_bytes("http://example.com:abc/")
 
 

@@ -1,6 +1,9 @@
 """Minimal fixed-host QuickBooks Online API adapter."""
 from typing import Any
+
 import httpx
+
+
 class QuickBooksConnector:
  def __init__(self,realm_id:str,token:str,client:httpx.Client|None=None,environment:str='sandbox'):
   self.realm_id,self.token=realm_id,token;self.client=client or httpx.Client(timeout=20);self.base='https://sandbox-quickbooks.api.intuit.com' if environment=='sandbox' else 'https://quickbooks.api.intuit.com'

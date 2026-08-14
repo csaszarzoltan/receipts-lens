@@ -69,7 +69,6 @@ from PIL import Image
 
 from app import api
 
-
 # ---------------------------------------------------------------------------
 # Deterministic fixtures / helpers
 # ---------------------------------------------------------------------------
@@ -108,8 +107,8 @@ class _FakeReceipt:
     date = "2025-01-01"
     tax = 0.1
     currency = "USD"
-    items: list = []
-    confidence: dict = {}
+    items: tuple = ()
+    confidence: tuple = ()
 
 
 def _fake_process_one(_bytes: bytes) -> dict:
@@ -175,7 +174,7 @@ def wired_env(monkeypatch: pytest.MonkeyPatch):
 
     def _client_factory(*args, **kwargs):
         # Force the mock transport while preserving any timeout kwarg from the fetcher.
-        return real_client(transport=transport, *args, **kwargs)
+        return real_client(*args, transport=transport, **kwargs)
 
     monkeypatch.setattr(httpx, "Client", _client_factory)
     monkeypatch.setattr(socket, "getaddrinfo", _fake_getaddrinfo)
@@ -221,10 +220,10 @@ def test_fetch_image_bytes_is_wired_into_api_module() -> None:
     )
     # The physical implementation must be importable from the project.
     try:
-        from app.security import fetch_image_bytes as _via_security  # noqa: F401
+        from app.security import fetch_image_bytes as _via_security
     except Exception:
         try:
-            from app.ssrf_guard import fetch_image_bytes as _via_guard  # noqa: F401
+            from app.ssrf_guard import fetch_image_bytes as _via_guard
         except Exception as exc:  # pragma: no cover - defensive
             pytest.fail(f"fetch_image_bytes not importable from app.security/app.ssrf_guard: {exc}")
 

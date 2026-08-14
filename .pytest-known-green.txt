@@ -1,1 +1,1 @@
-tests/test_fetcher_wiring.py:
+tests/test_fetcher_wiring.py::test_batch_isolates_private_host_without_500

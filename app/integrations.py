@@ -1,10 +1,15 @@
 """Accounting connector port, CSV adapter and auditable usage metering."""
 from __future__ import annotations
-import csv, io, json, threading
+
+import csv
+import io
+import json
+import threading
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
+
 
 @dataclass(frozen=True)
 class AccountingProfile:
@@ -29,7 +34,7 @@ class UsageMeter:
     def __init__(self,path:str|Path)->None:self.path=Path(path);self.path.parent.mkdir(parents=True,exist_ok=True);self._lock=threading.Lock()
     def record(self,tenant_id:str,event:str,quantity:int=1)->None:
         if not tenant_id or not event or quantity<1: raise ValueError("valid usage event required")
-        row={"tenant_id":tenant_id,"event":event,"quantity":quantity,"created_at":datetime.now(timezone.utc).isoformat()}
+        row={"tenant_id":tenant_id,"event":event,"quantity":quantity,"created_at":datetime.now(UTC).isoformat()}
         with self._lock,self.path.open("a",encoding="utf-8") as fh:fh.write(json.dumps(row,sort_keys=True)+"\n")
     def report(self,tenant_id:str)->dict[str,int]:
         totals:dict[str,int]={}

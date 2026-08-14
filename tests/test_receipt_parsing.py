@@ -30,7 +30,6 @@ from PIL import Image
 from app import api
 from app.security import fetch_image_bytes
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -152,7 +151,7 @@ def test_valid_image_url_returns_200_and_parsed_data():
     transport = httpx.MockTransport(_handler)
 
     with (
-        patch.object(httpx, "Client", lambda *a, **kw: real_client(transport=transport, *a, **kw)),
+        patch.object(httpx, "Client", lambda *a, **kw: real_client(*a, transport=transport, **kw)),
         patch.object(socket, "getaddrinfo", _fake_getaddrinfo),
     ):
         result = fetch_image_bytes("http://images.example.com/receipt.png")
@@ -162,7 +161,9 @@ def test_valid_image_url_returns_200_and_parsed_data():
 
 def test_invalid_url_returns_400_or_422():
     """Malformed URL → raises an error (HTTPException or other), not 500."""
-    with pytest.raises(Exception):
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException):
         fetch_image_bytes("http://example.com:abc/")
 
 

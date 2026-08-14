@@ -1,7 +1,11 @@
-import base64, os
+import base64
+import os
+
 from fastapi.testclient import TestClient
+
 os.environ['RECEIPTLENS_CREDENTIAL_KEY']=base64.urlsafe_b64encode(b'q'*32).decode()
 from app.api import app
+
 H={'X-Tenant-ID':'qbo-complete','X-Role':'admin'}
 
 def test_us_010_start_rejects_open_redirect():
@@ -16,7 +20,7 @@ def test_us_011_connection_list_is_tenant_scoped():
 def test_us_012_mapping_save_and_current_are_versioned():
  c=TestClient(app)
  # a provider connection is created through the tested service callback because live Intuit is not called in contract tests
- from app.product_api import service, _connections
+ from app.product_api import _connections, service
  actor=type('A',(),{'tenant_id':'qbo-complete','role':'admin'})()
  cs=_connections(); start=cs.start_oauth(actor,'/integrations')
  conn=cs.complete_oauth(actor,start['state'],'code','realm-test',{'access_token':'a','refresh_token':'r','expires_in':3600})

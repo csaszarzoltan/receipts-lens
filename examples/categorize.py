@@ -7,6 +7,7 @@ Usage:
 """
 
 import sys
+
 import httpx
 
 API_BASE = "http://localhost:8000"

@@ -13,9 +13,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from app.exceptions import InvalidImageError
 from app.ocr import extract_text, parse_receipt, parse_receipt_with_confidence
 from app.preprocessing import preprocess_image
-from app.exceptions import InvalidImageError
 
 
 def main(image_path: str) -> None:

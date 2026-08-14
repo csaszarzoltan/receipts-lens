@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import logging
 import ipaddress
+import logging
 import socket
 import urllib.parse
+from collections.abc import Iterable as IterableType
 from collections.abc import Iterator
-from typing import Iterable as IterableType
 
 import httpx
-
 from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
@@ -150,7 +149,7 @@ def count_bytes(iterable: IterableType[bytes], max_bytes: int) -> Iterator[bytes
 
 
 def _normalize_redirect_url(base_url: str, location: str) -> urllib.parse.ParseResult:
-    if location.startswith("http://") or location.startswith("https://"):
+    if location.startswith(("http://", "https://")):
         return urllib.parse.urlparse(location)
     return urllib.parse.urlparse(urllib.parse.urljoin(base_url, location))
 

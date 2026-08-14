@@ -1,7 +1,11 @@
-import base64,os
+import base64
+import os
+
 from fastapi.testclient import TestClient
+
 os.environ['RECEIPTLENS_CREDENTIAL_KEY']=base64.urlsafe_b64encode(b'k'*32).decode()
 from app.api import app
+
 H={'X-Tenant-ID':'completion','X-Role':'admin'}
 
 def test_us_010_oauth_start_is_real_and_tenant_safe():

@@ -20,8 +20,8 @@ import pytest
 from starlette.testclient import TestClient
 
 from app import api, ocr
-from app.reports import ReceiptStore, receipt_store
 from app.report_generator import generate_csv, generate_pdf
+from app.reports import ReceiptStore, receipt_store
 
 # ============================================================================
 # Fixtures / helpers
