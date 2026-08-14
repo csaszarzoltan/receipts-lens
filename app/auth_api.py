@@ -33,6 +33,7 @@ from app.product_service import (
     Actor,
     is_production,
 )
+from app.subscription_alerts import send_email_notification
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -284,8 +285,3 @@ def accept_invite(
         "role": payload["role"],
         "expires_at": payload["expires_at"],
     }
-
-
-# Late import to satisfy the SMTP delivery path without a circular dep at
-# module top (product_api imports this module).
-from app.subscription_alerts import send_email_notification

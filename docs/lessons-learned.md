@@ -114,3 +114,47 @@ Lesson: in Pydantic validators, `ValueError` is the *mechanism* for 422 — don'
   which is a pre-existing known-failing test tracked in `.pytest-known-green.txt`
   (it waits for P0-3 fetcher wiring; verified failing on the pre-audit HEAD too).
 - Two previously-dead tests now execute and pass.
+
+## Re-run 2026-08-14 (P0 audit re-check after "hamis komplett")
+
+The original completion claimed 0 errors but only verified with the repo `.venv`
+ruff (0.16.1). The operator's PATH ruff (0.5.7) still reported **12 errors** —
+the same class of "hamis komplett" found in sibling repos. Verified both
+linters before touching anything:
+
+- `.venv/bin/ruff` (0.16.1): 0 errors
+- PATH `ruff` (0.5.7): **12 errors** — 11× E402 (module-level import not at top
+  of file), 1× E741 (ambiguous `l`)
+
+Remaining violations at start (0.5.7):
+
+| Location | Rule | Fix |
+|---|---|---|
+| `app/auth_api.py:291` | E402 | moved `send_email_notification` to top imports |
+| `app/dashboard.py:179` | E741 | renamed loop var `l` → `label` |
+| `app/product_api.py:540-543` | E402 | moved `AutomationService` / `ExportWorkflow` / `InboxService` / `QualityService` to top |
+| `app/product_api.py:861-864` | E402 | moved `AccountingProjectionService` / `ConnectionService` / `CredentialStore` / `OAuthConfigError` to top |
+| `tests/test_cli.py:190` | E402 | moved `get_type_hints` to top imports |
+| `tests/test_multilang_ocr.py:120` | E402 | moved `_mock_patch` to top imports |
+
+Why the late imports were safe to move: none of the 8 modules
+(`subscription_alerts`, `automation_service`, `export_workflow`,
+`inbox_service`, `quality_service`, `accounting_projection`,
+`connection_service`, `credential_store`, `intuit_oauth`) import
+`app.auth_api` / `app.product_api`, so the "circular dep" concern documented
+in the `auth_api.py` comment no longer applied (the comment was stale).
+
+Verification (final):
+
+- PATH `ruff` 0.5.7: `ruff check .` → **All checks passed!** (0 errors)
+- `.venv/bin/ruff` 0.16.1: `ruff check . --exclude '.venv,node_modules,__pycache__'`
+  → **All checks passed!** (0 errors)
+- `pytest tests/ -q`: only pre-existing known-failing
+  `tests/test_fetcher_wiring.py::test_batch_isolates_private_host_without_500`
+  (tracked in `.pytest-known-green.txt`, fails identically on the pre-audit
+  HEAD — verified via `git stash`).
+
+Lesson: a repo can be green on its pinned ruff (0.16.1) while the operator's
+PATH ruff (0.5.7) still fails. E402/E741 are NOT in the 0.16 default select
+set but ARE in 0.5.7's. Before declaring a ruff audit complete, run BOTH the
+repo `.venv` ruff and the operator's PATH ruff.

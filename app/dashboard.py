@@ -176,7 +176,7 @@ def render_forecast_dashboard() -> str:
       <h2>Category Spend Forecast</h2>
       {_bar_svg(chart_values)}
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
-        {"".join(f'<span class="muted">{escape(l)}: ${v:,.2f}</span>' for l, v in zip(chart_labels, chart_values))}
+        {"".join(f'<span class="muted">{escape(label)}: ${v:,.2f}</span>' for label, v in zip(chart_labels, chart_values))}
       </div>
     </div>
   </section>

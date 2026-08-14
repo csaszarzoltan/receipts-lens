@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import inspect
 from typing import get_type_hints
+from unittest.mock import patch as _mock_patch
 
 import pytest
 
@@ -116,8 +117,6 @@ class TestMultilangOCRInterface:
 # ===========================================================================
 # BEHAVIORAL TESTS — should fail with NotImplementedError until implemented
 # ===========================================================================
-
-from unittest.mock import patch as _mock_patch
 
 
 class TestExtractTextLang:

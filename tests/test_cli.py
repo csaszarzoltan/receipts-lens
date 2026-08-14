@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import inspect
+from typing import get_type_hints
 
 import pytest
 
@@ -184,10 +185,6 @@ class TestBuildParserBehavior:
             pytest.skip("Not implemented yet — RED phase")
         args, _ = parser.parse_known_args(["export", "--format", "xero", "--category", "food"])
         assert args.category == "food"
-
-
-# Need get_type_hints for main return type check
-from typing import get_type_hints
 
 
 class TestMainBehavior:

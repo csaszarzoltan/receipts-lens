@@ -10,8 +10,15 @@ from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.accounting_projection import AccountingProjectionService
 from app.accounting_workspace import AccountingWorkspace
 from app.advanced_workspace import AdvancedWorkspace, extract_ocr_boxes
+from app.automation_service import AutomationService
+from app.connection_service import ConnectionService
+from app.credential_store import CredentialStore
+from app.export_workflow import ExportWorkflow
+from app.inbox_service import InboxService
+from app.intuit_oauth import OAuthConfigError
 from app.ocr import ConfidenceReceipt, parse_receipt_with_confidence
 from app.product_service import (
     HOUSEHOLD_ROLES,
@@ -20,6 +27,7 @@ from app.product_service import (
     ProductService,
     is_production,
 )
+from app.quality_service import QualityService
 from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_vision
 
 router = APIRouter()
@@ -537,10 +545,6 @@ def create_export_run(body: ExportRequest, current: Actor = Depends(actor)) -> d
 
 # ReceiptLens 1.1 accounting-readiness API
 accounting = AccountingWorkspace(service)
-from app.automation_service import AutomationService
-from app.export_workflow import ExportWorkflow
-from app.inbox_service import InboxService
-from app.quality_service import QualityService
 
 export_workflow = ExportWorkflow(service, accounting)
 quality_service = QualityService(service)
@@ -858,10 +862,6 @@ def rollback_run(run_id:str,body:RollbackRequest,current:Actor=Depends(actor))->
     except KeyError as exc:raise HTTPException(404,"Run not found") from exc
 
 # QuickBooks connected-workflow completion API
-from app.accounting_projection import AccountingProjectionService
-from app.connection_service import ConnectionService
-from app.credential_store import CredentialStore
-from app.intuit_oauth import OAuthConfigError
 
 
 def _credential_store():
