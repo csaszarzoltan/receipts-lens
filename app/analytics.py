@@ -52,6 +52,61 @@ class SpendingAnalytics:
     singleton imported from ``app.reports``.
     """
 
+    def _accumulate_item(self, item: Any, category: str | None,
+                         group_totals: dict[str, float], group_counts: dict[str, int],
+                         group_max: dict[str, float], group_min: dict[str, float],
+                         categories_found: set[str]) -> None:
+        """Add one receipt item's price to the per-category aggregates."""
+        item_cat = item.category or "Uncategorized"
+        if category and category.lower() not in item_cat.lower():
+            return
+        categories_found.add(item_cat)
+        group_totals[item_cat] += item.price
+        group_counts[item_cat] += 1
+        if item_cat not in group_max or item.price > group_max[item_cat]:
+            group_max[item_cat] = item.price
+        if item_cat not in group_min or item.price < group_min[item_cat]:
+            group_min[item_cat] = item.price
+
+    def _accumulate_receipt(self, receipt: Any, category: str | None,
+                            group_totals: dict[str, float], group_counts: dict[str, int],
+                            group_max: dict[str, float], group_min: dict[str, float]) -> None:
+        """Accumulate one receipt: by item when items exist, else merchant proxy."""
+        total = receipt.total or 0.0
+        categories_found: set[str] = set()
+        if receipt.items:
+            for item in receipt.items:
+                self._accumulate_item(item, category, group_totals, group_counts,
+                                      group_max, group_min, categories_found)
+        else:
+            cat = "Uncategorized"
+            if category and category.lower() not in cat.lower():
+                return
+            categories_found.add(cat)
+            group_totals[cat] += total
+            group_counts[cat] += 1
+            if cat not in group_max or total > group_max[cat]:
+                group_max[cat] = total
+            if cat not in group_min or total < group_min[cat]:
+                group_min[cat] = total
+
+    @staticmethod
+    def _build_groups(category: str | None, group_totals: dict[str, float],
+                      group_counts: dict[str, int], group_max: dict[str, float],
+                      group_min: dict[str, float]) -> list[SpendingGroup]:
+        return [
+            SpendingGroup(
+                key=cat,
+                total=round(group_totals[cat], 2),
+                count=group_counts[cat],
+                avg=round(group_totals[cat] / group_counts[cat], 2) if group_counts[cat] > 0 else 0.0,
+                max=round(group_max.get(cat, 0.0), 2),
+                min=round(group_min.get(cat, 0.0), 2),
+            )
+            for cat in sorted(group_totals.keys())
+            if not category or category.lower() in cat.lower()
+        ]
+
     def by_category(
         self,
         date_from: str,
@@ -71,49 +126,11 @@ class SpendingAnalytics:
         group_max: dict[str, float] = {}
         group_min: dict[str, float] = {}
 
-        # Track totals per receipt for accurate counts per category
         for receipt in receipts:
-            total = receipt.total or 0.0
-            categories_found: set[str] = set()
+            self._accumulate_receipt(receipt, category, group_totals, group_counts,
+                                     group_max, group_min)
 
-            if receipt.items:
-                for item in receipt.items:
-                    item_cat = item.category or "Uncategorized"
-                    # If category filter is set, skip non-matching items
-                    if category and category.lower() not in item_cat.lower():
-                        continue
-                    categories_found.add(item_cat)
-                    group_totals[item_cat] += item.price
-                    group_counts[item_cat] += 1
-                    if item_cat not in group_max or item.price > group_max[item_cat]:
-                        group_max[item_cat] = item.price
-                    if item_cat not in group_min or item.price < group_min[item_cat]:
-                        group_min[item_cat] = item.price
-            else:
-                # No items, use merchant as category proxy
-                cat = "Uncategorized"
-                if category and category.lower() not in cat.lower():
-                    continue
-                categories_found.add(cat)
-                group_totals[cat] += total
-                group_counts[cat] += 1
-                if cat not in group_max or total > group_max[cat]:
-                    group_max[cat] = total
-                if cat not in group_min or total < group_min[cat]:
-                    group_min[cat] = total
-
-        groups = [
-            SpendingGroup(
-                key=cat,
-                total=round(group_totals[cat], 2),
-                count=group_counts[cat],
-                avg=round(group_totals[cat] / group_counts[cat], 2) if group_counts[cat] > 0 else 0.0,
-                max=round(group_max.get(cat, 0.0), 2),
-                min=round(group_min.get(cat, 0.0), 2),
-            )
-            for cat in sorted(group_totals.keys())
-            if not category or category.lower() in cat.lower()
-        ]
+        groups = self._build_groups(category, group_totals, group_counts, group_max, group_min)
 
         total_spent = round(sum(g.total for g in groups), 2)
         trend = self._build_trend(date_from, date_to)

@@ -85,10 +85,9 @@ class AccountingWorkspace:
         return {"receipt_id": receipt_id, "version": version, "line_items": clean,
                 "before": before, "line_items_total": round(sum(x["amount"] for x in clean), 2)}
 
-    def validate(self, actor: Any, receipt_id: str, connection_id: str | None = None) -> dict[str, Any]:
-        payload = self.receipt(actor.tenant_id, receipt_id)["payload"]
+    def _validate_core_fields(self, payload: dict[str, Any]) -> list[dict[str, str]]:
+        """Check required fields and total/tax invariants; return error dicts."""
         errors: list[dict[str, str]] = []
-        warnings: list[dict[str, str]] = []
         required = ("vendor", "date", "total", "currency")
         for field in required:
             if payload.get(field) in (None, ""):
@@ -99,6 +98,14 @@ class AccountingWorkspace:
         if total is not None and float(total) < 0:
             errors.append({"code": "negative_total", "field": "total",
                            "message": "A végösszeg nem lehet negatív."})
+        if tax is not None and total is not None and float(tax) > float(total):
+            errors.append({"code": "tax_exceeds_total", "field": "tax",
+                           "message": "Az adó nem lehet nagyobb a végösszegnél."})
+        return errors
+
+    def _validate_date(self, payload: dict[str, Any], errors: list[dict[str, str]],
+                       warnings: list[dict[str, str]]) -> None:
+        """Check the receipt date format and future dates."""
         try:
             if payload.get("date") and date.fromisoformat(payload["date"]) > date.today():
                 warnings.append({"code": "future_date", "field": "date",
@@ -106,14 +113,21 @@ class AccountingWorkspace:
         except ValueError:
             errors.append({"code": "invalid_date", "field": "date",
                            "message": "A dátum formátuma érvénytelen."})
+
+    def _validate_line_items(self, payload: dict[str, Any], total: Any,
+                             warnings: list[dict[str, str]]) -> float:
+        """Check line-item totals against the receipt total; return item_total."""
         items = payload.get("line_items") or []
         item_total = round(sum(float(i.get("amount", i.get("price", 0)) or 0) for i in items), 2)
         if total is not None and items and abs(item_total - float(total)) > 0.01:
             warnings.append({"code": "line_total_mismatch", "field": "line_items",
                              "message": f"A tételsorok összege {item_total:.2f}, a végösszeg {float(total):.2f}."})
-        if tax is not None and total is not None and float(tax) > float(total):
-            errors.append({"code": "tax_exceeds_total", "field": "tax",
-                           "message": "Az adó nem lehet nagyobb a végösszegnél."})
+        return item_total
+
+    def _validate_export_context(self, actor: Any, receipt_id: str, connection_id: str | None,
+                                 warnings: list[dict[str, str]],
+                                 errors: list[dict[str, str]]) -> None:
+        """Check cost-center metadata and connection mapping existence."""
         metadata = self.db.execute("SELECT project,cost_center FROM receipt_metadata WHERE tenant_id=? AND receipt_id=?",
                                    (actor.tenant_id, receipt_id)).fetchone()
         if not metadata or not metadata["cost_center"]:
@@ -125,6 +139,14 @@ class AccountingWorkspace:
             if not conn:
                 errors.append({"code": "connection_missing", "field": "connection",
                                "message": "Az exportkapcsolat nem található."})
+
+    def validate(self, actor: Any, receipt_id: str, connection_id: str | None = None) -> dict[str, Any]:
+        payload = self.receipt(actor.tenant_id, receipt_id)["payload"]
+        errors = self._validate_core_fields(payload)
+        warnings: list[dict[str, str]] = []
+        self._validate_date(payload, errors, warnings)
+        item_total = self._validate_line_items(payload, payload.get("total"), warnings)
+        self._validate_export_context(actor, receipt_id, connection_id, warnings, errors)
         readiness = "blocked" if errors else ("warning" if warnings else "exportable")
         return {"receipt_id": receipt_id, "readiness": readiness, "errors": errors,
                 "warnings": warnings, "line_items_total": item_total}

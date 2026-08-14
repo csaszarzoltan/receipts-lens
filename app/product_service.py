@@ -158,6 +158,17 @@ class ProductService:
         rows = self._db.execute("SELECT * FROM jobs WHERE tenant_id=? ORDER BY created_at DESC", (actor.tenant_id,)).fetchall()
         return [dict(r) for r in rows]
 
+    @staticmethod
+    def _review_row_matches(
+        row: Any, payload: dict[str, Any], confidence: dict[str, Any],
+        confidence_field: str | None, confidence_lt: float | None,
+        readiness: str | None,
+    ) -> bool:
+        if readiness and row["status"] != readiness:
+            return False
+        value = confidence.get(confidence_field) if confidence_field else None
+        return not (confidence_lt is not None and value is not None and float(value) >= confidence_lt)
+
     def list_reviews(self, actor: Actor, confidence_field: str | None = None,
                      confidence_lt: float | None = None, readiness: str | None = None,
                      sort: str = "created_asc", limit: int = 50, offset: int = 0) -> dict[str, Any]:
@@ -173,8 +184,8 @@ class ProductService:
         for row in rows:
             payload=json.loads(row["payload"]); confidence=payload.get("confidence") or {}
             value=confidence.get(confidence_field) if confidence_field else None
-            if readiness and row["status"] != readiness: continue
-            if confidence_lt is not None and value is not None and float(value) >= confidence_lt: continue
+            if not self._review_row_matches(row, payload, confidence, confidence_field, confidence_lt, readiness):
+                continue
             items.append({"receipt_id":row["receipt_id"],"status":row["status"],"readiness":row["status"],
                           "version":row["version"],"receipt":payload,"lowest_confidence":min([v for v in confidence.values() if isinstance(v,(int,float))],default=None),
                           "selected_confidence":value,"created_at":row["created_at"]})
@@ -344,6 +355,27 @@ class ProductService:
         return {"state": state, "blocker_count": blocker_count,
                 "warning_count": warning_count, "issues": issues}
 
+    @staticmethod
+    def _search_row_matches(
+        row: Any, payload: dict[str, Any], tags: list[Any],
+        readiness_state: str, query: str | None, status: str | None,
+        tag: str | None, min_total: float | None, max_total: float | None,
+        readiness: str | None,
+    ) -> bool:
+        total = payload.get("total")
+        haystack = " ".join(str(payload.get(k) or "") for k in ("vendor", "date", "currency")).lower()
+        if query and query.lower() not in haystack:
+            return False
+        if status and row["status"] != status:
+            return False
+        if tag and tag.lower() not in {str(x).lower() for x in tags}:
+            return False
+        if min_total is not None and (total is None or float(total) < min_total):
+            return False
+        if max_total is not None and (total is None or float(total) > max_total):
+            return False
+        return not (readiness and readiness_state != readiness)
+
     def search_receipts(self, actor: Actor, query: str | None = None,
                         status: str | None = None, tag: str | None = None,
                         min_total: float | None = None, max_total: float | None = None,
@@ -363,15 +395,12 @@ class ProductService:
         for row in rows:
             payload=json.loads(row["payload"])
             tags=json.loads(row["tags"] or "[]")
-            total=payload.get("total")
-            haystack=" ".join(str(payload.get(k) or "") for k in ("vendor","date","currency")).lower()
             result_readiness = self.receipt_readiness(payload, row["status"], row["cost_center"])
-            if query and query.lower() not in haystack: continue
-            if status and row["status"] != status: continue
-            if tag and tag.lower() not in {str(x).lower() for x in tags}: continue
-            if min_total is not None and (total is None or float(total) < min_total): continue
-            if max_total is not None and (total is None or float(total) > max_total): continue
-            if readiness and result_readiness["state"] != readiness: continue
+            if not self._search_row_matches(
+                row, payload, tags, result_readiness["state"], query, status,
+                tag, min_total, max_total, readiness,
+            ):
+                continue
             items.append({"receipt_id":row["receipt_id"],"status":row["status"],
                           "version":row["version"],"created_at":row["created_at"],
                           "receipt":payload,"metadata":{"tags":tags,"project":row["project"],
@@ -507,6 +536,103 @@ class ProductService:
         return {"schema_version":1,"tenant_id":actor.tenant_id,"exported_at":self._now(),
                 "receipts":receipts,"approvals":approvals}
 
+    @staticmethod
+    def _clean_line_items(line_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Validate and normalize line items; raises ValueError on the first bad item."""
+        clean_items = []
+        for index, item in enumerate(line_items):
+            name = str(item.get("name") or "").strip()
+            try:
+                quantity = float(item.get("quantity", 1))
+                unit_price = float(item.get("unit_price", item.get("price", 0)))
+                amount = float(item.get("amount", quantity * unit_price))
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"invalid line item at index {index}") from exc
+            if not name or quantity <= 0 or unit_price < 0 or amount < 0:
+                raise ValueError(f"invalid line item at index {index}")
+            clean_items.append({
+                "name": name, "quantity": quantity, "unit_price": unit_price,
+                "amount": round(amount, 2), "tax_rate": item.get("tax_rate"),
+                "category": item.get("category"),
+            })
+        return clean_items
+
+    @staticmethod
+    def _clean_workspace_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+        """Validate and normalize tags/project/cost_center; raises ValueError on bad tags."""
+        tags = metadata.get("tags") or []
+        normalized: dict[str, str] = {}
+        for value in tags:
+            cleaned = str(value).strip()
+            if cleaned:
+                normalized.setdefault(cleaned.lower(), cleaned)
+        tag_values = sorted(normalized.values(), key=str.lower)
+        if len(tag_values) > 20 or any(len(tag) > 40 for tag in tag_values):
+            raise ValueError("at most 20 tags of 40 characters are allowed")
+        return {
+            "tags": tag_values,
+            "project": str(metadata.get("project") or "").strip() or None,
+            "cost_center": str(metadata.get("cost_center") or "").strip() or None,
+        }
+
+    def _receipt_row(self, actor: Actor, receipt_id: str) -> Any:
+        """Fetch one tenant receipt or raise KeyError."""
+        row = self._db.execute(
+            "SELECT * FROM receipts WHERE tenant_id=? AND receipt_id=?",
+            (actor.tenant_id, receipt_id),
+        ).fetchone()
+        if not row:
+            raise KeyError(receipt_id)
+        return row
+
+    def _apply_workspace_tx(
+        self, actor: Actor, receipt_id: str, expected_version: int,
+        fields: dict[str, Any], clean_items: list[dict[str, Any]] | None,
+        clean_metadata: dict[str, Any] | None, complete: bool,
+    ) -> tuple[str, int, dict[str, Any]]:
+        """Apply the workspace update inside the transaction.
+
+        Returns (status, version, payload). Raises KeyError/ProductConflict on
+        stale or missing receipts.
+        """
+        row = self._receipt_row(actor, receipt_id)
+        if row["version"] != expected_version:
+            raise ProductConflict("stale receipt version")
+        payload = json.loads(row["payload"])
+        payload.update(fields)
+        if clean_items is not None:
+            payload["line_items"] = clean_items
+        status = "completed" if complete else row["status"]
+        version = expected_version + 1
+        self._db.execute(
+            "UPDATE receipts SET payload=?,status=?,version=? WHERE tenant_id=? AND receipt_id=?",
+            (json.dumps(payload, sort_keys=True), status, version, actor.tenant_id, receipt_id),
+        )
+        self._db.execute(
+            "UPDATE jobs SET status=? WHERE tenant_id=? AND receipt_id=?",
+            (status, actor.tenant_id, receipt_id),
+        )
+        if clean_metadata is not None:
+            self._db.execute(
+                "INSERT OR REPLACE INTO receipt_metadata VALUES(?,?,?,?,?,?)",
+                (receipt_id, actor.tenant_id, json.dumps(clean_metadata["tags"]),
+                 clean_metadata["project"], clean_metadata["cost_center"], self._now()),
+            )
+        self._audit(actor.tenant_id, "receipt.workspace.updated", receipt_id)
+        return status, version, payload
+
+    def _read_workspace_metadata(self, actor: Actor, receipt_id: str) -> dict[str, Any]:
+        """Read stored metadata back after the transaction commits."""
+        metadata_row = self._db.execute(
+            "SELECT tags,project,cost_center FROM receipt_metadata WHERE tenant_id=? AND receipt_id=?",
+            (actor.tenant_id, receipt_id),
+        ).fetchone()
+        return {
+            "tags": json.loads(metadata_row["tags"]) if metadata_row else [],
+            "project": metadata_row["project"] if metadata_row else None,
+            "cost_center": metadata_row["cost_center"] if metadata_row else None,
+        }
+
     def update_receipt_workspace(
         self, actor: Actor, receipt_id: str, expected_version: int,
         fields: dict[str, Any] | None, line_items: list[dict[str, Any]] | None,
@@ -526,82 +652,16 @@ class ProductService:
         if not fields and line_items is None and metadata is None:
             raise ValueError("at least one workspace change is required")
 
-        clean_items = None
-        if line_items is not None:
-            clean_items = []
-            for index, item in enumerate(line_items):
-                name = str(item.get("name") or "").strip()
-                try:
-                    quantity = float(item.get("quantity", 1))
-                    unit_price = float(item.get("unit_price", item.get("price", 0)))
-                    amount = float(item.get("amount", quantity * unit_price))
-                except (TypeError, ValueError) as exc:
-                    raise ValueError(f"invalid line item at index {index}") from exc
-                if not name or quantity <= 0 or unit_price < 0 or amount < 0:
-                    raise ValueError(f"invalid line item at index {index}")
-                clean_items.append({
-                    "name": name, "quantity": quantity, "unit_price": unit_price,
-                    "amount": round(amount, 2), "tax_rate": item.get("tax_rate"),
-                    "category": item.get("category"),
-                })
-
-        clean_metadata = None
-        if metadata is not None:
-            tags = metadata.get("tags") or []
-            normalized: dict[str, str] = {}
-            for value in tags:
-                cleaned = str(value).strip()
-                if cleaned:
-                    normalized.setdefault(cleaned.lower(), cleaned)
-            tag_values = sorted(normalized.values(), key=str.lower)
-            if len(tag_values) > 20 or any(len(tag) > 40 for tag in tag_values):
-                raise ValueError("at most 20 tags of 40 characters are allowed")
-            clean_metadata = {
-                "tags": tag_values,
-                "project": str(metadata.get("project") or "").strip() or None,
-                "cost_center": str(metadata.get("cost_center") or "").strip() or None,
-            }
+        clean_items = self._clean_line_items(line_items) if line_items is not None else None
+        clean_metadata = self._clean_workspace_metadata(metadata) if metadata is not None else None
 
         with self._lock, self._db:
-            row = self._db.execute(
-                "SELECT * FROM receipts WHERE tenant_id=? AND receipt_id=?",
-                (actor.tenant_id, receipt_id),
-            ).fetchone()
-            if not row:
-                raise KeyError(receipt_id)
-            if row["version"] != expected_version:
-                raise ProductConflict("stale receipt version")
-            payload = json.loads(row["payload"])
-            payload.update(fields)
-            if clean_items is not None:
-                payload["line_items"] = clean_items
-            status = "completed" if complete else row["status"]
-            version = expected_version + 1
-            self._db.execute(
-                "UPDATE receipts SET payload=?,status=?,version=? WHERE tenant_id=? AND receipt_id=?",
-                (json.dumps(payload, sort_keys=True), status, version, actor.tenant_id, receipt_id),
+            status, version, payload = self._apply_workspace_tx(
+                actor, receipt_id, expected_version, fields,
+                clean_items, clean_metadata, complete,
             )
-            self._db.execute(
-                "UPDATE jobs SET status=? WHERE tenant_id=? AND receipt_id=?",
-                (status, actor.tenant_id, receipt_id),
-            )
-            if clean_metadata is not None:
-                self._db.execute(
-                    "INSERT OR REPLACE INTO receipt_metadata VALUES(?,?,?,?,?,?)",
-                    (receipt_id, actor.tenant_id, json.dumps(clean_metadata["tags"]),
-                     clean_metadata["project"], clean_metadata["cost_center"], self._now()),
-                )
-            self._audit(actor.tenant_id, "receipt.workspace.updated", receipt_id)
 
-        metadata_row = self._db.execute(
-            "SELECT tags,project,cost_center FROM receipt_metadata WHERE tenant_id=? AND receipt_id=?",
-            (actor.tenant_id, receipt_id),
-        ).fetchone()
-        result_metadata = {
-            "tags": json.loads(metadata_row["tags"]) if metadata_row else [],
-            "project": metadata_row["project"] if metadata_row else None,
-            "cost_center": metadata_row["cost_center"] if metadata_row else None,
-        }
+        result_metadata = self._read_workspace_metadata(actor, receipt_id)
         return {"receipt_id": receipt_id, "status": status, "version": version,
                 "receipt": payload, "metadata": result_metadata}
 
