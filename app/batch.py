@@ -134,12 +134,9 @@ class BatchProcessor:
         def _process_one(idx: int, item: bytes | str) -> dict[str, Any]:
             try:
                 if isinstance(item, str):
-                    # URL — fetch bytes
-                    import httpx
+                    from app.security import fetch_image_bytes
 
-                    resp = httpx.get(item, timeout=30)
-                    resp.raise_for_status()
-                    img_bytes = resp.content
+                    img_bytes = fetch_image_bytes(item)
                 else:
                     img_bytes = item
                 parsed = parse_receipt(img_bytes, lang=lang)

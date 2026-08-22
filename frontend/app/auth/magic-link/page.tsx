@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { requestMagicLink, verifyMagicLink } from "@/lib/api";
@@ -12,7 +12,7 @@ import { setSessionToken } from "@/lib/auth";
  *   - Without a token → email form; the returned link is shown when the
  *     backend runs in dev mode (no SMTP), otherwise the email is "sent".
  */
-export default function MagicLinkPage() {
+function MagicLinkInner() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token");
@@ -116,5 +116,13 @@ export default function MagicLinkPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MagicLinkPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-sm text-slate-500">Betöltés…</p></div>}>
+      <MagicLinkInner />
+    </Suspense>
   );
 }

@@ -311,8 +311,8 @@ def _render_receipt(parsed: ConfidenceReceipt) -> dict:
         "line_items": [
             {"name": item.name, "price": item.price} for item in parsed.items
         ],
-        "confidence": parsed.confidence,
-        "confidence_level": parsed.confidence_level,
+        "confidence": getattr(parsed, "confidence", {}),
+        "confidence_level": getattr(parsed, "confidence_level", None),
     }
 
 

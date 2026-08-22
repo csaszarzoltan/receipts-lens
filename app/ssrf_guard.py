@@ -226,10 +226,10 @@ def fetch_image_bytes(
 ) -> bytes:
     try:
         request = validate_url(url, max_bytes=max_bytes)
-        client = _SSRFGuardClient()
+        guard = _SSRFGuardClient()
         client_timeout = httpx.Timeout(connect=10.0, read=timeout, write=None, pool=None)
         with httpx.Client(timeout=client_timeout) as http_client:
-            return client._send(http_client, request, max_bytes=max_bytes, buffer=bytearray())
+            return guard._send(http_client, request, max_bytes=max_bytes, buffer=bytearray())
     except httpx.InvalidURL as exc:
         logger.warning("Invalid URL rejected: %s", exc)
         raise HTTPException(

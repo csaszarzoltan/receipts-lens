@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { acceptInvite } from "@/lib/api";
@@ -13,7 +13,7 @@ import type { HouseholdRole } from "@/lib/types";
  * page resolves it against the backend, which creates the membership and
  * returns a session — the user is signed straight in.
  */
-export default function InvitePage() {
+function InviteInner() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token");
@@ -102,5 +102,13 @@ export default function InvitePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function InvitePage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-sm text-slate-500">Betöltés…</p></div>}>
+      <InviteInner />
+    </Suspense>
   );
 }
