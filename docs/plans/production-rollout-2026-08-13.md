@@ -1,6 +1,6 @@
 # ReceiptLens élesítés — receipts.allthezoo.com
 
-**Dátum**: 2026-08-13 · **Státusz**: Terv v2 (döntésekkel) · **Becsült munka**: fél nap
+**Dátum**: 2026-08-13 · **Státusz**: Terv v3 (AI-scan = jövőbeli fizetős) · **Becsült munka**: fél nap
 
 ## Kiinduló állapot (mérve)
 
@@ -20,8 +20,8 @@
 |---|---|---|
 | D1 | Subdomain | ✅ **`receipts.allthezoo.com`** (user, 2026-08-13) |
 | D2 | Portok | BE 8130, FE 3300 |
-| D3 | SMTP provider | **Javaslat: Resend** (SMTP-interfészen, l. lent) — user jóváhagyás + API key kell |
-| D4 | Cloudflare proxy | **Javaslat: DNS-only** (szürke felhő) — Caddy maga intézi a TLS-t |
+| D3 | SMTP provider | ✅ **Resend** (SMTP: smtp.resend.com:587, feladó noreply@allthezoo.com) — API key beszerzés alatt |
+| D4 | Cloudflare proxy | ✅ **DNS-only** (szürke felhő) — Caddy intézi a TLS-t |
 
 ### D3 indoklás — miért Resend?
 
@@ -50,7 +50,10 @@
    - `RECEIPTLENS_SMTP_ENABLED=1` + `RECEIPTLENS_SMTP_HOST=smtp.resend.com`,
      `PORT=587`, `USER=resend`, `PASSWORD=<resend-api-key>`,
      `FROM=noreply@allthezoo.com`
-   - vision LLM key (ha bekapcsoljuk az AI-scan-t; külön döntés — költség)
+   - 📝 **AI-scan (vision LLM) — JÖVŐBELI FIZETŐS FUNKCIÓ**: kulcs NEM kerül bele
+     az éles `.env`-be. Az OCR alapból Tesseracttal fut. Az AI-scan kapcsoló a
+     frontendben/kódban marad, de max `coming_soon` / upgrade-promptként jelenik
+     meg (l. bővebben a végjegyzetet).
 2. Frontend production build:
    `NEXT_PUBLIC_API_BASE_URL=https://receipts.allthezoo.com/api npm run build`
    (dev mód helyett `next start` — egyben a memória-problémát is megoldja: 545 MB → ~60 MB)
@@ -87,11 +90,24 @@
 
 - ⚠️ **OCR terhelés**: BUG-009 maradék (2× Tesseract 300s+ terhelten) — shared VPS-en
   a mealmind mellett figyelni kell; induláskor max 1-2 párhuzamos OCR
-- **AI-scan költség**: vision LLM key budget-döntés előbb, mint feature
 - **Session-store memóriában van** → restart kijelentkeztet; elfogadható béta-szinten,
   később DB-be
-- **User-input függőség**: Resend fiók + API key (D3), Cloudflare A record (Fázis 3)
-  — ezek nélkül csak az infra-lépések futtathatók
+
+## Végjegyzet — AI-scan (jövőbeli fizetős funkció)
+
+Az **AI-scan** (vision LLM-es nyugtaleolvasás, jobb pontosság összetett számlákon)
+élesben **nem aktivált**; az OCR kizárólag Tesseracttal fut. Döntésed szerint:
+
+> *Legyen megjegyzés, hogy a jövőben a fizetős verzió része.*
+
+Ezért:
+- Az éles `.env`-be **nem kerül vision-LLM API-key**.
+- A frontend `ai_scan` paraméter/kapcsoló bennmarad a kódban, de éles környezetben
+  **upgrade-promptot** mutat („Hamarosan: AI-scan a Pro csomagban") vagy rejtve
+  marad — fejleszti, hogy a feature-flag a `RECEIPTLENS_FEATURE_AI_SCAN` env-en múlik
+  (default: off élesben).
+- A kanban chain-ben „AI-scan fizetős mögé zárása" külön task lesz (Pro plan
+  bevezetésekor), itt most csak a note+dokumentálás történik.
 
 ## Szállítás
 
