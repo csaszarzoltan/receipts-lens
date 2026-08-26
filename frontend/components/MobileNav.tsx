@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { BUSINESS_NAV_ITEMS, MOBILE_TABS, NAV_ITEMS } from "@/lib/nav";
+import { BUSINESS_NAV_ITEMS, MOBILE_TABS, NAV_ITEMS, getNavLabel } from "@/lib/nav";
 import { cx } from "@/lib/utils";
 
 /**
@@ -40,7 +40,7 @@ export default function MobileNav() {
               aria-current={activeTab(item.href) ? "page" : undefined}
             >
               <span aria-hidden="true" className="text-lg leading-none">{item.icon}</span>
-              {item.label}
+              {getNavLabel(item)}
             </Link>
           ))}
           <button
@@ -87,7 +87,7 @@ export default function MobileNav() {
                       className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-900"
                     >
                       <span aria-hidden="true">{item.icon}</span>
-                      {item.label}
+                      {getNavLabel(item)}
                     </Link>
                   </li>
                 ))}
@@ -107,7 +107,7 @@ export default function MobileNav() {
                         className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100"
                       >
                         <span aria-hidden="true">{item.icon}</span>
-                        {item.label}
+                        {getNavLabel(item)}
                       </Link>
                     </li>
                   ))}

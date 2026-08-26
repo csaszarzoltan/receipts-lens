@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { BUSINESS_NAV_ITEMS, NAV_ITEMS } from "@/lib/nav";
+import { BUSINESS_NAV_ITEMS, NAV_ITEMS, getNavLabel } from "@/lib/nav";
 import { cx } from "@/lib/utils";
 
 function isActive(href: string, pathname: string): boolean {
@@ -44,7 +44,7 @@ export default function Sidebar() {
                     )}
                   >
                     <span aria-hidden="true" className="text-base">{item.icon}</span>
-                    {item.label}
+                    {getNavLabel(item)}
                   </Link>
                 </li>
               );
@@ -79,7 +79,7 @@ export default function Sidebar() {
                         )}
                       >
                         <span aria-hidden="true" className="text-base">{item.icon}</span>
-                        {item.label}
+                        {getNavLabel(item)}
                       </Link>
                     </li>
                   );

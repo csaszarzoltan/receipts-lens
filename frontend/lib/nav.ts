@@ -1,41 +1,46 @@
+import { t, type Locale, type MessageKey } from "./i18n";
+import { getLocale } from "./i18n";
+
 export interface NavItem {
   href: string;
-  label: string;
+  /** i18n key — NOT the final label; use getNavLabel() to resolve. */
+  labelKey: MessageKey;
   icon: string;
 }
 
 /**
- * Consumer navigation (F1.1 consumer pivot) — household-facing labels from
- * docs/plans/consumer-pivot-2026-08-13.md §3.3. The main navigation must
- * contain zero business jargon: the B2B features live in BUSINESS_NAV_ITEMS
- * behind the separate "Business" entry point (see Sidebar / MobileNav).
+ * Consumer navigation (F1.1 consumer pivot) — translated via i18n catalog.
+ * Keep labels as keys — the Sidebar/MobileNav resolve them at render time.
  */
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Áttekintés", icon: "📊" },
-  { href: "/receipts", label: "Vásárlások", icon: "🧾" },
-  { href: "/upload", label: "Nyugta hozzáadása", icon: "📤" },
-  { href: "/review", label: "Ellenőrzés", icon: "🔍" },
-  { href: "/duplicates", label: "Ismétlődések", icon: "🔄" },
-  { href: "/inbox", label: "Családi postafiók", icon: "📧" },
-  { href: "/subscriptions", label: "Előfizetések", icon: "🔁" },
-  { href: "/forecast", label: "Előrejelzés", icon: "📈" },
-  { href: "/budget", label: "Háztartási keret", icon: "🎯" },
-  { href: "/reports", label: "Összesítés", icon: "📄" },
-  { href: "/settings", label: "Beállítások", icon: "⚙️" },
+  { href: "/dashboard", labelKey: "dashboard", icon: "📊" },
+  { href: "/receipts", labelKey: "receipts", icon: "🧾" },
+  { href: "/upload", labelKey: "upload", icon: "📤" },
+  { href: "/review", labelKey: "review", icon: "🔍" },
+  { href: "/duplicates", labelKey: "duplicates", icon: "🔄" },
+  { href: "/inbox", labelKey: "inbox", icon: "📧" },
+  { href: "/subscriptions", labelKey: "subscriptions", icon: "🔁" },
+  { href: "/forecast", labelKey: "forecast", icon: "📈" },
+  { href: "/budget", labelKey: "budget", icon: "🎯" },
+  { href: "/reports", labelKey: "reports", icon: "📄" },
+  { href: "/settings", labelKey: "settings", icon: "⚙️" },
 ];
 
 /**
- * Business section (F1.1) — B2B/accounting features are NOT deleted, they
- * are hidden behind a separate entry point ("Business") with their original
- * labels. Keep in sync with the plan §2.5 / §3.3.
+ * Business section (F1.1) — B2B labels translated via i18n.
  */
 export const BUSINESS_NAV_ITEMS: NavItem[] = [
-  { href: "/approvals", label: "Approvals", icon: "✅" },
-  { href: "/exports", label: "Export Center", icon: "📦" },
-  { href: "/accounting", label: "Accounting", icon: "📒" },
-  { href: "/integrations", label: "Integrations", icon: "🔌" },
-  { href: "/automations", label: "Automations", icon: "⚡" },
+  { href: "/approvals", labelKey: "approvals", icon: "✅" },
+  { href: "/exports", labelKey: "exports", icon: "📦" },
+  { href: "/accounting", labelKey: "accounting", icon: "📒" },
+  { href: "/integrations", labelKey: "integrations", icon: "🔌" },
+  { href: "/automations", labelKey: "automations", icon: "⚡" },
 ];
+
+/** Resolve a NavItem label to translated string. */
+export function getNavLabel(item: NavItem, locale?: Locale): string {
+  return t(item.labelKey, locale ?? getLocale());
+}
 
 /** Primary mobile bottom-tab items (first five consumer destinations). */
 export const MOBILE_TABS: NavItem[] = NAV_ITEMS.slice(0, 5);

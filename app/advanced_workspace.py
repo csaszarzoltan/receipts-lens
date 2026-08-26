@@ -311,7 +311,7 @@ class AdvancedWorkspace:
     def preferences(self, tenant_id: str, role: str) -> dict[str, Any]:
         row = self.db.execute("SELECT payload FROM user_preferences WHERE tenant_id=? AND role=?",
                               (tenant_id, role)).fetchone()
-        return json.loads(row[0]) if row else {"language": "hu", "compact": False,
+        return json.loads(row[0]) if row else {"language": "en", "compact": False,
                                                "high_contrast": False,
                                                "dashboard_widgets": ["kpis", "actions", "spending", "quality"]}
 
