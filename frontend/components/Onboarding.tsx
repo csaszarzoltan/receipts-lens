@@ -115,7 +115,7 @@ export default function Onboarding() {
                 className={cx(button, "border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800")}
                 disabled={saving}
               >
-                Vissza
+                {t("back")}
               </button>
             ) : null}
             <button

@@ -252,7 +252,7 @@ export default function OnboardingPage() {
           <div className="flex gap-2">
             {step > 0 ? (
               <button type="button" onClick={() => setStep((value) => value - 1)} disabled={saving || uploading} className="btn-secondary text-sm">
-                Vissza
+                {t("back")}
               </button>
             ) : null}
             {isLast ? (
