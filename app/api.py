@@ -225,24 +225,48 @@ app.include_router(auth_router)
 
 
 # ---------------------------------------------------------------------------
+# Shared auth helper — session (Bearer) or dev headers (X-Tenant-ID/X-Role)
+# ---------------------------------------------------------------------------
+
+def _resolve_tenant_from_auth(
+    authorization: str | None,
+    x_tenant_id: str | None,
+    x_role: str | None,
+) -> str:
+    """Resolve tenant identity from either a Bearer session token or legacy
+    dev headers. Session-based auth takes precedence (F1.3 / G2).
+    """
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        try:
+            identity = service.resolve_session(token)
+            return identity["tenant_id"]
+        except KeyError:
+            raise HTTPException(401, "Invalid or expired session")
+    if x_tenant_id is None or not x_tenant_id.strip():
+        raise HTTPException(401, "Tenant identity is required")
+    if x_role is None or x_role not in {"admin", "reviewer", "integrator"}:
+        raise HTTPException(403, "Unknown role")
+    return x_tenant_id.strip()
+
+
+# ---------------------------------------------------------------------------
 # Consumer dashboard (F1.2 — §3.4 of docs/plans/consumer-pivot-2026-08-13.md)
 # ---------------------------------------------------------------------------
 
 @app.get("/api/v1/consumer/dashboard")
 def consumer_dashboard(
+    authorization: str | None = Header(default=None, alias="Authorization"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
     x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict[str, Any]:
     """Consumer dashboard payload — all six blocks, live backend data.
 
-    Tenant/role headers follow the product-workspace auth contract: a
-    missing tenant is 401, an unknown role is 403 (SEC-003 parity).
+    Auth: Bearer session token (logged-in users) OR X-Tenant-ID/X-Role
+    headers (dev fallback). Session-based auth takes precedence.
     """
-    if x_tenant_id is None or not x_tenant_id.strip():
-        raise HTTPException(401, "Tenant identity is required")
-    if x_role is None or x_role not in {"admin", "reviewer", "integrator"}:
-        raise HTTPException(403, "Unknown role")
-    return build_consumer_dashboard(x_tenant_id.strip())
+    tenant_id = _resolve_tenant_from_auth(authorization, x_tenant_id, x_role)
+    return build_consumer_dashboard(tenant_id)
 
 # ---------------------------------------------------------------------------
 # Configurable limits (plumbed into fetch_image_bytes defaults)
@@ -328,15 +352,9 @@ def api_v1_actor(
 ) -> Actor:
     """Strict auth for the /api/v1/receipts CRUD endpoints.
 
-    Unlike the product-workspace dependency (which defaults to ``demo``/``admin``
-    for convenience), these endpoints require an explicit tenant identity:
-    a missing/blank ``X-Tenant-ID`` yields 401 and an unrecognised role yields
-    403, matching the documented auth contract (BUG-006).
+    Bearer session token takes precedence (F1.3 / G2). Falls back to
+    X-Tenant-ID/X-Role headers in dev mode.
     """
-    if x_tenant_id is None or not x_tenant_id.strip():
-        raise HTTPException(401, "Tenant identity is required")
-    if x_role is None or x_role not in {"admin", "reviewer", "integrator"}:
-        raise HTTPException(403, "Unknown role")
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization.split(" ", 1)[1].strip()
         try:
@@ -344,6 +362,10 @@ def api_v1_actor(
         except KeyError as exc:
             raise HTTPException(401, "Invalid or expired session") from exc
         return Actor(identity["tenant_id"], identity["role"])
+    if x_tenant_id is None or not x_tenant_id.strip():
+        raise HTTPException(401, "Tenant identity is required")
+    if x_role is None or x_role not in {"admin", "reviewer", "integrator"}:
+        raise HTTPException(403, "Unknown role")
     if _is_production:
         raise HTTPException(401, "Session required")
     return Actor(x_tenant_id, x_role)
@@ -1218,7 +1240,9 @@ class BudgetUpdateRequest(BaseModel):
 @app.post("/api/v1/budgets", response_model=dict)
 def create_budget_route(
     body: BudgetCreateRequest,
+    authorization: str | None = Header(default=None, alias="Authorization"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict:
     """Create a new budget definition scoped to the caller's tenant.
 
@@ -1232,7 +1256,7 @@ def create_budget_route(
             currency=body.currency,
             period=body.period,
             alert_threshold=body.alert_threshold,
-            tenant_id=(x_tenant_id or "").strip(),
+            tenant_id=_resolve_tenant_from_auth(authorization, x_tenant_id, x_role),
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -1241,21 +1265,25 @@ def create_budget_route(
 
 @app.get("/api/v1/budgets", response_model=dict)
 def list_budgets_route(
+    authorization: str | None = Header(default=None, alias="Authorization"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict:
     """List the caller's budget definitions with computed spend fields."""
-    records = budget_store.list(tenant_id=(x_tenant_id or "").strip())
+    records = budget_store.list(tenant_id=_resolve_tenant_from_auth(authorization, x_tenant_id, x_role))
     return {"budgets": [r.to_dict() for r in records]}
 
 
 @app.get("/api/v1/budgets/{id}", response_model=dict)
 def get_budget_route(
     id: str,
+    authorization: str | None = Header(default=None, alias="Authorization"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict:
     """Get a single budget by id (tenant-scoped: 404 for other tenants' budgets)."""
     record = budget_store.get(id)
-    if record is None or record.tenant_id != (x_tenant_id or "").strip():
+    if record is None or record.tenant_id != _resolve_tenant_from_auth(authorization, x_tenant_id, x_role):
         raise HTTPException(status_code=404, detail="Budget not found")
     return record.to_dict()
 
@@ -1264,7 +1292,9 @@ def get_budget_route(
 def update_budget_route(
     id: str,
     body: BudgetUpdateRequest,
+    authorization: str | None = Header(default=None, alias="Authorization"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict:
     """Update fields on an existing budget (tenant-scoped: 404 for others)."""
     kwargs = {}
@@ -1296,11 +1326,13 @@ def update_budget_route(
 @app.delete("/api/v1/budgets/{id}", response_model=dict)
 def delete_budget_route(
     id: str,
+    authorization: str | None = Header(default=None, alias="Authorization"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict:
     """Delete a budget definition (tenant-scoped: 404 for other tenants' budgets)."""
     record = budget_store.get(id)
-    if record is None or record.tenant_id != (x_tenant_id or "").strip():
+    if record is None or record.tenant_id != _resolve_tenant_from_auth(authorization, x_tenant_id, x_role):
         raise HTTPException(status_code=404, detail="Budget not found")
     deleted = budget_store.delete(id)
     if not deleted:
