@@ -9,6 +9,7 @@ import EmptyState from "@/components/EmptyState";
 import AiScanToggle from "@/components/AiScanToggle";
 import AiResultPanel from "@/components/AiResultPanel";
 import { AI_SCAN_ENABLED } from "@/lib/featureFlags";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * Upload page — drag & drop / camera capture, then the real OCR pipeline
@@ -24,13 +25,14 @@ import { AI_SCAN_ENABLED } from "@/lib/featureFlags";
  * run classic Tesseract OCR (see docs/plans/production-rollout-2026-08-13.md).
  */
 export default function UploadPage() {
+  const { t } = useTranslation();
   const { entries, enqueue, clear, remove, lastAiResult } = useUpload();
   const [aiScan, setAiScan] = useState(false);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Nyugta hozzáadása</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("addReceipt")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Take a photo or drop a receipt image — OCR extracts the data instantly.
         </p>

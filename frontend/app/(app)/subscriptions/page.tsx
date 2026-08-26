@@ -16,6 +16,7 @@ import type {
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatDate, formatMoney } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 const RENEWAL_SOON_DAYS = 14;
 
@@ -33,6 +34,7 @@ function daysLabel(days: number): string {
 }
 
 export default function SubscriptionsPage() {
+  const { t } = useTranslation();
   const [guideFor, setGuideFor] = useState<Subscription | null>(null);
   const { data: prefs } = useSWR<Preferences>("/product/preferences", getPreferences);
   const [emailAlerts, setEmailAlerts] = useState<boolean | null>(null);
@@ -84,7 +86,7 @@ export default function SubscriptionsPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            Előfizetések
+            {t("subscriptions")}
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Renewals, price changes and cancellation guides for your recurring

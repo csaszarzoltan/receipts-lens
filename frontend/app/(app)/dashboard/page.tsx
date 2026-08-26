@@ -11,22 +11,24 @@ import type {
 import { PageSkeleton } from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
 import { formatDate, formatMoney } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * Lakossági dashboard (F1.2 — docs/plans/consumer-pivot-2026-08-13.md §3.4).
  *
  * Hat blokk, mindegyik élő backend adatot mutat (GET /api/v1/consumer/dashboard):
- *   1. „Mennyit költhetek még ma?" — napi maradékkeret (budget visszaszámolás)
+ *   1. „{t("dailyRemaining")}" — napi maradékkeret (budget visszaszámolás)
  *   2. Havi költés kategóriánként — „mire ment el a pénzem"
- *   3. Drágulás-figyelmeztetések (meglévő előfizetés-motor)
- *   4. Lemondható előfizetések
- *   5. Családi keret-státusz (közös háztartási keret + tagok)
- *   6. Legutóbbi nyugták
+ *   3. {t("priceAlerts")} (meglévő előfizetés-motor)
+ *   4. {t("cancellableSubscriptions")}
+ *   5. {t("householdStatus")} (közös háztartási keret + tagok)
+ *   6. {t("recentReceipts")}
  *
  * Lakossági nyelvezet: nincs üzleti szakkifejezés. Üres állapotnál a blokk
  * onboarding/első lépés CTA-ra mutat.
  */
 export default function ConsumerDashboardPage() {
+  const { t } = useTranslation();
   const { data, error, isLoading } = useSWR<ConsumerDashboard>(
     "/api/v1/consumer/dashboard",
     getConsumerDashboard,
@@ -42,9 +44,9 @@ export default function ConsumerDashboardPage() {
         </h1>
         <EmptyState
           icon="⚠️"
-          title="Nem sikerült betölteni az áttekintést"
-          description="Ellenőrizd, hogy a háttérszolgáltatás fut-e, majd próbáld újra."
-          action={{ label: "Újrapróbálkozás", href: "/dashboard" }}
+          title={t("error")}
+          description={t("retry")}
+          action={{ label: t("retry"), href: "/dashboard" }}
         />
       </div>
     );
@@ -60,21 +62,21 @@ export default function ConsumerDashboardPage() {
             Áttekintés
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            A háztartásod pénzügyei egy helyen.
+            {t("overviewSubtitle")}
           </p>
         </div>
         <Link href="/upload" className="btn-primary">
-          📤 Nyugta hozzáadása
+          {t("addReceipt")}
         </Link>
       </div>
 
-      {/* 1. Mennyit költhetek még ma? */}
+      {/* 1. {t("dailyRemaining")} */}
       <section aria-label="Napi maradékkeret" className="grid gap-4 lg:grid-cols-2">
         {daily_remaining ? (
           <div className="card p-5">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                Mennyit költhetek még ma?
+                {t("dailyRemaining")}
               </h2>
               <span className="text-xl" aria-hidden="true">
                 💶
@@ -103,20 +105,20 @@ export default function ConsumerDashboardPage() {
             icon="🎯"
             title="Még nincs havi kereted"
             description="Állíts be háztartási keretet, és minden nap megmondjuk, mennyit költhetsz még biztonságosan."
-            action={{ label: "Keret beállítása", href: "/budget" }}
+            action={{ label: t("noBudgetSet"), href: "/budget" }}
           />
         )}
 
-        {/* 5. Családi keret-státusz */}
+        {/* 5. {t("householdStatus")} */}
         <HouseholdBlock household={household} />
       </section>
 
       {/* 2. Havi költés kategóriánként */}
-      <section className="card p-5" aria-label="Havi költés kategóriánként">
+      <section className="card p-5" aria-label={t("monthlySpending")}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              Mire ment el a pénzem?
+              {t("monthlySpending")}
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {monthly_by_category.month} havi költés — összesen{" "}
@@ -127,16 +129,16 @@ export default function ConsumerDashboardPage() {
             href="/reports"
             className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
           >
-            Összesítés megnyitása →
+            {t("openReports")}
           </Link>
         </div>
         {monthly_by_category.categories.length === 0 ? (
           <div className="mt-4">
             <EmptyState
               icon="🧾"
-              title="Még nincs nyugtád"
+              title={t("noReceipts")}
               description="Az első nyugta feltöltése után itt látod, mire ment el a pénzed."
-              action={{ label: "Első nyugta feltöltése", href: "/upload" }}
+              action={{ label: t("uploadFirst"), href: "/upload" }}
             />
           </div>
         ) : (
@@ -172,11 +174,11 @@ export default function ConsumerDashboardPage() {
         )}
       </section>
 
-      {/* 3. Drágulás-figyelmeztetések */}
-      <section className="card p-5" aria-label="Drágulás-figyelmeztetések">
+      {/* 3. {t("priceAlerts")} */}
+      <section className="card p-5" aria-label={t("priceAlerts")}>
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-            Drágulás-figyelmeztetések
+            {t("priceAlerts")}
           </h2>
           <span className="text-xl" aria-hidden="true">
             📈
@@ -186,7 +188,7 @@ export default function ConsumerDashboardPage() {
           <div className="mt-4">
             <EmptyState
               icon="✅"
-              title="Nincs drágulás"
+              title={t("allClear")}
               description="Jelenleg egyetlen előfizetésednél sem észleltünk áremelést."
             />
           </div>
@@ -210,12 +212,12 @@ export default function ConsumerDashboardPage() {
         )}
       </section>
 
-      {/* 4. Lemondható előfizetések */}
-      <section className="card p-5" aria-label="Lemondható előfizetések">
+      {/* 4. {t("cancellableSubscriptions")} */}
+      <section className="card p-5" aria-label={t("cancellableSubscriptions")}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              Lemondható előfizetések
+              {t("cancellableSubscriptions")}
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Ezeket bármikor lemondhatod — a lemondási útmutató az Előfizetések
@@ -233,7 +235,7 @@ export default function ConsumerDashboardPage() {
           <div className="mt-4">
             <EmptyState
               icon="🔁"
-              title="Nincs kimutatott előfizetés"
+              title={t("noSubscriptionsFound")}
               description="Ha egy szolgáltatásért rendszeresen fizetsz, itt fog megjelenni."
             />
           </div>
@@ -261,18 +263,19 @@ export default function ConsumerDashboardPage() {
         )}
       </section>
 
-      {/* 6. Legutóbbi nyugták */}
+      {/* 6. {t("recentReceipts")} */}
       <RecentReceiptsBlock receipts={recent_receipts} />
     </div>
   );
 }
 
 function HouseholdBlock({ household }: { household: HouseholdStatus }) {
+  const { t } = useTranslation();
   return (
     <div className="card p-5">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          Családi keret-státusz
+          {t("householdStatus")}
         </h2>
         <span className="text-xl" aria-hidden="true">
           👨‍👩‍👧‍👦
@@ -283,19 +286,19 @@ function HouseholdBlock({ household }: { household: HouseholdStatus }) {
           <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {formatMoney(household.shared_budget, household.currency)}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Keret</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t("familyBudget")}</p>
         </div>
         <div>
           <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {formatMoney(household.spent, household.currency)}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Elköltve</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t("spent")}</p>
         </div>
         <div>
           <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
             {formatMoney(household.remaining, household.currency)}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Maradék</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t("remaining")}</p>
         </div>
       </div>
       {household.members.length > 0 ? (
@@ -325,26 +328,27 @@ function HouseholdBlock({ household }: { household: HouseholdStatus }) {
 }
 
 function RecentReceiptsBlock({ receipts }: { receipts: RecentReceipt[] }) {
+  const { t } = useTranslation();
   return (
-    <section className="card p-5" aria-label="Legutóbbi nyugták">
+    <section className="card p-5" aria-label={t("recentReceipts")}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          Legutóbbi nyugták
+          {t("recentReceipts")}
         </h2>
         <Link
           href="/receipts"
           className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
         >
-          Összes vásárlás →
+          {t("allPurchases")}
         </Link>
       </div>
       {receipts.length === 0 ? (
         <div className="mt-4">
           <EmptyState
             icon="🧾"
-            title="Még nincs nyugtád"
+            title={t("noReceipts")}
             description="Fotózd le az első nyugtát, és máris elkezdjük követni a költéseidet."
-            action={{ label: "Nyugta hozzáadása", href: "/upload" }}
+            action={{ label: t("addReceipt"), href: "/upload" }}
           />
         </div>
       ) : (

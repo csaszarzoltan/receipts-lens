@@ -5,6 +5,7 @@ import { getInboundEmails, tenantRequest } from "@/lib/api";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatFileSize } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 type Attachment = {
   attachment_id: string;
@@ -25,6 +26,7 @@ type Email = {
 };
 
 export default function InboxPage() {
+  const { t } = useTranslation();
   const { data, error, isLoading, mutate } = useSWR<{ items: Email[]; address: string }>(
     "/product/inbound-emails",
     getInboundEmails as never,
@@ -47,7 +49,7 @@ export default function InboxPage() {
   return (
     <main className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Családi postafiók</h1>
+        <h1 className="text-2xl font-bold">{t("inbox")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Forward receipts to <strong>{data?.address ?? "your family inbox address"}</strong>. Each
           attachment is validated and tracked independently.

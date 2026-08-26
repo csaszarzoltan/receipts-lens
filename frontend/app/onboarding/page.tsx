@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getPreferences, savePreferences, uploadReceipt } from "@/lib/api";
 import { setAuthState } from "@/lib/auth";
 import { cx } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * Consumer onboarding — the 3-step first-run flow (F1.5 of
@@ -64,6 +65,7 @@ interface UploadOutcome {
 }
 
 export default function OnboardingPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -249,7 +251,7 @@ export default function OnboardingPage() {
 
         <div className="flex items-center justify-between gap-2">
           <button type="button" onClick={skip} disabled={saving} className="text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
-            Kihagyás
+            {t("skip")}
           </button>
           <div className="flex gap-2">
             {step > 0 ? (
@@ -259,11 +261,11 @@ export default function OnboardingPage() {
             ) : null}
             {isLast ? (
               <button type="button" onClick={() => void finish()} disabled={saving || uploading} className="btn-primary text-sm">
-                {saving ? "Betöltés…" : "Áttekintés megnyitása →"}
+                {saving ? t("loading") : t("finish")}
               </button>
             ) : (
               <button type="button" onClick={() => setStep((value) => value + 1)} className="btn-primary text-sm">
-                Tovább
+                {t("next")}
               </button>
             )}
           </div>
