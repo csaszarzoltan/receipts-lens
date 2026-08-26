@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { getRole, setRole, ROLES, type Role } from "@/lib/auth";
 import { roleLabel } from "@/lib/roles";
+import { getSessionToken } from "@/lib/auth";
 import ThemeToggle from "@/components/ThemeToggle";
 import NotificationPanel from "@/components/NotificationPanel";
 import ProfileMenu from "@/components/ProfileMenu";
-import { clearSessionToken, getSessionToken } from "@/lib/auth";
 
 /** Sticky top bar — global search, household role, notifications, theme. */
 export default function Topbar() {

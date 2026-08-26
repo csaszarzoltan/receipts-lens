@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { googleSsoEnabled } from "@/lib/api";
+import { API_BASE_URL, googleSsoEnabled } from "@/lib/api";
 import { setAuthState } from "@/lib/auth";
 import { roleLabel } from "@/lib/roles";
 
@@ -43,7 +43,7 @@ export default function LoginPage() {
         {googleReady && (
           <div className="mt-6">
             <a
-              href="/api/auth/google/start"
+              href={`${API_BASE_URL}/auth/google/start?return_to=${encodeURIComponent("/dashboard")}`}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">

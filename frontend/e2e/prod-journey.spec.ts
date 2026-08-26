@@ -61,7 +61,7 @@ async function expectAssetsAndNoCrash(page: Page, route: string): Promise<void> 
   //    — ez fedi a ma reggeli CSS 400 bugot (ff80162 vs 4927501 hash mismatch).
   const cssFailures = await page.evaluate(() =>
     Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
-      .filter((l) => l.sheet === null)
+      .filter((l) => (l as HTMLLinkElement).sheet === null)
       .map((l) => (l as HTMLLinkElement).href),
   );
   expect(cssFailures, `${route}: betöltetlen stylesheet(ek): ${cssFailures.join(", ")}`).toHaveLength(0);

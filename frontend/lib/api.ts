@@ -1081,3 +1081,6 @@ export async function logoutSession(): Promise<void> {
   }).catch(() => {});
   clearSessionToken();
 }
+
+/** Alias — spec calls it `logout()` (POST /api/auth/session/logout Bearer-rel). */
+export const logout = logoutSession;

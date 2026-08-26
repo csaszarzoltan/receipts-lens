@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { googleSsoEnabled } from "@/lib/api";
+import { API_BASE_URL, googleSsoEnabled } from "@/lib/api";
 
 /**
  * Profile menu: shows user email and "Kilépés" button when a session exists.
  * Also renders a Google SSO button in the Topbar when enabled.
  */
 export default function ProfileMenu() {
-  const router = useRouter();
   const [googleEnabled, setGoogleEnabled] = useState(false);
 
   useEffect(() => {
@@ -20,7 +18,7 @@ export default function ProfileMenu() {
     <div className="flex items-center gap-2">
       {googleEnabled && (
         <a
-          href={`${typeof window !== "undefined" ? window.location.origin : ""}/api/auth/google/start`}
+          href={`${API_BASE_URL}/auth/google/start?return_to=${encodeURIComponent("/dashboard")}`}
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
           title="Folytatás Google-lel"
         >
