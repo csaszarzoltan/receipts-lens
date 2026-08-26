@@ -74,8 +74,8 @@ export default function ApprovalsPage() {
       ) : items.length === 0 ? (
         <EmptyState
           icon="🎯"
-          title="Nothing pending"
-          description="All approvals are up to date."
+          title={t("nothingPending")}
+          description={t("allClear")}
         />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2" aria-label="Approval queue">

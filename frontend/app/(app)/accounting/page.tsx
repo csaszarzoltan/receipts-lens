@@ -37,7 +37,7 @@ export default function AccountingPage() {
       ) : error ? (
         <EmptyState icon="⚠️" title="Could not load receipts" description="Check that the backend is running." />
       ) : items.length === 0 ? (
-        <EmptyState icon="📄" title="No receipts yet" description="Upload a receipt to check its accounting readiness." action={{ label: "Upload a receipt", href: "/upload" }} />
+        <EmptyState icon="📄" title={t("noReceipts")} description={t("noReceiptsHint")} action={{ label: t("uploadFirst"), href: "/upload" }} />
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="card overflow-x-auto" aria-label="Receipt selector">

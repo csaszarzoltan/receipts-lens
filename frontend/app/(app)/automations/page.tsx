@@ -65,8 +65,8 @@ export default function AutomationsPage() {
       ) : rules.length === 0 ? (
         <EmptyState
           icon="⚡"
-          title="No rules yet"
-          description="Create rules to automate categorization and tagging."
+          title={t("noRules")}
+          description={t("noBudgetSetHint")}
         />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2" aria-label="Automation rules">

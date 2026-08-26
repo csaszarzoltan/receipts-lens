@@ -62,7 +62,7 @@ export default function ExportsPage() {
         ) : connectionsError ? (
           <EmptyState icon="⚠️" title="Could not load connections" description="Check that the backend is running." />
         ) : connections.length === 0 ? (
-          <EmptyState icon="🔌" title="No connections yet" description="Create a CSV, QuickBooks or Xero connection to export receipts." />
+          <EmptyState icon="🔌" title={t("noRules")} description="Create a CSV, QuickBooks or Xero connection to export receipts." />
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2" aria-label="Connections">
             {connections.map((connection) => (
@@ -99,7 +99,7 @@ export default function ExportsPage() {
       <section aria-label="Export history">
         <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">Export history</h2>
         {runs.length === 0 ? (
-          <EmptyState icon="📦" title="No exports yet" description="Export runs will appear here." />
+          <EmptyState icon="📦" title={t("notEnoughData")} description="Export runs will appear here." />
         ) : (
           <ul className="card divide-y divide-slate-100 dark:divide-slate-800">
             {runs.map((run) => (

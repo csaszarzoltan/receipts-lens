@@ -59,9 +59,9 @@ export default function ForecastPage() {
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("forecast")}</h1>
         <EmptyState
           icon="📊"
-          title="Not enough data"
-          description="Need at least 2 periods of history to project future spending. Upload more receipts to unlock forecasts."
-          action={{ label: "Upload receipts", href: "/upload" }}
+          title={t("notEnoughData")}
+          description={t("notEnoughDataHint")}
+          action={{ label: t("uploadFirst"), href: "/upload" }}
         />
       </div>
     );
