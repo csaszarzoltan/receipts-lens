@@ -48,3 +48,9 @@ Thumbs.db
 !.mimocode/bin
 .hermes/
 analysis/
+
+# Runtime logs (uvicorn/backup output)
+logs/
+
+# Ephemeral prod smoke harness (Playwright toggles — clobbers .next)
+frontend/.prod-smoke/

@@ -2,6 +2,17 @@
 
 **Dátum**: 2026-08-13 · **Státusz**: Terv v3 (AI-scan = jövőbeli fizetős) · **Becsült munka**: fél nap
 
+> **Frissítés (2026-08-26) — Fázis 1 KÉSZ**: `.env` éles (chmod 600, gitignored,
+> nincs vision-key), backend systemd-ként fut (`receipts-lens-api.service`,
+> 127.0.0.1:8130, health/ready 200), napi SQLite-backup cron 03:17 UTC
+> (7 nap retention, script: `scripts/backup-sqlite.sh`), frontend prod-build
+> zöld (`NEXT_PUBLIC_API_BASE_URL=https://receipts.allthezoo.com/api`,
+> BUILD_ID `hzKabDfs8mzHqnPuTWusp`). AI-scan gate élőben ellenőrizve:
+> upgrade-prompt jelen, AiScanToggle nincs renderelve, localhost-ref sincs a
+> client chunkokban. ⚠️ Tanulság: `npm run dev` smoke-test törli a `.next`
+> prod-buildet — dev-smoke után mindig újra `next build`. Következik: Fázis 2–3
+> (frontend systemd + Caddy block + Cloudflare DNS/SPF/DKIM).
+
 ## Kiinduló állapot (mérve)
 
 - Kód: HEAD `0f90207`, pytest **1452 passed**, `next build` **zöld**, ruff tiszta
