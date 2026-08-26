@@ -187,12 +187,14 @@ def _safe_return_to(value: str | None) -> str:
 
 
 @router.get("/auth/google/status")
+@router.get("/api/auth/google/status")
 def google_status() -> dict[str, bool]:
     """Probe whether Google SSO is configured at runtime."""
     return {"enabled": google_is_configured()}
 
 
 @router.get("/auth/google/start")
+@router.get("/api/auth/google/start")
 def google_start(
     request: Request,
     return_to: str | None = None,
@@ -242,6 +244,7 @@ def google_start(
 
 
 @router.get("/auth/google/callback")
+@router.get("/api/auth/google/callback")
 async def google_callback(
     request: Request,
     code: str | None = None,
@@ -377,6 +380,7 @@ def session_me(body: SessionRequest) -> dict[str, Any]:
 
 
 @router.post("/auth/session/logout", status_code=204)
+@router.post("/api/auth/session/logout", status_code=204)
 def session_logout(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Response:
