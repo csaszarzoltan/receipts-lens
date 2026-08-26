@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { uploadReceipt, uploadReceiptWithAi } from "@/lib/api";
 import { AI_MOCK_ENABLED, mockAiScanResponseForFile } from "@/lib/aiScanMock";
+import { AI_SCAN_ENABLED } from "@/lib/featureFlags";
 import type { AiScanUploadResponse, ReceiptItem } from "@/lib/types";
 
 export interface UploadQueueEntry {
@@ -38,7 +39,10 @@ export function useUpload() {
 
   const enqueue = useCallback(
     (files: FileList | File[], options: EnqueueOptions = {}) => {
-      const aiScan = options.aiScan ?? false;
+      // Production gate (defence-in-depth): even if a caller forces aiScan,
+      // the vision path only runs when NEXT_PUBLIC_AI_SCAN_ENABLED was set at
+      // build time. With the flag off, uploads fall back to classic OCR.
+      const aiScan = (options.aiScan ?? false) && AI_SCAN_ENABLED;
       const list = Array.from(files);
       const newEntries: UploadQueueEntry[] = list.map((file) => ({
         id: `upload-${++counter.current}`,

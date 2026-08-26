@@ -83,3 +83,18 @@ cd frontend && npx tsc --noEmit                              # strict typecheck
 npx next build                                               # production build
 bash ~/.hermes/scripts/ui-gate.sh ..                          # modern-frontend gate
 ```
+
+## AI Scan feature flag
+
+AI Scan (LLM vision OCR) is a **future paid feature** and is disabled by default in every
+build. The flag is a build-time constant in `lib/featureFlags.ts`:
+
+- `NEXT_PUBLIC_AI_SCAN_ENABLED` unset or `false` (production default): the upload page
+  hides the toggle and shows the "coming soon / Pro" upgrade prompt, and uploads always
+  run classic Tesseract OCR — the vision API is never called.
+- `NEXT_PUBLIC_AI_SCAN_ENABLED=1 npm run build|dev`: local dev/demo opt-in; the toggle
+  appears and uploads post `ai_scan=true`.
+
+The production rollout ships without any vision-LLM API key on purpose — see
+`docs/plans/production-rollout-2026-08-13.md` ("Végjegyzet — AI-scan") and
+`docs/ai-vision-ocr.md`.
