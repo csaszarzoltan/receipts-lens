@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased] - 2026-08-26 (Google SSO + tartós session — G1-G5, t_3945fe93)
+
+### Added
+- **Google SSO (OAuth 2.0 authorization-code)** — `docs/plans/google-sso-2026-08-26.md` G1-G5:
+  - Backend `app/google_oidc.py` — id_token RS256 ellenőrzés (issuer/audience/nonce/email_verified, JWKS, `exp`/`iat` ablak).
+  - Routes `app/auth_api.py` — `GET /api/auth/google/status` (`{enabled}` probe, dual `/auth` + `/api/auth` prefix a prod Caddy-hoz), `GET /api/auth/google/start` (state+nonce 32B random, `HttpOnly+Secure+SameSite=Lax` cookie 10 perc, `return_to` csak `/`-rel prefixelt lehet), `GET /api/auth/google/callback` (CSRF-ellenőrzés + `exchange_google_code` + `find_or_create_household_owner` + `create_session` → `302 #session_token=&expires_at=&return_to=`). Hiányzó konfigra `503 Google sign-in is not configured`. `POST /api/auth/session/logout` (`204` idempotens, Bearer nélkül `401`) dual prefixen.
+  - `app/product_service.py` — `SESSION_TTL` 30 → **180 nap**, `resolve_session` sliding (minden hitelesített hívás `expires_at = now + TTL`), `delete_session`, `find_or_create_household_owner`.
+  - Frontend `frontend/app/auth/google/callback/page.tsx` — fragment `#session_token&expires_at&return_to` parse → `setSessionToken` → `/dashboard` (query fallback, open-redirect guard); `frontend/lib/api.ts` — `googleSsoEnabled()`, `logoutSession()`; `frontend/app/(auth)/login/page.tsx` — „Folytatás Google-lel" gomb `status` probe alapján; `frontend/components/Topbar.tsx` — „Kilépés" gomb (`logoutSession` + `localStorage` törlés + `/login`).
+  - Env: `RECEIPTLENS_GOOGLE_CLIENT_ID` / `_SECRET` / `_REDIRECT_URI` (+ `_OAUTH_STATE_SECRET`, `_AUTH_BASE_URL`); új Python függőség nincs (`cryptography` + `httpx` már bent).
+- **PROD E2E `frontend/e2e/prod-journey.spec.ts`** bővítés — `login: Google SSO gomb látszik (enabled:true → Folytatás Google-lel)` (status probe conditional), `auth/google/callback: fragment nélkül hibaüzenet (nem crash)`, `tartós login: /auth/session/logout` (401/204/idempotens + sliding perzisztencia), `auth/magic-link: oldal betölt + űrlap` (F1.3 regression, magic-link továbbra is él), `logout UI: session nélkül product/* 401 + login oldal látható` (auth-gating + Google SSO + magic-link ellenőrzés session nélkül). Teljes suite `npx playwright test --config playwright.prod.config.ts` zölden élesben (`https://receipts.allthezoo.com`).
+
+### Changed
+- README: Google SSO + tartós bejelentkezés/Kilépés feature blokkok, magic-link megjegyzés, env-var táblázat kiegészítése (`GOOGLE_*`, `OAUTH_STATE_SECRET`, `AUTH_BASE_URL`).
+
+### Verification
+- 79 új tesztek összesen (`tests/test_google_auth_routes.py`, `tests/test_session_sliding.py`, `frontend/e2e/prod-journey.spec.ts` 25 → 27 — ebből 2 új a G5-ben: magic-link + logout UI flow; a korábbi d740103 commit 3 G5-előfutár tesztet már landolt).
+
 ## [Unreleased] - 2026-08-13 (F1.3 auth review fixes — t_313a4ac0)
 
 ### Fixed

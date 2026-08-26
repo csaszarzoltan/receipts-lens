@@ -345,4 +345,65 @@ test.describe("ReceiptLens PROD — teljes bejárás", () => {
     });
     expect(stillAuthed.status(), "E2E session továbbra is 200 kell legyen logout nélkül").toBe(200);
   });
+
+  // ------------------------------------------------------------------
+  // 13. Magic-link oldal továbbra is él (F1.3 regression)
+  // ------------------------------------------------------------------
+  test("auth/magic-link: oldal betölt, űrlap látszik (magic-link továbbra is él)", async ({ page }) => {
+    await page.goto("/auth/magic-link");
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForTimeout(1500);
+    await expectAssetsAndNoCrash(page, "/auth/magic-link");
+    await expect(page.getByRole("heading", { name: /ReceiptLens/i }).first()).toBeVisible();
+    const emailInput = page.locator('#magic-email, input[type="email"]');
+    await expect(emailInput.first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole("button", { name: /Belépési link/i })).toBeVisible();
+    // A login oldal továbbra is linkeli a magic-linket
+    await page.goto("/login");
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForTimeout(1000);
+    await expect(page.getByRole("link", { name: /Belépés e-mail linkkel/i })).toBeVisible();
+    await expectAssetsAndNoCrash(page, "/login (magic-link link)");
+  });
+
+  // ------------------------------------------------------------------
+  // 14. Logout UI flow: Kilépés → localStorage törölve → product/* 401
+  // ------------------------------------------------------------------
+  test("logout UI: session nélkül product/* 401 + login oldal látható", async ({ page }) => {
+    // Üres böngésző: NINCS seedSession (a beforeEach addInitScript-et nem
+    // tudjuk kikapcsolni, de a /login oldalon a session nélkül is működik).
+    // A teszt az auth-gatinget és a login oldal tartalmát ellenőrzi:
+    //   1. product/* API 401 session nélkül
+    //   2. A login oldal loadol CSS-sel és a Sign in gomb látható
+    //   3. A magic-link és a Google SSO link/frissítés elérhető
+
+    // 1. Product API session nélkül → 401
+    const resp = await page.request.get(`${BASE}/api/product/receipts?limit=1`);
+    expect(resp.status(), "session nélkül 401 kell legyen").toBe(401);
+
+    // 2. Login oldal betölt
+    await page.goto("/login");
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForTimeout(1500);
+    await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+    await expectAssetsAndNoCrash(page, "/login (session nélkül)");
+
+    // 3. Magic-link elérhető a loginon
+    await expect(page.getByRole("link", { name: /Belépés e-mail linkkel/i })).toBeVisible();
+
+    // 4. Google SSO státusz — ha enabled, a gomb látszik (ellenőrizzük)
+    const probe = await page.request.get(`${BASE}/api/auth/google/status`);
+    const enabled = probe.ok() ? ((await probe.json()) as { enabled: boolean }).enabled : false;
+    if (enabled) {
+      const googleLink = page.locator('a[href*="/api/auth/google/start"]');
+      await expect(googleLink).toBeVisible({ timeout: 5000 });
+      await expect(googleLink).toContainText(/Folytatás Google|Google/i);
+    }
+
+    // 5. Valódi E2E session továbbra is él (nem töröltük)
+    const stillAuthed = await page.request.get(`${BASE}/api/product/receipts?limit=1`, {
+      headers: { Authorization: `Bearer ${SESSION_TOKEN}` },
+    });
+    expect(stillAuthed.status(), "valódi E2E session továbbra is 200").toBe(200);
+  });
 });

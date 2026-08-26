@@ -81,6 +81,9 @@ See `docs/api.md`, `docs/product-workflows.md`, `docs/accounting-export-guide.md
 - **SSRF guard** — URL validation and DNS-resolution checks block requests to private/reserved IP ranges (RFC 1918, link-local, metadata endpoints). Follows redirects safely through the same validation.
 - **Duplicate detection** — `POST /v1/check-duplicates` compares parsed receipts by vendor similarity and total proximity, returning candidate groups with confidence scores.
 - **Configurable resource limits** — `MAX_IMAGE_BYTES` (20 MB) and `URL_FETCH_TIMEOUT` (30 s) cap image downloads (constants in `app/api.py`).
+- **Google SSO (OAuth 2.0)** — `GET /api/auth/google/start` → Google → `GET /api/auth/google/callback` → household find-or-create (`hh-{email}`, owner) + sliding session (180 nap, `Kilépés`-ig él). A loginon a „Folytatás Google-lel" gomb a `GET /api/auth/google/status → {enabled}` probe alapján jelenik meg; ha nincs konfigurálva (hiányzó `RECEIPTLENS_GOOGLE_CLIENT_ID/_SECRET`), a végpont `503`-at ad és a gomb rejtve marad. Callback fragment: `#session_token=…&expires_at=…&return_to=…` (JS olvassa, `localStorage` + `/dashboard`). Biztonság: state+nonce `HttpOnly+Secure+SameSite=Lax` cookie (10 perc), `return_to` csak `/`-rel kezdődhet (open-redirect védelem). Új függőség nincs (`httpx` + `cryptography` már bent). Lásd `docs/plans/google-sso-2026-08-26.md`.
+- **Tartós bejelentkezés + Kilépés** — `SESSION_TTL` 30 → **180 nap**, `resolve_session()` sliding: minden hitelesített kérés frissíti az `expires_at`-et. `POST /api/auth/session/logout` (`Authorization: Bearer ***`) törli a session sort (`204`, ismeretlenre is — idempotens, Bearer nélkül `401`); a Topbar „Kilépés" gombja ezt hívja és törli a `localStorage` kulcsot.
+- **Magic-link továbbra is él** — Google SSO mellett: `POST /auth/magic-link-request` + `POST /auth/magic-link-verify` (15 perc, single-use sha256-hashed); belépés `POST /auth/session/me` ellenőrzéssel. Lásd `docs/api.md`.
 - **Flexible input** — accepts a multipart `file` upload or an `image_url` form field, in single or batch mode.
 - **FastAPI service** — async endpoint with `/health`, OpenAPI docs, and strict type hints.
 - **Health endpoint** — `GET /health` returns `{"status":"ok"}` for load-balancer probes.
@@ -313,6 +316,11 @@ Image size is approximately 692 MB.
 | `VISION_OCR_ENABLED` | No | *(off)* | Cost guard for AI Vision OCR — set to `1`/`true`/`yes`/`on` to enable the LLM vision path. Without it, `ai_scan=true` requests fall back to Tesseract. |
 | `VISION_OCR_TIMEOUT` | No | `30.0` | Timeout in seconds for vision-LLM requests (float). |
 | `RECEIPTLENS_SMTP_ENABLED` | No | *(off)* | Set to `1` to allow SMTP delivery of subscription alerts. SMTP connection settings are passed to `send_email_notification()` as a config dict (host / port / user / password / from_addr / to_addr) — see [docs/subscription-alerts.md](docs/subscription-alerts.md). |
+| `RECEIPTLENS_GOOGLE_CLIENT_ID` | No | *(empty)* | Google OAuth Client ID — enables Google SSO when set together with `_SECRET` + `_REDIRECT_URI`. Missing → `GET /api/auth/google/status → {enabled:false}`, `GET /api/auth/google/start → 503`. |
+| `RECEIPTLENS_GOOGLE_CLIENT_SECRET` | No | *(empty)* | Google OAuth Client Secret (never logged). |
+| `RECEIPTLENS_GOOGLE_REDIRECT_URI` | No | `https://receipts.allthezoo.com/api/auth/google/callback` | OAuth redirect URI registered in Google Cloud Console. |
+| `RECEIPTLENS_OAUTH_STATE_SECRET` | No | random per process | HMAC secret for the OAuth state/nonce cookie; set a fixed value for multi-node deployments. |
+| `RECEIPTLENS_AUTH_BASE_URL` | No | `https://receipts.allthezoo.com` | Frontend base URL used when building the post-OAuth redirect fragment. |
 
 The following variables are **declared in deployment configs** but not yet wired in the application code.
 They are reserved for future use:
