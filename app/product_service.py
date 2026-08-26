@@ -36,7 +36,7 @@ WRITE_ROLES = {"owner", "adult"}
 LEGACY_HEADER_ROLES = {"admin", "reviewer", "integrator"}
 MAGIC_LINK_TTL_SECONDS = 15 * 60
 INVITE_TTL_SECONDS = 7 * 24 * 60 * 60
-SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
+SESSION_TTL_SECONDS = 180 * 24 * 60 * 60
 
 
 def _sha256(value: str) -> str:
@@ -809,7 +809,14 @@ class ProductService:
                 "role": role, "expires_at": datetime.fromtimestamp(expires, UTC).isoformat()}
 
     def resolve_session(self, session_token: str) -> dict[str, Any]:
-        """Resolve a session token into an identity or raise ``KeyError``."""
+        """Resolve a session token into an identity or raise ``KeyError``.
+
+        On success the expiry is extended (sliding session) — every
+        authenticated request refreshes the TTL so the login persists as long
+        as the user keeps using the app (goal: stays logged in until explicit
+        sign-out).  The update is best-effort: a write failure does not fail
+        the read.
+        """
         row = self._db.execute(
             "SELECT * FROM sessions WHERE session_token=?",
             (session_token,),
@@ -818,7 +825,48 @@ class ProductService:
             raise KeyError("unknown session")
         if row["expires_at"] <= self._now():
             raise KeyError("session expired")
+        try:
+            new_exp = datetime.fromisoformat(self._now()).timestamp() + SESSION_TTL_SECONDS
+            self._db.execute(
+                "UPDATE sessions SET expires_at=? WHERE session_token=?",
+                (datetime.fromtimestamp(new_exp, UTC).isoformat(), session_token),
+            )
+            self._db.commit()
+        except Exception:
+            pass
         return {"email": row["email"], "tenant_id": row["tenant_id"], "role": row["role"]}
+
+    def delete_session(self, session_token: str) -> bool:
+        """Delete a session token. Returns True when a row was removed."""
+        with self._db:
+            cur = self._db.execute("DELETE FROM sessions WHERE session_token=?", (session_token,))
+            if cur.rowcount:
+                self._db.commit()
+            return cur.rowcount > 0
+
+    def find_or_create_household_owner(self, email: str) -> tuple[str, bool]:
+        """Find or create a household for *email* with an ``owner`` member row.
+
+        Returns ``(tenant_id, created)`` where *created* is ``True`` when a new
+        household and member row were inserted.  The household id is derived
+        deterministically from the email (``hh-{email}``).
+        """
+        email_norm = email.strip().lower()
+        tenant_id = f"hh-{email_norm.replace('@', '-').replace('.', '-')}"
+        with self._db:
+            existing = self._db.execute(
+                "SELECT 1 FROM members WHERE tenant_id=? AND email=? AND role='owner'",
+                (tenant_id, email_norm),
+            ).fetchone()
+            if existing:
+                return tenant_id, False
+            member_id = str(uuid.uuid4())
+            self._db.execute(
+                "INSERT INTO members(member_id,tenant_id,email,role,active) VALUES(?,?,?,?,1)",
+                (member_id, tenant_id, email_norm, "owner"),
+            )
+            self._audit(tenant_id, "member.created", member_id)
+        return tenant_id, True
 
     # --- F1.3 household invites ----------------------------------------------
     def create_invite(

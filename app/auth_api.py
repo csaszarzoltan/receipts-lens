@@ -24,12 +24,15 @@ import logging
 import os
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
+from app.google_oidc import OIDCError, exchange_google_code, is_configured as google_is_configured
 from app.product_api import service
 from app.product_service import (
     HOUSEHOLD_ROLES,
+    SESSION_TTL_SECONDS,
     Actor,
     is_production,
 )
@@ -40,7 +43,10 @@ logger = logging.getLogger("uvicorn.error")
 router = APIRouter()
 
 INVITE_TTL_SECONDS = 7 * 24 * 60 * 60
-SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
+SESSION_TTL_SECONDS = 180 * 24 * 60 * 60
+OAUTH_COOKIE = "receiptlens.oauth"
+OAUTH_COOKIE_MAX_AGE = 600
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 MAGIC_LINK_TTL_SECONDS = 15 * 60
 
 LOGIN_LINK_TEMPLATE = "{base_url}/auth/magic-link?token={token}"
@@ -201,6 +207,164 @@ def session_me(body: SessionRequest) -> dict[str, Any]:
     except KeyError as exc:
         raise HTTPException(401, "Invalid or expired session") from exc
     return identity
+
+
+@router.post("/auth/session/logout", status_code=204)
+def session_logout(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+) -> None:
+    """Invalidate the session identified by the Authorization Bearer token."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(401, "Session required")
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        raise HTTPException(401, "Session required")
+    service.delete_session(token)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Google SSO
+# ---------------------------------------------------------------------------
+
+def _safe_return_to(value: str | None) -> str:
+    if not value or not value.startswith("/") or value.startswith("//"):
+        return "/dashboard"
+    return value
+
+
+@router.get("/auth/google/status")
+def google_status() -> dict[str, Any]:
+    """Whether Google SSO is configured (no secrets leak)."""
+    return {"enabled": google_is_configured()}
+
+
+@router.get("/auth/google/start")
+def google_start(request: Request, return_to: str = "/dashboard"):
+    """Start the Google authorization-code flow.
+
+    Sets a signed state cookie (HttpOnly, Secure when HTTPS, SameSite=Lax)
+    and redirects to accounts.google.com.  When Google SSO is not configured
+    returns 503 so the UI can hide the button.
+    """
+    import base64
+    import hashlib
+    import hmac
+    import json
+    import secrets
+    import time
+    from urllib.parse import urlencode
+
+    if not google_is_configured():
+        raise HTTPException(503, "Google sign-in is not configured")
+
+    client_id = os.getenv("RECEIPTLENS_GOOGLE_CLIENT_ID", "").strip()
+    nonce = secrets.token_urlsafe(24)
+    state_raw = json.dumps(
+        {"nonce": nonce, "return_to": _safe_return_to(return_to), "iat": int(time.time())},
+        separators=(",", ":"),
+    )
+    # Sign the state with HMAC-SHA256 using CREDENTIAL_KEY (always present in prod .env).
+    cred = os.getenv("RECEIPTLENS_CREDENTIAL_KEY", "") or client_id
+    sig = hmac.new(cred.encode(), state_raw.encode(), hashlib.sha256).hexdigest()
+    state = base64.urlsafe_b64encode(state_raw.encode()).decode().rstrip("=") + "." + sig
+
+    redirect_uri = os.getenv("RECEIPTLENS_GOOGLE_REDIRECT_URI", DEFAULT_REDIRECT_URI_GOOGLE()).strip()
+    from app.google_oidc import DEFAULT_REDIRECT_URI as GOOGLE_CB  # noqa: PLC0415
+
+    if not redirect_uri:
+        redirect_uri = GOOGLE_CB
+
+    params = urlencode(
+        {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "openid email profile",
+            "state": state,
+            "nonce": nonce,
+            "prompt": "select_account",
+        }
+    )
+    resp = RedirectResponse(f"{GOOGLE_AUTH_URL}?{params}", status_code=307)
+    secure = os.getenv("RECEIPTLENS_HTTPS", "0") == "1" or os.getenv("RECEIPTLENS_ENV") == "production"
+    resp.set_cookie(
+        OAUTH_COOKIE, state, max_age=OAUTH_COOKIE_MAX_AGE, httponly=True, secure=secure, samesite="lax", path="/"
+    )
+    return resp
+
+
+def DEFAULT_REDIRECT_URI_GOOGLE() -> str:  # noqa: D103
+    from app.google_oidc import DEFAULT_REDIRECT_URI  # noqa: PLC0415
+
+    return DEFAULT_REDIRECT_URI
+
+
+@router.get("/auth/google/callback")
+async def google_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None):
+    """Handle the Google redirect — verify state, exchange code, create session."""
+    import base64
+    import hashlib
+    import hmac
+    import json
+    from urllib.parse import quote, urlencode
+
+    frontend_base = AUTH_BASE_URL.rstrip("/") or "https://receipts.allthezoo.com"
+    failure = f"{frontend_base}/auth/google/callback?error="
+
+    if error:
+        return RedirectResponse(failure + quote(error), status_code=303)
+    if not code or not state:
+        return RedirectResponse(failure + "oauth_state_invalid", status_code=303)
+
+    # Verify the HMAC of the state
+    try:
+        raw_b64, sig = state.rsplit(".", 1)
+        # base64 urlsafe without padding
+        raw_b64_padded = raw_b64 + "=" * (-len(raw_b64) % 4)
+        state_raw = base64.urlsafe_b64decode(raw_b64_padded).decode()
+        cred = os.getenv("RECEIPTLENS_CREDENTIAL_KEY", "") or os.getenv(
+            "RECEIPTLENS_GOOGLE_CLIENT_ID", ""
+        )
+        expected = hmac.new(cred.encode(), state_raw.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            raise ValueError("bad state signature")
+        payload = json.loads(state_raw)
+        nonce = str(payload.get("nonce", ""))
+        return_to = _safe_return_to(payload.get("return_to"))
+        # iat freshness (10 min window)
+        iat = int(payload.get("iat", 0))
+        import time as _time
+
+        if _time.time() - iat > OAUTH_COOKIE_MAX_AGE + 60:
+            raise ValueError("state expired")
+    except Exception:
+        return RedirectResponse(failure + "oauth_state_invalid", status_code=303)
+
+    # The oauth cookie is an extra CSRF layer (third-party cookie blocking may
+    # drop it on the Google redirect — accept a valid signed state regardless).
+    # When present, it must match.
+    cookie_state = request.cookies.get(OAUTH_COOKIE)
+    if cookie_state and cookie_state != state:
+        return RedirectResponse(failure + "oauth_state_invalid", status_code=303)
+
+    try:
+        claims = await exchange_google_code(code, nonce)
+    except OIDCError:
+        return RedirectResponse(failure + "oauth_provider_unavailable", status_code=303)
+
+    email = str(claims.get("email", "")).strip().lower()
+    if not email:
+        return RedirectResponse(failure + "oauth_provider_unavailable", status_code=303)
+
+    tenant_id = f"hh-{email.replace('@', '-').replace('.', '-')}"
+    session = service.create_session(email, tenant_id, "owner")
+    # Redirect to the frontend callback page with the session in the fragment
+    # (fragment is never sent to the server).
+    frag = urlencode({"session_token": session["session_token"], "expires_at": session["expires_at"], "return_to": return_to})
+    resp = RedirectResponse(f"{frontend_base}/auth/google/callback#{frag}", status_code=303)
+    resp.delete_cookie(OAUTH_COOKIE, path="/")
+    return resp
 
 
 # ---------------------------------------------------------------------------
