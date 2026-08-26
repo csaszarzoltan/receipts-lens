@@ -151,7 +151,7 @@ class TestGoogleCallbackSliding:
         from urllib.parse import parse_qs, urlparse
 
         # Start
-        start = client.get("/api/auth/google/start", follow_redirects=False)
+        start = client.get("/auth/google/start", follow_redirects=False)
         state = parse_qs(urlparse(start.headers["location"]).query)["state"][0]
         cookies = start.headers.get_list("set-cookie")
         cookie_state = [c for c in cookies if "receiptlens.oauth" in c][0].split(";")[0].split("=", 1)[1]
@@ -175,7 +175,7 @@ class TestGoogleCallbackSliding:
             client.cookies.set("receiptlens.oauth", cookie_state, path="/")
             try:
                 cb = client.get(
-                    f"/api/auth/google/callback?code=valid&state={state}",
+                    f"/auth/google/callback?code=valid&state={state}",
                     follow_redirects=False,
                 )
             finally:

@@ -186,7 +186,7 @@ def _safe_return_to(value: str | None) -> str:
     return value
 
 
-@router.get("/api/auth/google/status")
+@router.get("/auth/google/status")
 def google_status() -> dict[str, bool]:
     """Probe whether Google SSO is configured at runtime."""
     return {"enabled": google_is_configured()}
