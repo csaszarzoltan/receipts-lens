@@ -1,40 +1,57 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { setSessionToken } from "@/lib/auth";
 
 /**
  * Google SSO callback page — reads session_token from the URL fragment
- * (the backend redirects here with #session_token=...&expires_at=...),
+ * (the backend redirects here with #session_token=...&expires_at=...&return_to=...),
  * persists the session, and navigates to the intended destination.
  *
  * Fragments are never sent to the server, so this must be handled client-side.
+ * The return_to value is already sanitized server-side (only /-prefixed paths).
  */
 function GoogleCallbackInner() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get("error");
+    if (err) {
+      setError(`Google bejelentkezés sikertelen: ${err}`);
+      return;
+    }
+
     // Fragment: #session_token=...&expires_at=...&return_to=...
     const hash = window.location.hash.slice(1);
     if (!hash) {
+      const qToken = params.get("session_token");
+      if (qToken) {
+        setSessionToken(qToken);
+        window.history.replaceState(null, "", window.location.pathname);
+        router.push(params.get("return_to") || "/dashboard");
+        return;
+      }
       setError("A Google bejelentkezés sikertelen (hiányzó token).");
       return;
     }
-    const params = new URLSearchParams(hash);
-    const sessionToken = params.get("session_token");
-    const returnTo = params.get("return_to") || "/dashboard";
+    const frag = new URLSearchParams(hash);
+    const sessionToken = frag.get("session_token");
+    const returnTo = frag.get("return_to") || "/dashboard";
 
     if (!sessionToken) {
       setError("A Google bejelentkezés sikertelen (hiányzó session).");
       return;
     }
 
+    // Basic open-redirect guard client-side as well
+    const safeReturnTo = returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/dashboard";
+
     setSessionToken(sessionToken);
-    // Clean the fragment so it doesn't re-trigger on refresh
     window.history.replaceState(null, "", window.location.pathname);
-    router.push(returnTo);
+    router.push(safeReturnTo);
   }, [router]);
 
   return (

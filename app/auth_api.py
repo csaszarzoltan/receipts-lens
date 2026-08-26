@@ -192,7 +192,7 @@ def google_status() -> dict[str, bool]:
     return {"enabled": google_is_configured()}
 
 
-@router.get("/api/auth/google/start")
+@router.get("/auth/google/start")
 def google_start(
     request: Request,
     return_to: str | None = None,
@@ -208,12 +208,11 @@ def google_start(
         raise HTTPException(503, "Google sign-in is not configured")
 
     state = secrets.token_hex(32)  # 64 hex chars = 32 bytes
-    state_hmac = _oauth_hmac(state)
+    nonce = _oauth_hmac(state)
 
-    # The nonce passed to exchange_google_code is derived from the state
-    # via HMAC — the server recomputes it from the returned state query param.
+    # return_to is bound into the cookie suffix — open-redirect safe
     safe_rt = _safe_return_to(return_to)
-    cookie_value = state
+    cookie_value = f"{state}:{safe_rt}"
 
     params = {
         "client_id": os.getenv("RECEIPTLENS_GOOGLE_CLIENT_ID"),
@@ -224,6 +223,7 @@ def google_start(
         "response_type": "code",
         "scope": "openid email profile",
         "state": state,
+        "nonce": nonce,
         "prompt": "select_account",
     }
     redirect_url = f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
@@ -241,7 +241,7 @@ def google_start(
     return response
 
 
-@router.get("/api/auth/google/callback")
+@router.get("/auth/google/callback")
 async def google_callback(
     request: Request,
     code: str | None = None,
@@ -269,12 +269,19 @@ async def google_callback(
             f"{frontend_url}/login?error=oauth_missing_params", status_code=302
         )
 
-    # CSRF check: state must match the cookie
+    # CSRF check: state must match the cookie (return_to bound via cookie suffix)
     cookie_state = request.cookies.get(OAUTH_COOKIE)
-    if not cookie_state or not secrets.compare_digest(cookie_state, state):
+    if not cookie_state or ":" not in cookie_state:
         return RedirectResponse(
             f"{frontend_url}/login?error=oauth_invalid_state", status_code=302
         )
+    cookie_state_val, cookie_return_to = cookie_state.split(":", 1)
+    if not secrets.compare_digest(cookie_state_val, state):
+        return RedirectResponse(
+            f"{frontend_url}/login?error=oauth_invalid_state", status_code=302
+        )
+    # return_to was bound at /start — sanitize once more on the way out
+    return_to = _safe_return_to(cookie_return_to)
 
     # Derive the nonce from the state (same HMAC as /start)
     expected_nonce = _oauth_hmac(state)
@@ -295,6 +302,7 @@ async def google_callback(
     fragment = urlencode({
         "session_token": session["session_token"],
         "expires_at": session["expires_at"],
+        "return_to": return_to,
     })
     redirect = RedirectResponse(
         f"{frontend_url}/auth/google/callback#{fragment}", status_code=302
