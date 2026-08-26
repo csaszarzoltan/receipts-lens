@@ -60,7 +60,7 @@ export default function ApprovalsPage() {
           </p>
         </div>
         <button type="button" onClick={() => setPolicyOpen(true)} className="btn-secondary text-sm">
-          + New approval policy
+          {t("approvals")}
         </button>
       </div>
 
@@ -70,7 +70,7 @@ export default function ApprovalsPage() {
           <SkeletonCard className="h-40" />
         </div>
       ) : error ? (
-        <EmptyState icon="⚠️" title="Could not load approvals" description="Check that the backend is running." />
+        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
       ) : items.length === 0 ? (
         <EmptyState
           icon="🎯"
@@ -129,7 +129,7 @@ export default function ApprovalsPage() {
 
       <Modal
         open={policyOpen}
-        title="Create approval policy"
+        title={t("approvals")}
         onClose={() => setPolicyOpen(false)}
         footer={
           <>

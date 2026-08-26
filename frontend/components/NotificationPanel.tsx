@@ -6,15 +6,18 @@ import { getNotifications, markAllRead, updateNotification } from "@/lib/api";
 import type { Notification } from "@/lib/types";
 import { timeAgo } from "@/lib/utils";
 import { cx } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 /** Slide-over notification center with read/archive actions and unread count. */
 export default function NotificationPanel({
+
   open,
   onClose,
 }: {
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const { data, error, isLoading, mutate } = useSWR(
     open ? "/product/notifications" : null,
     () => getNotifications(false),
@@ -81,7 +84,7 @@ export default function NotificationPanel({
             <p className="p-6 text-sm text-slate-500 dark:text-slate-400">Loading…</p>
           ) : error ? (
             <p className="p-6 text-sm text-rose-600 dark:text-rose-400">
-              Could not load notifications.
+              {t("couldNotLoad")}
             </p>
           ) : items.length === 0 ? (
             <div className="p-8 text-center">

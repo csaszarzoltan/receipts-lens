@@ -44,7 +44,7 @@ export default function DuplicatesPage() {
           <SkeletonCard className="h-44" />
         </div>
       ) : error ? (
-        <EmptyState icon="⚠️" title="Could not load duplicates" description="Check that the backend is running." />
+        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
       ) : items.length === 0 ? (
         <EmptyState
           icon="🔄"

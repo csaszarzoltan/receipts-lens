@@ -8,8 +8,10 @@ import { prepareExport } from "@/lib/api";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatMoney } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export default function ExportPreparePage() {
+  const { t } = useTranslation();
   const { data, error, isLoading } = useSWR("/product/receipts?limit=200", () =>
     searchReceipts({ limit: 200 }),
   );
@@ -50,7 +52,7 @@ export default function ExportPreparePage() {
       {isLoading ? (
         <SkeletonCard className="h-64" />
       ) : error ? (
-        <EmptyState icon="⚠️" title="Could not load receipts" description="Check that the backend is running." />
+        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
       ) : items.length === 0 ? (
         <EmptyState icon="📄" title="No receipts yet" description="Upload receipts to prepare an export." action={{ label: "Upload a receipt", href: "/upload" }} />
       ) : (

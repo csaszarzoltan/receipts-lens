@@ -165,3 +165,46 @@ for (const locale of LOCALES) {
     expect(overlayGone, `${locale} /upload crash`).toBe(true);
   });
 }
+// ── 10 nyelv × 8 további oldal h1 (routes that previously had hardcoded HU/EN) ──
+const H1_BY_LOCALE: Record<string, Record<Locale, string>> = {
+  reports:    { en: "Reports", hu: "Összesítés", de: "Berichte", fr: "Rapports", es: "Informes", it: "Report", pt: "Relatórios", nl: "Rapporten", pl: "Raporty", ro: "Rapoarte" },
+  forecast:   { en: "Forecast", hu: "Előrejelzés", de: "Prognose", fr: "Prévisions", es: "Previsión", it: "Previsioni", pt: "Previsão", nl: "Prognose", pl: "Prognoza", ro: "Prognoză" },
+  receipts:   { en: "Receipts", hu: "Vásárlások", de: "Einkäufe", fr: "Achats", es: "Compras", it: "Acquisti", pt: "Compras", nl: "Aankopen", pl: "Zakupy", ro: "Cumpărături" },
+  review:     { en: "Review", hu: "Ellenőrzés", de: "Prüfung", fr: "Vérification", es: "Revisión", it: "Revisione", pt: "Revisão", nl: "Controleren", pl: "Weryfikacja", ro: "Verificare" },
+  budget:     { en: "Budget", hu: "Háztartási keret", de: "Haushaltsbudget", fr: "Budget du foyer", es: "Presupuesto del hogar", it: "Budget familiare", pt: "Orçamento familiar", nl: "Huishoudbudget", pl: "Budżet domowy", ro: "Buget gospodărie" },
+  settings:   { en: "Settings", hu: "Beállítások", de: "Einstellungen", fr: "Paramètres", es: "Ajustes", it: "Impostazioni", pt: "Definições", nl: "Instellingen", pl: "Ustawienia", ro: "Setări" },
+  duplicates: { en: "Duplicates", hu: "Ismétlődések", de: "Duplikate", fr: "Doublons", es: "Duplicados", it: "Duplicati", pt: "Duplicados", nl: "Duplicaten", pl: "Duplikaty", ro: "Duplicate" },
+  accounting: { en: "Accounting", hu: "Könyvelési ellenőrzés", de: "Buchhaltung", fr: "Comptabilité", es: "Contabilidad", it: "Contabilità", pt: "Contabilidade", nl: "Boekhouding", pl: "Księgowość", ro: "Contabilitate" },
+};
+
+const ROUTES_TO_PROBE: Array<{ path: string; h1Key: string }> = [
+  { path: "/reports", h1Key: "reports" },
+  { path: "/forecast", h1Key: "forecast" },
+  { path: "/receipts", h1Key: "receipts" },
+  { path: "/review", h1Key: "review" },
+  { path: "/budget", h1Key: "budget" },
+  { path: "/settings", h1Key: "settings" },
+  { path: "/duplicates", h1Key: "duplicates" },
+  { path: "/accounting", h1Key: "accounting" },
+];
+
+for (const { path, h1Key } of ROUTES_TO_PROBE) {
+  for (const locale of LOCALES) {
+    test(`US-004: 10 routes — ${locale}: ${path} h1 + crash nincs`, async ({ page }) => {
+      test.setTimeout(60_000);
+      await seed(page, locale, true);
+      await page.goto(path);
+      await page.waitForLoadState("domcontentloaded");
+      await page.waitForTimeout(1500);
+      const h1 = H1_BY_LOCALE[h1Key][locale];
+      await expect(page.getByRole("heading", { name: h1 }).first()).toBeVisible({ timeout: 8000 });
+      const overlayGone = await page.evaluate(() => {
+        const portal = document.querySelector("nextjs-portal");
+        if (!portal?.shadowRoot) return true;
+        return !portal.shadowRoot.textContent?.includes("Unhandled Runtime Error");
+      });
+      expect(overlayGone, `${locale} ${path} crash`).toBe(true);
+    });
+  }
+}
+

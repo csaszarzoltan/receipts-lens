@@ -51,20 +51,20 @@ export default function ExportsPage() {
           </p>
         </div>
         <button type="button" onClick={() => setCreateOpen(true)} className="btn-primary text-sm">
-          + New connection
+          {t("integrations")}
         </button>
       </div>
 
-      <section aria-label="Connections">
-        <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">Connections</h2>
+      <section aria-label={t("integrations")}>
+        <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">{t("integrations")}</h2>
         {connectionsLoading ? (
           <SkeletonCard className="h-32" />
         ) : connectionsError ? (
-          <EmptyState icon="⚠️" title="Could not load connections" description="Check that the backend is running." />
+          <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
         ) : connections.length === 0 ? (
           <EmptyState icon="🔌" title={t("noRules")} description="Create a CSV, QuickBooks or Xero connection to export receipts." />
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2" aria-label="Connections">
+          <ul className="grid gap-4 sm:grid-cols-2" aria-label={t("integrations")}>
             {connections.map((connection) => (
               <li key={connection.connection_id} className="card p-5">
                 <div className="flex items-center justify-between gap-3">
@@ -96,8 +96,8 @@ export default function ExportsPage() {
         )}
       </section>
 
-      <section aria-label="Export history">
-        <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">Export history</h2>
+      <section aria-label={t("exports")}>
+        <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">{t("exports")}</h2>
         {runs.length === 0 ? (
           <EmptyState icon="📦" title={t("notEnoughData")} description="Export runs will appear here." />
         ) : (
@@ -115,7 +115,7 @@ export default function ExportsPage() {
 
       <Modal
         open={createOpen}
-        title="New connection"
+        title={t("integrations")}
         onClose={() => setCreateOpen(false)}
         footer={
           <>

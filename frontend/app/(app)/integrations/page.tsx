@@ -8,6 +8,7 @@ import type { Connection, ProviderConnection } from "@/lib/types";
 import EmptyState from "@/components/EmptyState";
 import Modal from "@/components/Modal";
 import { SkeletonCard } from "@/components/Skeleton";
+import { useTranslation } from "@/lib/i18n";
 
 const PROVIDERS = [
   { value: "csv", label: "CSV", icon: "📄" },
@@ -16,6 +17,7 @@ const PROVIDERS = [
 ];
 
 export default function IntegrationsPage() {
+  const { t } = useTranslation();
   const { data, error, isLoading, mutate } = useSWR<{ items: ProviderConnection[] }>(
     "/product/provider-connections",
     getProviderConnections,
@@ -30,7 +32,7 @@ export default function IntegrationsPage() {
   const connections = data?.items ?? [];
 
   async function create() {
-    await createConnection({ name: name || "New connection", provider, mapping: {} });
+    await createConnection({ name: name || t("integrations"), provider, mapping: {} });
     setOpen(false);
     setName("");
     mutate();
@@ -85,7 +87,7 @@ export default function IntegrationsPage() {
           <SkeletonCard className="h-32" />
         </div>
       ) : error ? (
-        <EmptyState icon="⚠️" title="Could not load integrations" description="Check that the backend is running." />
+        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
       ) : connections.length === 0 ? (
         <EmptyState icon="🔌" title="No integrations yet" description="Add a CSV, QuickBooks or Xero connection to get started." />
       ) : (

@@ -172,7 +172,7 @@ function ReceiptsContent() {
       ) : error ? (
         <EmptyState
           icon="⚠️"
-          title="Could not load receipts"
+          title={t("couldNotLoad")}
           description="The backend may be offline. Check the server and retry."
         />
       ) : filtered.length === 0 ? (

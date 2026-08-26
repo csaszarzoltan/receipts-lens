@@ -27,6 +27,7 @@ function isWeakMatch(item: ReviewItem): boolean {
 }
 
 function ReviewWorkspace() {
+  const { t } = useTranslation();
   const { data, error, isLoading, mutate } = useSWR<{ items: ReviewItem[] }>(
     "/product/review-items",
     getReviewItems,
@@ -45,8 +46,8 @@ function ReviewWorkspace() {
     return (
       <EmptyState
         icon="⚠️"
-        title="Could not load review items"
-        description="Check that the backend is running, then retry."
+        title={t("couldNotLoad")}
+        description={t("error")}
       />
     );
   }

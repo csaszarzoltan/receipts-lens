@@ -59,7 +59,7 @@ export default function InboxPage() {
         <SkeletonCard className="h-48" />
       ) : error ? (
         <div role="alert" className="card border-red-200 dark:border-red-900/50 p-5">
-          <h2 className="font-semibold text-red-800 dark:text-red-200">Could not load inbox</h2>
+          <h2 className="font-semibold text-red-800 dark:text-red-200">{t("couldNotLoad")}</h2>
           <button className="btn-primary mt-3" onClick={() => mutate()}>
             Retry
           </button>

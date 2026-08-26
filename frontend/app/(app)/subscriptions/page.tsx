@@ -128,8 +128,8 @@ export default function SubscriptionsPage() {
       ) : error ? (
         <EmptyState
           icon="⚠️"
-          title="Could not load subscriptions"
-          description="Check that the backend is running."
+          title={t("couldNotLoad")}
+          description={t("error")}
         />
       ) : items.length === 0 ? (
         <EmptyState

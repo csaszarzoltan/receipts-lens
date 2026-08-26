@@ -8,8 +8,10 @@ import { householdRoleLabel } from "@/lib/roles";
 import { getTenant } from "@/lib/auth";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
+import { useTranslation } from "@/lib/i18n";
 
 export default function MembersSettingsPage() {
+  const { t } = useTranslation();
   const { data, error, isLoading, mutate } = useSWR<{ items: Member[] }>("/product/members", getMembers);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<HouseholdRole>("adult");
@@ -46,7 +48,7 @@ export default function MembersSettingsPage() {
       {isLoading ? (
         <SkeletonCard className="h-40" />
       ) : error ? (
-        <EmptyState icon="⚠️" title="Could not load members" description="Check that the backend is running." />
+        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
       ) : members.length === 0 ? (
         <EmptyState icon="👥" title="No members yet" description="Add your first family member below." />
       ) : (

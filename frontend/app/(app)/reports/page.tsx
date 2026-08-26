@@ -49,12 +49,12 @@ export default function ReportsPage() {
       {receiptsLoading ? (
         <SkeletonCard className="h-72" />
       ) : receiptsError ? (
-        <EmptyState icon="⚠️" title="Could not load reports" description="Check that the backend is running." />
+        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
       ) : trend.length === 0 ? (
         <EmptyState icon="📊" title="Not enough data" description="Upload receipts to unlock spending reports." action={{ label: "Upload receipts", href: "/upload" }} />
       ) : (
-        <section className="card p-5" aria-label="Spending by month">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Spending by month</h2>
+        <section className="card p-5" aria-label={t("spendingTrend")}>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("spendingTrend")}</h2>
           <p className="mb-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
             {items.length} receipts · {formatMoney(trend.reduce((sum, p) => sum + p.amount, 0), "USD")} total
           </p>

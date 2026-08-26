@@ -55,7 +55,7 @@ export default function ProfileSettingsPage() {
         {isLoading ? (
           <p className="mt-3 text-sm text-slate-400">Loading…</p>
         ) : error ? (
-          <p className="mt-3 text-sm text-rose-600 dark:text-rose-400">Could not load preferences.</p>
+          <p className="mt-3 text-sm text-rose-600 dark:text-rose-400">{t("couldNotLoad")}</p>
         ) : (
           <div className="mt-4 space-y-4">
             <div>

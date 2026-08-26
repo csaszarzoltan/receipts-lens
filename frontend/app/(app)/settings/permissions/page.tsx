@@ -7,14 +7,16 @@ import type { PermissionMatrix } from "@/lib/types";
 import { roleLabel } from "@/lib/roles";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
+import { useTranslation } from "@/lib/i18n";
 
 export default function PermissionsSettingsPage() {
+  const { t } = useTranslation();
   const { data, error, isLoading, mutate } = useSWR<PermissionMatrix>("/product/permissions", getPermissions);
 
   if (isLoading) return <SkeletonCard className="h-64" />;
 
   if (error || !data) {
-    return <EmptyState icon="⚠️" title="Could not load permissions" description="Check that the backend is running." />;
+    return <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />;
   }
 
   const matrix = data;

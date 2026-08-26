@@ -61,7 +61,7 @@ export default function AutomationsPage() {
           <SkeletonCard className="h-32" />
         </div>
       ) : error ? (
-        <EmptyState icon="⚠️" title="Could not load rules" description="Check that the backend is running." />
+        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
       ) : rules.length === 0 ? (
         <EmptyState
           icon="⚡"
@@ -97,7 +97,7 @@ export default function AutomationsPage() {
 
       <Modal
         open={createOpen}
-        title="Create automation rule"
+        title={t("automations")}
         onClose={() => setCreateOpen(false)}
         footer={
           <>

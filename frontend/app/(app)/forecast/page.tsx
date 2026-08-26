@@ -48,7 +48,7 @@ export default function ForecastPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("forecast")}</h1>
-        <EmptyState icon="⚠️" title="Could not load forecast data" description="Check that the backend is running." />
+        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
       </div>
     );
   }
@@ -93,7 +93,7 @@ export default function ForecastPage() {
         </p>
       </div>
 
-      <section className="card p-5" aria-label="Forecast projections">
+      <section className="card p-5" aria-label={t("forecastTitle")}>
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
           Next period projections
         </h2>
@@ -101,7 +101,7 @@ export default function ForecastPage() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="card p-5" aria-label="Budget variance">
+        <section className="card p-5" aria-label={t("budgetVariance")}>
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
             Budget variance
           </h2>
@@ -128,7 +128,7 @@ export default function ForecastPage() {
           )}
         </section>
 
-        <section className="card p-5" aria-label="Anomalies">
+        <section className="card p-5" aria-label={t("anomalies")}>
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
             Anomalies
             {anomalies ? (

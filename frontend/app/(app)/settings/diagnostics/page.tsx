@@ -5,8 +5,10 @@ import { downloadDiagnostics, getDiagnostics } from "@/lib/api";
 import type { Diagnostics } from "@/lib/types";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
+import { useTranslation } from "@/lib/i18n";
 
 export default function DiagnosticsSettingsPage() {
+  const { t } = useTranslation();
   const { data, error, isLoading } = useSWR<Diagnostics>("/product/diagnostics", getDiagnostics);
 
   async function download() {
@@ -22,7 +24,7 @@ export default function DiagnosticsSettingsPage() {
   if (isLoading) return <SkeletonCard className="h-48" />;
 
   if (error || !data) {
-    return <EmptyState icon="⚠️" title="Could not load diagnostics" description="Check that the backend is running." />;
+    return <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />;
   }
 
   const rows: Array<[string, string | number | boolean]> = [
