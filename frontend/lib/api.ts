@@ -56,7 +56,7 @@ import type {
   WorkQueueItem,
   WorkspaceVersion,
 } from "./types";
-import { authHeaders } from "./auth";
+import { authHeaders, getSessionToken, clearSessionToken } from "./auth";
 import { AI_SCAN_ENABLED } from "./featureFlags";
 
 export const API_BASE_URL =
@@ -1054,4 +1054,30 @@ export async function acceptInvite(
     `/auth/households/${householdId}/invites/${inviteId}/accept`,
     { method: "POST", body: JSON.stringify({ token }) },
   );
+}
+
+// ---------------------------------------------------------------------------
+// Google SSO + session lifecycle
+// ---------------------------------------------------------------------------
+
+/** GET /auth/google/status — whether Google SSO is enabled. */
+export async function googleSsoEnabled(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/google/status`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.enabled === true;
+  } catch {
+    return false;
+  }
+}
+
+/** POST /auth/session/logout — invalidate the current session. */
+export async function logoutSession(): Promise<void> {
+  const session = getSessionToken();
+  await request("/auth/session/logout", {
+    method: "POST",
+    headers: session ? { Authorization: `Bearer ${session}` } : {},
+  }).catch(() => {});
+  clearSessionToken();
 }
