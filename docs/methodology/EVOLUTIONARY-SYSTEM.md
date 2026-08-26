@@ -130,7 +130,9 @@ As a {szerep} I want {mit} So that {miért — JTBD}.
 
 ---
 
-## 7) E2E piramis — folyamatos (4 réteg)
+## 7) E2E piramis — folyamatos (4 réteg) + Browser Helper szolgáltatások
+
+### 7.1 A 4 réteg (folyamatos felmérés)
 
 | Réteg | Mikor | Hol | Mit | Költség | Ha piros |
 |---|---|---|---|---|---|
@@ -139,21 +141,62 @@ As a {szerep} I want {mit} So that {miért — JTBD}.
 | **Prod canary** (élő, 30-60p) | folyamatos | **hermes cron `no_agent`** (`scripts/e2e-canary-*.sh`) | `playwright.prod.config.ts` (`baseURL=https://prod`, nincs webServer) + `/health` probe | 0 LLM-token | Telegram + kanban `BLOCKED` kártya + `notepad` freq |
 | **Local watch** (dev) | fejlesztés közben | `npx playwright test --watch` | `webServer reuseExistingServer:true` | 0 | lokális |
 
-**Részletek:** `docs/methodology/BROWSER-HELPER-MCP.md` — 6 képességcsoport valós endpointokkal (`/agent/observe` accessibility, `/agent/act` snapshot-free, `/page/analyze`, etc.), tenant izoláció, record→replay.
+> A 4 réteg együtt adja a „folyamatos felmérést” — a canary piros futása nem incidens, hanem evolúciós input (vissza az 1. fázisba ⟲).
 
-**Config konvenció:**
+### 7.2 Browser Helper — tényleges szolgáltatások (REST `http://localhost:8000` + CDP 9555)
+
+Az E2E rendszer **hibrid**: **browser_helper = alkotás & feltárás** (interaktív, token-költséges, élő böngésző), **Playwright CLI = végrehajtás & kapuk** (determinisztikus, 0 token, CI/canary). Tilos MCP böngészőt futtatni a CI-ben — az csak a spec-generálás és a helyi hibakeresés eszköze.
+
+**1. Szemantikus A11y fa introspekció** — nem CSS-osztály (`.btn-blue-400`) alapján, hanem a felhasználó által látott fa szerint:
+- `POST /agent/observe` — `mode: "accessibility" | "legacy"` (ajánlott: `accessibility`), `max_nodes`, `fallback: "accessibility"`, `include_hidden`, `auto_modal` → `snapshot_id` + `element_id` hivatkozások, token-optimalizált hierarchia (role, name, value, state)
+- `POST /page/analyze` — `buttons[]`, `form_fields[]` (checked state-tel), `modals[]` (role, aria_label, focus_trap), `iframes[]`, `alerts[]`, `text_preview`
+- `POST /page/outline` — `h1–h6` hierarchia + snippet + pozíció
+
+**2. Determinisztikus interakciós primitívek + actionability check** (látható, stabil, kattintható, nem takarja overlay):
+- `POST /agent/act` — `click | fill | select | wait | wait_for_element | select_tab | evaluate | workflow` + `target: {snapshot_id, element_id}` vagy `{backend_node_id: 4023}` (snapshot-free) + `auto_recover: true` (stale → friss accessibility) + `verify_after: {type: "text_visible" | "element_visible", text: "Success"}`
+- `POST /click/text`, `/click/label` (**kötelező** radios/checkboxokhoz — framework-safe), `/click/coordinates`, `/type`, `/form/fill`, `/form/select`, `/dropdown/select`
+- `POST /wait`, `/wait/text`, `/wait/visible`, `/wait/network-idle` — SPA-nál kötelező: `domcontentloaded + 2s settle`, tilos `networkidle` (polling miatt timeout)
+
+**3. Diagnosztika: hálózati forgalom & konzol naplózás** — a fejlesztő agent azonnal látja a háttérben elbukó hívásokat:
+- `POST /network/start|stop`, `GET /network/log`, `POST /page/diff` (változás-detekció), `POST /agent/act` + konzol-log lekérdezés
+- `js_expression: "window.map?.loaded() === true"` — MapLibre/WebGL canvas megvárása (nem `sleep`)
+
+**4. Vizuális & strukturális bizonyítékok (multimodal grounding):**
+- `POST /headless/screenshot` (`full_page`, `quality`) → `GET /artifacts/{id}`, `POST /screenshot`, `/full_screenshot`, `/element_screenshot`
+- `POST /agent/highlight` — piros keret az elemek köré (Bizonyíték hogy jó komponensre mutat)
+
+**5. Automatikus Playwright kódexport (`record → replay`):**
+- `POST /agent/record` `{"start": true}` → `POST /agent/record/stop` → `POST /agent/replay` (`recorded_id`, `on_error`, `data_overrides`)
+- `POST /agent/execute-task` — bounded micro-workflow (`goal`, `constraints: {max_steps: 5}`: observe → discover → fill → verify)
+- `POST /agent/extract` — schema szerinti kinyerés bizonyítékkal, nem fabrikál
+
+**6. Munkamenet, adatbázis & tenant izoláció:**
+- `POST /session/save|restore` — cookies + localStorage + sessionStorage; `POST /agent/forms/discover` (`scope: "page_with_history"` SPA lazy-loadinghoz) + `POST /agent/forms/fill` (`form_ref`, `resolver: "autocomplete"`)
+- `POST /agent/available-actions`, `POST /tabs/scan`, `POST /page/iframe/switch` (`index: -1` vissza a főoldalra)
+
+> **Részletes referencia:** `docs/methodology/BROWSER-HELPER-MCP.md` — 6 képességcsoport teljes specifikációval, példa-workflow-kkel, hibaelhárítással.
+
+### 7.3 Hibrid modell — mikor melyiket használd
+
+| Feladat | Eszköz | Miért |
+|---|---|---|
+| US `gui_flow` validálás, spec generálás (RED) | **browser_helper** (`/agent/observe` + `/agent/act` + `/agent/record`) | élő A11y fa + szemantikus lokátor (`getByRole('button', {name: "Keresés"})`) |
+| Fejlesztés közbeni hibakeresés | **browser_helper** (`/network/log` + konzol + screenshot) | azonnali visszacsatolás |
+| CI push gate, nightly, prod canary | **Playwright CLI** (`npx playwright test`) | 0 token, determinisztikus, gyors |
+
+### 7.4 Config konvenció
 
 - `playwright.config.ts` = dev (BE+FE `webServer`, `workers:1`, `timeout:25s`)
 - `playwright.prod.config.ts` = prod (nincs `webServer`, `baseURL: $PROD_URL`, `workers:1`, `retries:1`)
 - `tests/e2e` = API contract (`TestClient`), `frontend/e2e` = UI (Playwright) — ne keverd.
 
-**Stabilitási szabályok (különben flaky és kikapcsolod):**
+### 7.5 Stabilitási szabályok (különben flaky és kikapcsolod)
 
 - Minden E2E izolált tenantban (`demo-e2e-$RUN_ID`), utána cleanup — ne a prod DB-t piszkáld.
 - Külső OGD **nightly-n mockolva**, **canary-n élesen** (pont azt teszteli, él-e a PARIS/sonBASE/Swisstopo).
 - `domcontentloaded + 2s settle` a MapLibre canvas-ra, ne `networkidle` (SPA-nál timeout) — swiss `app.spec.ts` már így csinálja.
 - Idempotens: ugyanaz a spec 2× futtatva is zöld (receipts `seedAuth` localStorage-val már idempotens).
-
+- Soha ne használj vizuális CSS osztályt lokátorként (`.bg-blue-500` stílusváltáskor törik) — mindig `getByRole` / `data-testid`.
 ---
 
 ## 8) Research → proto → dev sorrend + stop-gate
