@@ -291,4 +291,58 @@ test.describe("ReceiptLens PROD — teljes bejárás", () => {
     const resp = await page.request.get(`${BASE}/api/product/receipts?limit=1`);
     expect(resp.status(), "session nélkül 401-nek kell lennie").toBe(401);
   });
+
+  // ------------------------------------------------------------------
+  // 10. Google SSO gomb látszik a loginon ha engedélyezve (G2 probe)
+  // ------------------------------------------------------------------
+  test("login: Google SSO gomb látszik (enabled:true → Folytatás Google-lel)", async ({ page }) => {
+    const probe = await page.request.get(`${BASE}/api/auth/google/status`);
+    const enabled = probe.ok() ? ((await probe.json()) as { enabled: boolean }).enabled : false;
+    test.skip(!enabled, "Google SSO nincs engedélyezve élesben — gomb nem várható");
+
+    await page.goto("/login");
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForTimeout(1500);
+
+    const googleLink = page.locator('a[href*="/api/auth/google/start"]');
+    await expect(googleLink, "Google SSO start link nem látszik a loginon").toBeVisible({ timeout: 8000 });
+    await expect(googleLink).toContainText(/Folytatás Google|Google/i);
+    const href = await googleLink.getAttribute("href");
+    expect(href).toContain("/api/auth/google/start");
+    await expectAssetsAndNoCrash(page, "/login (google SSO)");
+  });
+
+  // ------------------------------------------------------------------
+  // 11. Google callback oldal fragment nélkül hiba-UX-et mutat
+  // ------------------------------------------------------------------
+  test("auth/google/callback: fragment nélkül hibaüzenet (nem crash)", async ({ page }) => {
+    await page.goto("/auth/google/callback");
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForTimeout(1500);
+    await expectAssetsAndNoCrash(page, "/auth/google/callback");
+    const body = (await page.textContent("body")) ?? "";
+    expect(body).toMatch(/Google|bejelentkezés|hiányzó|ReceiptLens/i);
+  });
+
+  // ------------------------------------------------------------------
+  // 12. Tartós bejelentkezés — logout végpont elérhető + idempotens
+  // ------------------------------------------------------------------
+  test("tartós login: /auth/session/logout végpont él (kilépésig perzisztens)", async ({ page }) => {
+    // Nem töröljük a valódi E2E tokent (prod DB-t kíméljük) — csak a
+    // végpont szerződését ellenőrizzük.
+    const noAuth = await page.request.post(`${BASE}/api/auth/session/logout`);
+    expect(noAuth.status(), "Bearer nélkül 401 kell").toBe(401);
+
+    const bogus = await page.request.post(`${BASE}/api/auth/session/logout`, {
+      headers: { Authorization: "Bearer bogus-token-xyz-000" },
+    });
+    expect(bogus.status(), "ismeretlen tokenre is 204 (idempotens)").toBe(204);
+
+    // A seedelt E2E session továbbra is érvényes — a bejelentkezés tényleg
+    // kitart a kilépésig (sliding 180 nap, resolve_session frissíti az expires_at-et).
+    const stillAuthed = await page.request.get(`${BASE}/api/product/receipts?limit=1`, {
+      headers: { Authorization: `Bearer ${SESSION_TOKEN}` },
+    });
+    expect(stillAuthed.status(), "E2E session továbbra is 200 kell legyen logout nélkül").toBe(200);
+  });
 });
