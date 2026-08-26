@@ -1,20 +1,21 @@
+"use client";
+
 import Link from "next/link";
-
-const SECTIONS = [
-  { href: "/settings/profile", label: "Profile", icon: "👤" },
-  { href: "/settings/members", label: "Family members", icon: "👥" },
-  { href: "/settings/permissions", label: "Permissions", icon: "🔐" },
-  { href: "/settings/privacy", label: "Privacy", icon: "🛡️" },
-  { href: "/settings/diagnostics", label: "Diagnostics", icon: "🩺" },
-];
-
-export const metadata = { title: "Settings" };
+import { useTranslation } from "@/lib/i18n";
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
+  const SECTIONS = [
+    { href: "/settings/profile", label: t("profile"), icon: "👤" },
+    { href: "/settings/members", label: t("familyMembers"), icon: "👥" },
+    { href: "/settings/permissions", label: t("permissions"), icon: "🔐" },
+    { href: "/settings/privacy", label: t("privacy"), icon: "🛡️" },
+    { href: "/settings/diagnostics", label: t("diagnostics"), icon: "🩺" },
+  ];
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Settings</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("settings")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Manage your household, members and privacy.
         </p>
