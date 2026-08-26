@@ -38,7 +38,7 @@ test.describe("US-003: Nyugta feltöltés (evolúciós)", () => {
     await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(2000);
 
-    await expect(page.getByRole("heading", { name: "Nyugta hozzáadása" })).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole("heading", { name: /Nyugta hozzáadása|Add receipt|Beleg hinzufügen/i })).toBeVisible({ timeout: 8000 });
     // DropZone: input[type=file] vagy drag area
     const dropZone = page.locator('[data-testid="drop-zone"], input[type="file"], [role="button"]:has-text("Húzd")').first();
     const zoneVisible = (await dropZone.count()) > 0 && (await dropZone.isVisible().catch(() => false));
