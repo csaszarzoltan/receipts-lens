@@ -243,7 +243,7 @@ class TestIdTokenVerification:
 
     def test_tampered_signature_rejected(self) -> None:
         good = make_id_token()
-        head, payload, _sig = good.split(".")
+        head, _payload, _sig = good.split(".")
         forged_payload = _b64url(
             json.dumps({"iss": "https://accounts.google.com", "sub": "victim"}).encode()
         )
@@ -269,7 +269,7 @@ class TestIdTokenVerification:
 
     def test_unknown_kid_rejected(self) -> None:
         good = make_id_token()
-        head, payload, sig = good.split(".")
+        _head, payload, sig = good.split(".")
         forged_head = _b64url(json.dumps({"alg": "RS256", "kid": "unknown-kid"}).encode())
         with pytest.raises(OIDCError, match="signing key"):
             exchange("code", "nonce", transport=google_transport(f"{forged_head}.{payload}.{sig}"))
