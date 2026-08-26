@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { setSessionToken } from "@/lib/auth";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * Google SSO callback page — reads session_token from the URL fragment
@@ -13,6 +14,7 @@ import { setSessionToken } from "@/lib/auth";
  * The return_to value is already sanitized server-side (only /-prefixed paths).
  */
 function GoogleCallbackInner() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +22,7 @@ function GoogleCallbackInner() {
     const params = new URLSearchParams(window.location.search);
     const err = params.get("error");
     if (err) {
-      setError(`Google bejelentkezés sikertelen: ${err}`);
+      setError(`${t("googleSignInFailed")}: ${err}`);
       return;
     }
 
@@ -34,7 +36,7 @@ function GoogleCallbackInner() {
         router.push(params.get("return_to") || "/dashboard");
         return;
       }
-      setError("A Google bejelentkezés sikertelen (hiányzó token).");
+      setError(t("googleMissingToken"));
       return;
     }
     const frag = new URLSearchParams(hash);
@@ -42,7 +44,7 @@ function GoogleCallbackInner() {
     const returnTo = frag.get("return_to") || "/dashboard";
 
     if (!sessionToken) {
-      setError("A Google bejelentkezés sikertelen (hiányzó session).");
+      setError(t("googleMissingSession"));
       return;
     }
 
@@ -67,7 +69,7 @@ function GoogleCallbackInner() {
           </p>
         ) : (
           <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400" aria-live="polite">
-            Bejelentkezés Google-lel…
+            {t("googleSigningIn")}
           </p>
         )}
       </div>

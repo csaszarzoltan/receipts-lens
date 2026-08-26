@@ -7,7 +7,7 @@ import { acceptInvite } from "@/lib/api";
 import { setSessionToken } from "@/lib/auth";
 import { householdRoleLabel } from "@/lib/roles";
 import type { HouseholdRole } from "@/lib/types";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, getLocale } from "@/lib/i18n";
 
 /**
  * Family invite acceptance (F1.3): the invite link carries ?token=...; the
@@ -50,7 +50,7 @@ function InviteInner() {
       const householdId = url.searchParams.get("household") ?? "";
       const inviteId = url.searchParams.get("invite") ?? "";
       if (!householdId || !inviteId) {
-        setError("Hiányos meghívó-link (nincs háztartás/meghívó azonosító).");
+        setError(t("inviteMissing"));
         return;
       }
       const session = await acceptInvite(householdId, inviteId, token);
@@ -58,7 +58,7 @@ function InviteInner() {
       setInfo({ household: session.household_id, role: session.role });
       router.push("/dashboard");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "A meghívó érvénytelen vagy lejárt.");
+      setError(err instanceof Error ? err.message : t("inviteInvalid"));
     } finally {
       setBusy(false);
     }
@@ -71,13 +71,13 @@ function InviteInner() {
           <span className="text-3xl" aria-hidden="true">👨‍👩‍👧</span>
           <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">{t("familyMembers")}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Csatlakozz a háztartáshoz a ReceiptLens-ben
+            Join the household in ReceiptLens
           </p>
         </div>
 
         {info ? (
           <p className="mt-6 text-center text-sm text-emerald-600 dark:text-emerald-400">
-            Csatlakoztál: {info.household} ({householdRoleLabel(info.role)})
+            {info.household} ({householdRoleLabel(info.role, getLocale())})
           </p>
         ) : (
           <div className="mt-6 space-y-4">
@@ -92,12 +92,12 @@ function InviteInner() {
               disabled={!token || busy}
               className="btn-primary w-full"
             >
-              {busy ? "Csatlakozás…" : "Meghívó elfogadása"}
+              {busy ? t("sending") : t("sendInvite")}
             </button>
             <p className="text-center text-sm text-slate-500 dark:text-slate-400">
               Vagy{" "}
               <Link href="/login" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-                jelentkezz be háztartással
+                sign in with household
               </Link>
             </p>
           </div>

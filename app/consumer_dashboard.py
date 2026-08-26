@@ -5,12 +5,12 @@ subscription intelligence, household members, receipts) into ONE
 tenant-scoped payload for the consumer dashboard. All six blocks are fed
 by live backend data — no placeholders:
 
-  1. daily_remaining   — „Mennyit költhetek még ma?" (budget countdown)
-  2. monthly_by_category — „Mire ment el a pénzem" (category pie/list)
-  3. price_alerts      — drágulás-figyelmeztetések (existing price-increase
+  1. daily_remaining   — "How much can I spend today?" (budget countdown)
+  2. monthly_by_category — "Where did my money go" (category pie/list)
+  3. price_alerts      — price increase alerts (existing price-increase
                          motor; subscription receipts for now — regular
                          purchases land in F2.1)
-  4. cancellable       — lemondható előfizetések (existing motor)
+  4. cancellable       — cancellable subscriptions (existing motor)
   5. household         — családi keret-státusz (shared budget + members)
   6. recent_receipts   — legutóbbi nyugták (fast access)
 
@@ -35,10 +35,10 @@ _MAX_RECENT = 6
 
 # Consumer-facing category labels (F1.2 — no business jargon).
 _CATEGORY_LABELS: dict[str, str] = {
-    "Office": "Munka / iroda",
-    "Meals": "Étkezés",
-    "Transport": "Közlekedés",
-    "Uncategorized": "Egyéb",
+    "Office": "Work / office",
+    "Meals": "Meals",
+    "Transport": "Transport",
+    "Uncategorized": "Other",
 }
 
 
@@ -197,8 +197,8 @@ def _price_alerts(today: date, tenant_id: str) -> list[dict[str, Any]]:
                     "monthly_cost": _money(sub["monthly_cost"]),
                     "renewal_date": sub.get("renewal_date") or "",
                     "message": (
-                        f"A(z) {sub['merchant']} drágult — most "
-                        f"{_money(sub['amount']):.2f} USD az utolsó díj"
+                        f"{sub['merchant']} price increased — now "
+                        f"{_money(sub['amount']):.2f} USD last charge"
                     ),
                 }
             )
@@ -267,17 +267,17 @@ def _household(today: date, tenant_id: str) -> dict[str, Any]:
         "currency": currency,
         "members": members,
         "member_breakdown_note": (
-            "A tagok szerinti bontás az új belépési mód bevezetésével "
-            "(F1.3) válik elérhetővé."
+            "Per-member breakdown will be available with the new sign-in flow "
+            "(F1.3)."
         ),
     }
 
 
 # Household role labels (§3.2 of the plan — consumer vocabulary).
 _ROLE_LABELS: dict[str, str] = {
-    "admin": "Háztartás tulajdonosa",
-    "reviewer": "Felnőtt tag",
-    "integrator": "Könyvelő / tanácsadó (Business mód)",
+    "admin": "Household owner",
+    "reviewer": "Adult member",
+    "integrator": "Accountant / advisor",
 }
 
 
@@ -300,7 +300,7 @@ def _recent_receipts(tenant_id: str) -> list[dict[str, Any]]:
         items.append(
             {
                 "receipt_id": item["receipt_id"],
-                "merchant": str(payload.get("vendor") or "Ismeretlen üzlet"),
+                "merchant": str(payload.get("vendor") or "Unknown merchant"),
                 "total": _money(payload.get("total") or 0.0),
                 "currency": str(payload.get("currency") or "USD"),
                 "date": payload.get("date") or "",

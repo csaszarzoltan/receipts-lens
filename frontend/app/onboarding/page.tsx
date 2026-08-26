@@ -13,8 +13,7 @@ import { useTranslation } from "@/lib/i18n";
  * docs/plans/consumer-pivot-2026-08-13.md, §4):
  *
  *   1. "Mi ez?" — the one-sentence positioning promise (§3.1):
- *      "Fotózd le a nyugtát. Mi megmutatjuk, hol folyik el a pénzed —
- *      és hol takaríthatsz meg."
+ *      "Snap the receipt. We show where your money goes —"
  *   2. Camera / upload access — capture the first receipt via the
  *      device camera or a file picker (DropZone pattern).
  *   3. First receipt — a live upload of the chosen photo. The OCR result
@@ -30,32 +29,28 @@ import { useTranslation } from "@/lib/i18n";
  *     grant or a device picker, both handled by <input capture>
  *   - finishing always persists onboarding_done=true before navigating
  */
-const PROMISE = "Fotózd le a nyugtát. Mi megmutatjuk, hol folyik el a pénzed — és hol takaríthatsz meg.";
-const PROMISE_HINT = "A nyugtáidból kiderül: mire ment el a pénzed, milyen előfizetéseket mondhatsz le, és hol spórolhatsz.";
-
-const STEPS = [
-  {
-    icon: "💡",
-    title: "Mi ez?",
-    titleEn: "What is this?",
-    body: PROMISE,
-    hint: PROMISE_HINT,
-  },
-  {
-    icon: "📷",
-    title: "Kamera hozzáférése",
-    titleEn: "Camera access",
-    body: "Az első nyugtádat fotóval vagy feltöltéssel adhatod hozzá.",
-    hint: "A fényképező használatához engedélyt kérünk. Kihagyhatod, és később is feltölthetsz nyugtát.",
-  },
-  {
-    icon: "🧾",
-    title: "Az első nyugtád",
-    titleEn: "Your first receipt",
-    body: "Küldd be az első nyugtádat — mi kiolvassuk belőle az eladót, az összeget és a dátumot.",
-    hint: "Az eredményt azonnal megmutatjuk, majd a lakossági áttekintésre navigálunk.",
-  },
-] as const;
+function getSteps(t: (k: string) => string) {
+  return [
+    {
+      icon: "💡",
+      title: t("onboardingStepWhat"),
+      body: t("onboardingPromise"),
+      hint: t("onboardingPromiseHint"),
+    },
+    {
+      icon: "📷",
+      title: t("onboardingStepCamera"),
+      body: t("onboardingCameraBody"),
+      hint: t("onboardingCameraHint"),
+    },
+    {
+      icon: "🧾",
+      title: t("onboardingStepFirst"),
+      body: t("onboardingFirstBody"),
+      hint: t("onboardingFirstHint"),
+    },
+  ] as const;
+}
 
 interface UploadOutcome {
   vendor: string | null;
@@ -93,6 +88,7 @@ export default function OnboardingPage() {
     };
   }, [router]);
 
+  const STEPS = getSteps(t as any);
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
 
@@ -129,7 +125,7 @@ export default function OnboardingPage() {
       });
     } catch (err) {
       setUploadError(
-        err instanceof Error ? err.message : "A feltöltés nem sikerült. Próbáld újra, vagy folytasd később.",
+        err instanceof Error ? err.message : t("onboardingUploadFailed"),
       );
     } finally {
       setUploading(false);
@@ -144,7 +140,7 @@ export default function OnboardingPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 py-8 dark:from-brand-950 dark:to-slate-950">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-card dark:bg-slate-900">
         {/* Sticky step indicator — forward/back state, never lost */}
-        <div className="flex gap-1" role="group" aria-label={`${step + 1}. lépés a ${STEPS.length} közül`}>
+        <div className="flex gap-1" role="group" aria-label={`${step + 1} ${t("onboardingStepOf")} ${STEPS.length} ${t("onboardingTotalOf")}`}>
           {STEPS.map((item, index) => (
             <div
               key={item.title}
@@ -164,7 +160,7 @@ export default function OnboardingPage() {
             {current.icon}
           </div>
           <p className="mt-3 text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">
-            {`${step + 1}. lépés a ${STEPS.length} közül`}
+            {`${step + 1} ${t("onboardingStepOf")} ${STEPS.length} ${t("onboardingTotalOf")}`}
           </p>
           <h1 className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{current.title}</h1>
           <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{current.body}</p>
@@ -180,14 +176,14 @@ export default function OnboardingPage() {
               onClick={openFilePicker}
               className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-brand-700"
             >
-              📷 Fénykép készítése
+              {t("onboardingTakePhoto")}
             </button>
             <button
               type="button"
               onClick={openFilePicker}
               className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-              🖼️ Feltöltés az eszközről
+              {t("onboardingUploadFromDevice")}
             </button>
           </div>
         ) : null}
@@ -204,7 +200,7 @@ export default function OnboardingPage() {
                   ⏳
                 </span>
                 <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                  Feldolgozás… Ez néhány másodpercet vesz igénybe.
+                  {t("onboardingProcessing")}
                 </p>
               </div>
             ) : outcome ? (
@@ -214,7 +210,7 @@ export default function OnboardingPage() {
                 aria-live="polite"
               >
                 <p className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-                  Kész — az első nyugtád feldolgozva
+                  {t("onboardingDone")}
                 </p>
                 <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
                   {outcome.vendor ?? t("vendor")}
@@ -226,7 +222,7 @@ export default function OnboardingPage() {
                 </p>
                 {outcome.confidenceLevel ? (
                   <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
-                    Megbízhatóság: {outcome.confidenceLevel}
+                    {t("onboardingConfidence")} {outcome.confidenceLevel}
                   </p>
                 ) : null}
               </div>
@@ -273,7 +269,7 @@ export default function OnboardingPage() {
 
         <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
           <Link href="/dashboard" className="underline-offset-2 hover:underline">
-            Már van fiókod? Ugrás az áttekintéshez →
+            {t("onboardingAlreadyHaveAccount")}
           </Link>
         </p>
       </div>

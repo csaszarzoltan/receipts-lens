@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { requestMagicLink, verifyMagicLink } from "@/lib/api";
 import { setSessionToken } from "@/lib/auth";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * Magic-link flow (F1.3):
@@ -13,6 +14,7 @@ import { setSessionToken } from "@/lib/auth";
  *     backend runs in dev mode (no SMTP), otherwise the email is "sent".
  */
 function MagicLinkInner() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token");
@@ -32,7 +34,7 @@ function MagicLinkInner() {
       })
       .catch((err: unknown) => {
         setError(
-          err instanceof Error ? err.message : "A belépési link érvénytelen vagy lejárt.",
+          err instanceof Error ? err.message : t("magicLinkExpired"),
         );
         setBusy(false);
       });
@@ -49,10 +51,10 @@ function MagicLinkInner() {
         setLink(null);
         setError(null);
       } else {
-        setError("Az e-mail küldés jelenleg nem elérhető (nincs SMTP beállítva).");
+        setError(t("magicLinkNoSmtp"));
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Hiba a belépési link kérésekor.");
+      setError(err instanceof Error ? err.message : t("magicLinkError"));
     } finally {
       setBusy(false);
     }
@@ -65,19 +67,19 @@ function MagicLinkInner() {
           <span className="text-3xl" aria-hidden="true">🔎</span>
           <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">ReceiptLens</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Jelszó nélküli belépés e-mailben
+            {t("magicLinkTitle")}
           </p>
         </div>
 
         {token ? (
           <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-300" aria-live="polite">
-            {busy ? "Bejelentkezés…" : error ?? "A link ellenőrzése…"}
+            {busy ? t("magicLinkSignIn") : error ?? t("magicLinkChecking")}
           </p>
         ) : (
           <div className="mt-6 space-y-4">
             <div>
               <label htmlFor="magic-email" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
-                E-mail cím
+                {t("magicLinkEmailLabel")}
               </label>
               <input
                 id="magic-email"
@@ -89,7 +91,7 @@ function MagicLinkInner() {
               />
             </div>
             <button type="button" onClick={request} disabled={!email || busy} className="btn-primary w-full">
-              {busy ? "Küldés…" : "Belépési link küldése"}
+              {busy ? t("sending") : t("magicLinkSend")}
             </button>
 
             {error && (
@@ -99,7 +101,7 @@ function MagicLinkInner() {
             )}
             {link && (
               <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                <p className="mb-1 font-medium">Fejlesztési mód — a link itt van (nincs SMTP):</p>
+                <p className="mb-1 font-medium">{t("magicLinkDevHint")}</p>
                 <a href={link} className="break-all text-brand-600 hover:underline dark:text-brand-400">
                   {link}
                 </a>
@@ -109,7 +111,7 @@ function MagicLinkInner() {
             <p className="text-center text-sm text-slate-500 dark:text-slate-400">
               Vagy{" "}
               <Link href="/login" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-                jelentkezz be háztartással
+                {t("login")}
               </Link>
             </p>
           </div>

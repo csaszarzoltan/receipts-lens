@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "@/lib/i18n";
 import { API_BASE_URL, googleSsoEnabled } from "@/lib/api";
 
 /**
- * Profile menu: shows user email and "Kilépés" button when a session exists.
+ * Profile menu: shows user email and "Log out" button when a session exists.
  * Also renders a Google SSO button in the Topbar when enabled.
  */
 export default function ProfileMenu() {
+  const { t } = useTranslation();
   const [googleEnabled, setGoogleEnabled] = useState(false);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export default function ProfileMenu() {
         <a
           href={`${API_BASE_URL}/auth/google/start?return_to=${encodeURIComponent("/dashboard")}`}
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-          title="Folytatás Google-lel"
+          title={t("continueWithGoogle")}
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />

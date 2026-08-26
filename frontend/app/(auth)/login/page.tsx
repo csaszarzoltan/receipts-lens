@@ -109,7 +109,7 @@ export default function LoginPage() {
           </Link>
           {" · "}
           <Link href="/auth/magic-link" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-            Belépés e-mail linkkel
+            {t("emailLinkLogin")}
           </Link>
         </p>
       </div>

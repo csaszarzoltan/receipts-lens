@@ -8,7 +8,7 @@ import { householdRoleLabel } from "@/lib/roles";
 import { getTenant } from "@/lib/auth";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, getLocale } from "@/lib/i18n";
 
 export default function MembersSettingsPage() {
   const { t } = useTranslation();
@@ -32,7 +32,7 @@ export default function MembersSettingsPage() {
       setEmail("");
       mutate();
     } catch (err: unknown) {
-      setInviteError(err instanceof Error ? err.message : "A meghívó küldése nem sikerült.");
+      setInviteError(err instanceof Error ? err.message : t("inviteErrorGeneric"));
     } finally {
       setBusy(false);
     }
@@ -41,7 +41,7 @@ export default function MembersSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Családtagok</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("familyMembers")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Household members and their roles.</p>
       </div>
 
@@ -56,7 +56,7 @@ export default function MembersSettingsPage() {
           {members.map((member) => (
             <li key={member.member_id} className="flex items-center justify-between gap-3 px-5 py-3">
               <span className="font-medium text-slate-800 dark:text-slate-100">{member.email}</span>
-              <span className="text-sm text-slate-500 dark:text-slate-400">{householdRoleLabel(member.role)}</span>
+              <span className="text-sm text-slate-500 dark:text-slate-400">{householdRoleLabel(member.role, getLocale())}</span>
               <span
                 className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                   member.active
@@ -64,7 +64,7 @@ export default function MembersSettingsPage() {
                     : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                 }`}
               >
-                {member.active ? "Active" : "Inactive"}
+                {member.active ? t("active") : t("inactive")}
               </span>
             </li>
           ))}
@@ -72,9 +72,9 @@ export default function MembersSettingsPage() {
       )}
 
       <section className="card max-w-lg p-5" aria-label="Add member">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Tag meghívása</h2>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("inviteMember")}</h2>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          A meghívott e-mailben kap linket (fejlesztési módban a link itt jelenik meg).
+          {t("inviteMemberHint")}
         </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <input
@@ -83,21 +83,21 @@ export default function MembersSettingsPage() {
             placeholder="csalad@example.com"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            aria-label="Member email"
+            aria-label={t("memberEmail")}
           />
-          <select className="input sm:w-52" value={role} onChange={(event) => setRole(event.target.value as HouseholdRole)} aria-label="Member role">
-            <option value="owner">{householdRoleLabel("owner")}</option>
-            <option value="adult">{householdRoleLabel("adult")}</option>
-            <option value="child">{householdRoleLabel("child")}</option>
-            <option value="view_only">{householdRoleLabel("view_only")}</option>
+          <select className="input sm:w-52" value={role} onChange={(event) => setRole(event.target.value as HouseholdRole)} aria-label={t("memberRole")}>
+            <option value="owner">{householdRoleLabel("owner", getLocale())}</option>
+            <option value="adult">{householdRoleLabel("adult", getLocale())}</option>
+            <option value="child">{householdRoleLabel("child", getLocale())}</option>
+            <option value="view_only">{householdRoleLabel("view_only", getLocale())}</option>
           </select>
         </div>
         <button type="button" onClick={add} disabled={!email || busy} className="btn-primary mt-4 text-sm">
-          {busy ? "Küldés…" : "Meghívó küldése"}
+          {busy ? t("sending") : t("sendInvite")}
         </button>
         {inviteLink && (
           <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            <p className="mb-1 font-medium">Fejlesztési mód — meghívó link:</p>
+            <p className="mb-1 font-medium">{t("inviteLinkDev")}</p>
             <a href={inviteLink} className="break-all text-brand-600 hover:underline dark:text-brand-400">
               {inviteLink}
             </a>

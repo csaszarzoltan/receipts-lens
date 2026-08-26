@@ -7,26 +7,28 @@ import type { Preferences } from "@/lib/types";
 import { cx } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
-const STEPS = [
-  {
-    id: "what",
-    icon: "💡",
-    title: "Mi ez?",
-    body: "Fotózd le a nyugtát. Mi megmutatjuk, hol folyik el a pénzed — és hol takaríthatsz meg.",
-  },
-  {
-    id: "camera",
-    icon: "📷",
-    title: "Kamera hozzáférése",
-    body: "Az első nyugtádat fotóval vagy feltöltéssel adhatod hozzá.",
-  },
-  {
-    id: "first-receipt",
-    icon: "🧾",
-    title: "Az első nyugtád",
-    body: "Küldd be az első nyugtádat, és azonnal látod az eredményt az áttekintésben.",
-  },
-] as const;
+function getSteps(t: (k: string) => string) {
+  return [
+    {
+      id: "what",
+      icon: "💡",
+      title: t("onboardingStepWhat"),
+      body: t("onboardingPromise"),
+    },
+    {
+      id: "camera",
+      icon: "📷",
+      title: t("onboardingStepCamera"),
+      body: t("onboardingCameraBody"),
+    },
+    {
+      id: "first-receipt",
+      icon: "🧾",
+      title: t("onboardingStepFirst"),
+      body: t("onboardingFirstBody"),
+    },
+  ] as const;
+}
 
 /**
  * First-run onboarding modal (F1.5) — the consumer 3-step flow shown only
@@ -42,6 +44,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [dismissed, setDismissed] = useState(false);
   const [saving, setSaving] = useState(false);
+  const STEPS = getSteps(t as any);
 
   useEffect(() => {
     getPreferences()
@@ -74,7 +77,7 @@ export default function Onboarding() {
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" aria-hidden="true" />
       <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-card animate-fade-in dark:bg-slate-900">
         {/* Sticky progress indicator */}
-        <div className="flex gap-1 px-6 pt-5" role="group" aria-label={`${step + 1}. lépés a ${STEPS.length} közül`}>
+        <div className="flex gap-1 px-6 pt-5" role="group" aria-label={`${step + 1} ${t("onboardingStepOf")} ${STEPS.length} ${t("onboardingTotalOf")}`}>
           {STEPS.map((item, index) => (
             <div
               key={item.id}
@@ -90,7 +93,7 @@ export default function Onboarding() {
             {current.icon}
           </div>
           <p className="mt-3 text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">
-            {`${step + 1}. lépés a ${STEPS.length} közül`}
+            {`${step + 1} ${t("onboardingStepOf")} ${STEPS.length} ${t("onboardingTotalOf")}`}
           </p>
           <h2 className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{current.title}</h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{current.body}</p>
@@ -102,7 +105,7 @@ export default function Onboarding() {
             className={cx(button, "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200")}
             disabled={saving}
           >
-            Kihagyás
+            {t("skip")}
           </button>
           <div className="flex gap-2">
             {step > 0 ? (

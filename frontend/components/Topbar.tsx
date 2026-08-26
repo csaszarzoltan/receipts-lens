@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { getRole, setRole, ROLES, type Role, getSessionToken } from "@/lib/auth";
 import { roleLabel } from "@/lib/roles";
+import { getLocale } from "@/lib/i18n";
 import { useTranslation } from "@/lib/i18n";
 import ThemeToggle from "@/components/ThemeToggle";
 import NotificationPanel from "@/components/NotificationPanel";
@@ -84,7 +85,7 @@ export default function Topbar() {
             >
               {ROLES.map((option) => (
                 <option key={option} value={option}>
-                  {roleLabel(option)}
+                  {roleLabel(option, getLocale())}
                 </option>
               ))}
             </select>

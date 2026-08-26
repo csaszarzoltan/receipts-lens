@@ -1,4 +1,5 @@
 import { cx } from "@/lib/utils";
+import { getLocale, t } from "@/lib/i18n";
 
 type Status = "needs_review" | "completed" | "pending" | "approved" | "rejected" | "failed" | string;
 
@@ -17,25 +18,30 @@ const TONES: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
 };
 
+const STATUS_KEYS: Record<string, string> = {
+  needs_review: "statusNeedsReview",
+  completed: "statusCompleted",
+  pending: "statusPending",
+  approved: "statusApproved",
+  rejected: "statusRejected",
+  failed: "statusFailed",
+  exportable: "statusExportable",
+  warning: "statusWarning",
+  blocked: "statusBlocked",
+  on_track: "statusOnTrack",
+  over_budget: "statusOverBudget",
+  active: "statusActive",
+};
+
 function labelFor(status: string): string {
-  const labels: Record<string, string> = {
-    needs_review: "Ellenőrzésre vár",
-    completed: "Kész",
-    pending: "Folyamatban",
-    approved: "Jóváhagyva",
-    rejected: "Elutasítva",
-    failed: "Sikertelen",
-    exportable: "Exportálható",
-    warning: "Figyelmeztetés",
-    blocked: "Blokkolt",
-    on_track: "Terv szerint",
-    over_budget: "Keret felett",
-    active: "Aktív",
-  };
-  return labels[status] ?? status.replace(/_/g, " ");
+  const key = STATUS_KEYS[status];
+  if (key) {
+    try { return t(key as any, getLocale()); } catch { return status.replace(/_/g, " "); }
+  }
+  return status.replace(/_/g, " ");
 }
 
-/** Status/readiness badge — tone mapped per status value. */
+/** Status/readiness badge — tone mapped per status value, label via i18n. */
 export default function StatusBadge({ status }: { status: Status }) {
   return (
     <span

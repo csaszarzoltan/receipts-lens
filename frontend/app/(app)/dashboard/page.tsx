@@ -14,18 +14,18 @@ import { formatDate, formatMoney } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
 /**
- * Lakossági dashboard (F1.2 — docs/plans/consumer-pivot-2026-08-13.md §3.4).
+ * Consumer dashboard (F1.2 — docs/plans/consumer-pivot-2026-08-13.md §3.4).
  *
- * Hat blokk, mindegyik élő backend adatot mutat (GET /api/v1/consumer/dashboard):
- *   1. „{t("dailyRemaining")}" — napi maradékkeret (budget visszaszámolás)
- *   2. Havi költés kategóriánként — „mire ment el a pénzem"
- *   3. {t("priceAlerts")} (meglévő előfizetés-motor)
+ * Six blocks, each shows live backend data (GET /api/v1/consumer/dashboard):
+ *   1. „{t("dailyRemaining")}" — daily remaining (budget countdown)
+ *   2. Monthly spending by category — „where my money went"
+ *   3. {t("priceAlerts")} (existing subscription engine)
  *   4. {t("cancellableSubscriptions")}
- *   5. {t("householdStatus")} (közös háztartási keret + tagok)
+ *   5. {t("householdStatus")} (household budget + members)
  *   6. {t("recentReceipts")}
  *
  * Consumer language: no business jargon. in the empty state the block
- * onboarding/első lépés CTA-ra mutat.
+ * onboarding/first-step CTA-ra mutat.
  */
 export default function ConsumerDashboardPage() {
   const { t } = useTranslation();
@@ -71,7 +71,7 @@ export default function ConsumerDashboardPage() {
       </div>
 
       {/* 1. {t("dailyRemaining")} */}
-      <section aria-label="Napi maradékkeret" className="grid gap-4 lg:grid-cols-2">
+      <section aria-label={t("dailyRemaining")} className="grid gap-4 lg:grid-cols-2">
         {daily_remaining ? (
           <div className="card p-5">
             <div className="flex items-center justify-between">
@@ -87,7 +87,7 @@ export default function ConsumerDashboardPage() {
             </p>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {daily_remaining.days_left} {t("dailyRemainingHint")}
-              keretből {formatMoney(daily_remaining.remaining_this_month, daily_remaining.currency)}{" "}
+              {t("remaining")} {formatMoney(daily_remaining.remaining_this_month, daily_remaining.currency)}{" "}
               
             </p>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
@@ -97,8 +97,7 @@ export default function ConsumerDashboardPage() {
               />
             </div>
             <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-               {daily_remaining.pct_used}
-            </p>
+               {daily_remaining.pct_used}%</p>
           </div>
         ) : (
           <EmptyState
@@ -113,7 +112,7 @@ export default function ConsumerDashboardPage() {
         <HouseholdBlock household={household} />
       </section>
 
-      {/* 2. Havi költés kategóriánként */}
+     
       <section className="card p-5" aria-label={t("monthlySpending")}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -137,7 +136,7 @@ export default function ConsumerDashboardPage() {
             <EmptyState
               icon="🧾"
               title={t("noReceipts")}
-              description="Az első nyugta feltöltése után itt látod, mire ment el a pénzed."
+              description={t("noReceiptYetHint")}
               action={{ label: t("uploadFirst"), href: "/upload" }}
             />
           </div>
@@ -203,8 +202,8 @@ export default function ConsumerDashboardPage() {
                   {alert.message}
                 </p>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                   {formatMoney(alert.monthly_cost, alert.currency)} — érdemes
-                  átnézni a díjat.
+                   {formatMoney(alert.monthly_cost, alert.currency)} — {t("warning")}
+                  
                 </p>
               </li>
             ))}
@@ -220,7 +219,7 @@ export default function ConsumerDashboardPage() {
               {t("cancellableSubscriptions")}
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Ezeket bármikor lemondhatod — a lemondási útmutató az Előfizetések
+              {t("cancellableSubscriptions")}: the cancellation guide is in {t("subscriptions")}
               oldalon van.
             </p>
           </div>
@@ -236,7 +235,7 @@ export default function ConsumerDashboardPage() {
             <EmptyState
               icon="🔁"
               title={t("noSubscriptionsFound")}
-              description="Ha egy szolgáltatásért rendszeresen fizetsz, itt fog megjelenni."
+              description={t("noSubscriptions")}
             />
           </div>
         ) : (
@@ -254,7 +253,7 @@ export default function ConsumerDashboardPage() {
                   ) : null}
                 </div>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                  {formatMoney(subscription.monthly_cost, "USD")}/hó · lejárat:{" "}
+                  {formatMoney(subscription.monthly_cost, "USD")}/mo · {t("statusPending")}:{" "}
                   {formatDate(subscription.renewal_date)}
                 </p>
               </li>
