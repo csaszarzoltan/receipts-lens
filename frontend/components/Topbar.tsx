@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
-import { getRole, setRole, ROLES, type Role } from "@/lib/auth";
+import { useEffect, useRef, useState } from "react";
+import { getRole, setRole, ROLES, type Role, getSessionToken } from "@/lib/auth";
 import { roleLabel } from "@/lib/roles";
-import { getSessionToken } from "@/lib/auth";
 import { useTranslation } from "@/lib/i18n";
 import ThemeToggle from "@/components/ThemeToggle";
 import NotificationPanel from "@/components/NotificationPanel";
@@ -16,7 +15,18 @@ export default function Topbar() {
   const { t } = useTranslation();
   const router = useRouter();
   const [role, setRoleState] = useState<Role>(getRole());
+  const [identity, setIdentity] = useState<{ email: string; display_name: string | null } | null>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  useEffect(() => {
+    const token = getSessionToken();
+    if (!token) return;
+    import("@/lib/api").then(({ resolveSession }) =>
+      resolveSession(token)
+        .then((id) => setIdentity({ email: id.email, display_name: (id as { display_name?: string | null }).display_name ?? null }))
+        .catch(() => {})
+    );
+  }, []);
   const searchRef = useRef<HTMLInputElement>(null);
 
   function submitSearch(event: React.FormEvent) {
@@ -53,6 +63,11 @@ export default function Topbar() {
         </form>
 
         <div className="ml-auto flex items-center gap-2">
+          {identity ? (
+            <span className="hidden max-w-[14rem] truncate text-sm text-slate-600 dark:text-slate-300 md:inline" title={identity.email}>
+              {t("signedInAs")} {identity.display_name || identity.email}
+            </span>
+          ) : null}
           {/* Household role selector — consumer label shown, wire value kept.
               The tenant selector was removed from the consumer view (F1.1). */}
           <div className="hidden items-center gap-2 md:flex">

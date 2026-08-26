@@ -298,8 +298,9 @@ async def google_callback(
         )
 
     email = claims["email"]
+    display_name = (claims.get("name") or claims.get("given_name") or "").strip() or None
     tenant_id, _created = service.find_or_create_household_owner(email)
-    session = service.create_session(email, tenant_id, "owner")
+    session = service.create_session(email, tenant_id, "owner", display_name=display_name)
 
     # Build the redirect URL with fragment (JS reads it, not the server)
     fragment = urlencode({

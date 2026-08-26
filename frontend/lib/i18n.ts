@@ -162,6 +162,8 @@ export const messages = {
     openUpload: "Open upload",
     couldNotLoad: "Could not load",
     householdFinances: "Your household finances at a glance.",
+    signedInAs: "Signed in as",
+    yourAccount: "Your account",
     business: "Business",
   },
   hu: {
@@ -291,6 +293,8 @@ export const messages = {
     openUpload: "Feltöltés megnyitása",
     couldNotLoad: "Nem sikerült betölteni",
     householdFinances: "A háztartásod pénzügyei egy helyen.",
+    signedInAs: "Bejelentkezve:",
+    yourAccount: "Fiókod",
     business: "Business",
   },
   de: {
@@ -420,6 +424,8 @@ export const messages = {
     openUpload: "Upload öffnen",
     couldNotLoad: "Konnte nicht laden",
     householdFinances: "Deine Haushaltsfinanzen auf einen Blick.",
+    signedInAs: "Angemeldet als",
+    yourAccount: "Dein Konto",
     business: "Business",
   },
   fr: {
@@ -549,6 +555,8 @@ export const messages = {
     openUpload: "Ouvrir l'ajout",
     couldNotLoad: "Chargement impossible",
     householdFinances: "Les finances de votre foyer en un coup d'œil.",
+    signedInAs: "Connecté en tant que",
+    yourAccount: "Votre compte",
     business: "Business",
   },
   es: {
@@ -678,6 +686,8 @@ export const messages = {
     openUpload: "Abrir subida",
     couldNotLoad: "No se pudo cargar",
     householdFinances: "Las finanzas de tu hogar de un vistazo.",
+    signedInAs: "Conectado como",
+    yourAccount: "Tu cuenta",
     business: "Business",
   },
   it: {
@@ -807,6 +817,8 @@ export const messages = {
     openUpload: "Apri caricamento",
     couldNotLoad: "Impossibile caricare",
     householdFinances: "Le finanze di casa a colpo d'occhio.",
+    signedInAs: "Accesso effettuato come",
+    yourAccount: "Il tuo account",
     business: "Business",
   },
   pt: {
@@ -936,6 +948,8 @@ export const messages = {
     openUpload: "Abrir envio",
     couldNotLoad: "Não foi possível carregar",
     householdFinances: "As finanças da sua casa num relance.",
+    signedInAs: "Conectado como",
+    yourAccount: "Sua conta",
     business: "Business",
   },
   nl: {
@@ -1065,6 +1079,8 @@ export const messages = {
     openUpload: "Upload openen",
     couldNotLoad: "Kon niet laden",
     householdFinances: "Je huishoudfinanciën in één oogopslag.",
+    signedInAs: "Ingelogd als",
+    yourAccount: "Je account",
     business: "Business",
   },
   pl: {
@@ -1194,6 +1210,8 @@ export const messages = {
     openUpload: "Otwórz przesyłanie",
     couldNotLoad: "Nie udało się załadować",
     householdFinances: "Finanse domowe na pierwszy rzut oka.",
+    signedInAs: "Zalogowano jako",
+    yourAccount: "Twoje konto",
     business: "Business",
   },
   ro: {
@@ -1323,6 +1341,8 @@ export const messages = {
     openUpload: "Deschide încărcarea",
     couldNotLoad: "Nu s-a putut încărca",
     householdFinances: "Finanțele gospodăriei dintr-o privire.",
+    signedInAs: "Conectat ca",
+    yourAccount: "Contul tău",
     business: "Business",
   },
 } as const;

@@ -457,6 +457,7 @@ export interface SessionIdentity {
   household_id: string;
   role: HouseholdRole;
   expires_at: string;
+  display_name?: string | null;
 }
 
 /** A household invite row (owner view + create response). */

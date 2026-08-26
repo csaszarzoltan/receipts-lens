@@ -119,8 +119,17 @@ class ProductService:
               token_hash TEXT, created_at TEXT NOT NULL, accepted_at TEXT);
             CREATE TABLE IF NOT EXISTS sessions(
               session_token TEXT PRIMARY KEY, email TEXT NOT NULL, tenant_id TEXT NOT NULL,
-              role TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
+              role TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL,
+              display_name TEXT);
             """)
+            # Migration for existing DBs that were created before display_name
+            try:
+                cols = {r[1] for r in self._db.execute("PRAGMA table_info(sessions)").fetchall()}
+                if "display_name" not in cols:
+                    self._db.execute("ALTER TABLE sessions ADD COLUMN display_name TEXT")
+                    self._db.commit()
+            except Exception:
+                pass
 
     @staticmethod
     def _now() -> str:
@@ -792,6 +801,7 @@ class ProductService:
         role: str,
         *,
         ttl_seconds: int = SESSION_TTL_SECONDS,
+        display_name: str | None = None,
     ) -> dict[str, Any]:
         """Create a session token bound to a household role."""
         token = secrets.token_urlsafe(32)
@@ -799,14 +809,15 @@ class ProductService:
         expires = datetime.fromisoformat(now).timestamp() + ttl_seconds
         with self._db:
             self._db.execute(
-                "INSERT INTO sessions(session_token,email,tenant_id,role,expires_at,created_at)"
-                " VALUES(?,?,?,?,?,?)",
+                "INSERT INTO sessions(session_token,email,tenant_id,role,expires_at,created_at,display_name)"
+                " VALUES(?,?,?,?,?,?,?)",
                 (token, email.strip().lower(), tenant_id, role,
-                 datetime.fromtimestamp(expires, UTC).isoformat(), now),
+                 datetime.fromtimestamp(expires, UTC).isoformat(), now, display_name),
             )
             self._audit(tenant_id, "auth.session_created", email.strip().lower())
         return {"session_token": token, "email": email.strip().lower(), "tenant_id": tenant_id,
-                "role": role, "expires_at": datetime.fromtimestamp(expires, UTC).isoformat()}
+                "role": role, "expires_at": datetime.fromtimestamp(expires, UTC).isoformat(),
+                "display_name": display_name}
 
     def resolve_session(self, session_token: str) -> dict[str, Any]:
         """Resolve a session token into an identity or raise ``KeyError``.
@@ -834,7 +845,12 @@ class ProductService:
             self._db.commit()
         except Exception:
             pass
-        return {"email": row["email"], "tenant_id": row["tenant_id"], "role": row["role"]}
+        dn = None
+        try:
+            dn = row["display_name"] if "display_name" in row.keys() else None
+        except Exception:
+            pass
+        return {"email": row["email"], "tenant_id": row["tenant_id"], "role": row["role"], "display_name": dn}
 
     def delete_session(self, session_token: str) -> bool:
         """Delete a session token. Returns True when a row was removed."""
