@@ -7,6 +7,7 @@ import { SpendingChart, type SpendPoint } from "@/components/Charts";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatMoney } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 function monthlySpend(items: Array<{ receipt: { date: string | null; total: number | null } }>): SpendPoint[] {
   const byMonth = new Map<string, number>();
@@ -27,6 +28,7 @@ function monthlySpend(items: Array<{ receipt: { date: string | null; total: numb
 }
 
 export default function ReportsPage() {
+  const { t } = useTranslation();
   const { data: receiptsData, error: receiptsError, isLoading: receiptsLoading } = useSWR(
     "/product/receipts?limit=200",
     () => searchReceipts({ limit: 200 }),
@@ -38,7 +40,7 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Összesítés</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("reports")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Spending analytics for your household.
         </p>

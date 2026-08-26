@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getPreferences, savePreferences } from "@/lib/api";
 import type { Preferences } from "@/lib/types";
 import { cx } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 const STEPS = [
   {
@@ -35,6 +36,7 @@ const STEPS = [
  * it needs and simply navigates to the dashboard when finished.
  */
 export default function Onboarding() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [preferences, setPreferences] = useState<Preferences | null>(null);
   const [step, setStep] = useState(0);
@@ -119,7 +121,7 @@ export default function Onboarding() {
               className={cx(button, "bg-brand-600 text-white hover:bg-brand-700")}
               disabled={saving}
             >
-              {isLast ? "Áttekintés megnyitása →" : "Tovább"}
+              {isLast ? t("finish") : t("next")}
             </button>
           </div>
         </div>

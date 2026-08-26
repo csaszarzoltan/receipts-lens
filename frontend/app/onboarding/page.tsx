@@ -222,7 +222,7 @@ export default function OnboardingPage() {
                 <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
                   {outcome.total !== null
                     ? `${outcome.total.toLocaleString("hu-HU", { maximumFractionDigits: 2 })} ${outcome.currency ?? ""}`
-                    : "Összeg nem állapítható meg"}
+                    : t("noReceipts")}
                 </p>
                 {outcome.confidenceLevel ? (
                   <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">

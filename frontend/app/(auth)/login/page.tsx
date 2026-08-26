@@ -103,9 +103,9 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-          Új itt?{" "}
+          {t("welcome").includes(" ") ? "New here? " : "New here? "}
           <Link href="/onboarding" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-            Töltsd ki a bevezetőt
+            {t("onboarding")}
           </Link>
           {" · "}
           <Link href="/auth/magic-link" className="font-medium text-brand-600 hover:underline dark:text-brand-400">

@@ -228,7 +228,7 @@ export default function ConsumerDashboardPage() {
             href="/subscriptions"
             className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
           >
-            Összes előfizetés →
+            {t("allPurchases")}
           </Link>
         </div>
         {cancellable_subscriptions.length === 0 ? (
