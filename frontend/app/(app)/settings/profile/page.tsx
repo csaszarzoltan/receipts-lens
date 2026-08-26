@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { getPreferences, savePreferences } from "@/lib/api";
 import type { Preferences } from "@/lib/types";
-import { getLocale, setLocale, useTranslation, type Locale } from "@/lib/i18n";
+import { getLocale, setLocale, useTranslation, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n";
 
 export default function ProfileSettingsPage() {
   const { t, locale } = useTranslation();
@@ -35,6 +35,11 @@ export default function ProfileSettingsPage() {
 
   async function changeLocale(next: Locale) {
     setLocale(next);
+    try {
+      await savePreferences({ language: next });
+    } catch {
+      // localStorage already reflects the new choice — backend is a nice-to-have sync
+    }
     location.reload();
   }
 
@@ -63,11 +68,12 @@ export default function ProfileSettingsPage() {
                 value={locale}
                 onChange={(event) => changeLocale(event.target.value as Locale)}
               >
-                <option value="en">English</option>
-                <option value="hu">Magyar</option>
+                {SUPPORTED_LOCALES.map((loc) => (
+                  <option key={loc} value={loc}>{LOCALE_LABELS[loc]}</option>
+                ))}
               </select>
               <p className="mt-1 text-xs text-slate-400">
-                UI labels come from the i18n catalog — Hungarian is a preview locale.
+                {t("language")} — {t("selectLanguage")}.
               </p>
             </div>
             <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-200">

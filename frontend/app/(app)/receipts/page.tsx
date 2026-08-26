@@ -12,17 +12,21 @@ import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 import StatusBadge from "@/components/StatusBadge";
 import { formatDate, formatMoney } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
-const STATUS_OPTIONS = [
-  { value: "needs_review", label: "Ellenőrzésre vár" },
-  { value: "completed", label: "Kész" },
-  { value: "pending", label: "Folyamatban" },
-  { value: "approved", label: "Jóváhagyva" },
-  { value: "rejected", label: "Elutasítva" },
-  { value: "failed", label: "Sikertelen" },
-];
+function getStatusOptions(t: any) {
+  return [
+    { value: "needs_review", label: t("needsReview") },
+    { value: "completed", label: t("done") },
+    { value: "pending", label: t("loading") },
+    { value: "approved", label: t("done") },
+    { value: "rejected", label: t("cancel") },
+    { value: "failed", label: t("error") },
+  ];
+}
 
 function ReceiptsContent() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [status, setStatus] = useState("");
@@ -80,7 +84,7 @@ function ReceiptsContent() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Vásárlások</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("receipts")}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {data?.total != null ? `${data.total} receipts` : "Search your receipts"}
           </p>
@@ -106,7 +110,7 @@ function ReceiptsContent() {
               setStatus(value);
               setOffset(0);
             },
-            options: STATUS_OPTIONS,
+            options: getStatusOptions(t),
             allLabel: "All statuses",
           },
           {

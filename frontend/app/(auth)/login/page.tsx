@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { API_BASE_URL, googleSsoEnabled } from "@/lib/api";
 import { setAuthState } from "@/lib/auth";
 import { roleLabel } from "@/lib/roles";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n";
 
 const ROLES = ["admin", "reviewer", "integrator"] as const;
 
@@ -16,7 +16,7 @@ const ROLES = ["admin", "reviewer", "integrator"] as const;
  * uses magic-link or Google SSO.
  */
 export default function LoginPage() {
-  const { t } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
   const router = useRouter();
   const [tenant, setTenant] = useState("demo");
   const [role, setRole] = useState<(typeof ROLES)[number]>("admin");
@@ -38,8 +38,25 @@ export default function LoginPage() {
           <span className="text-3xl" aria-hidden="true">🔎</span>
           <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">ReceiptLens</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Sign in to your household
+            {t("loginSubtitle")}
           </p>
+        </div>
+
+        {/* Language selector — 10 locales, no auth required. Stored in localStorage; synced to backend on login. */}
+        <div className="mt-4">
+          <label htmlFor="login-locale" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
+            {t("language")}
+          </label>
+          <select
+            id="login-locale"
+            className="input"
+            value={locale}
+            onChange={(event) => setLocale(event.target.value as Locale)}
+          >
+            {SUPPORTED_LOCALES.map((loc) => (
+              <option key={loc} value={loc}>{LOCALE_LABELS[loc]}</option>
+            ))}
+          </select>
         </div>
 
         {googleReady && (
@@ -62,7 +79,7 @@ export default function LoginPage() {
         <div className="mt-6 space-y-4">
           <div>
             <label htmlFor="login-tenant" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
-              Háztartás
+              Household
             </label>
             <select id="login-tenant" className="input" value={tenant} onChange={(event) => setTenant(event.target.value)}>
               <option value="demo">demo</option>
@@ -72,7 +89,7 @@ export default function LoginPage() {
           </div>
           <div>
             <label htmlFor="login-role" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
-              Szerepkör
+              Role
             </label>
             <select id="login-role" className="input" value={role} onChange={(event) => setRole(event.target.value as (typeof ROLES)[number])}>
               {ROLES.map((option) => (
@@ -81,7 +98,7 @@ export default function LoginPage() {
             </select>
           </div>
           <button type="button" onClick={signIn} className="btn-primary w-full">
-            Sign in
+            {t("login")}
           </button>
         </div>
 

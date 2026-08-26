@@ -7,8 +7,10 @@ import type { DuplicateCandidate } from "@/lib/types";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatMoney } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export default function DuplicatesPage() {
+  const { t } = useTranslation();
   const { data, error, isLoading, mutate } = useSWR<{ items: DuplicateCandidate[] }>(
     "/product/duplicates",
     getDuplicates,
@@ -30,7 +32,7 @@ export default function DuplicatesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Ismétlődések</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("duplicates")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Potential duplicate receipts detected by the matching engine.
         </p>

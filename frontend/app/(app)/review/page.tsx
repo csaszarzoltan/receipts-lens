@@ -10,6 +10,7 @@ import StatusBadge from "@/components/StatusBadge";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatMoney } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 /** Receipts with an uncertain OCR extraction land in review. */
 const LOW_CONFIDENCE_LEVELS = new Set(["low", "medium"]);
@@ -204,10 +205,11 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
 }
 
 export default function ReviewPage() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Ellenőrzés</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("review")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Receipts where OCR confidence was low — verify and confirm.
         </p>

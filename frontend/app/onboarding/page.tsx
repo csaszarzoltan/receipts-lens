@@ -237,7 +237,7 @@ export default function OnboardingPage() {
                   onClick={openFilePicker}
                   className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-brand-700"
                 >
-                  🧾 Nyugta kiválasztása
+                  {t("addReceipt")}
                 </button>
                 {uploadError ? (
                   <p className="mt-2 text-sm text-rose-600 dark:text-rose-400" role="alert">

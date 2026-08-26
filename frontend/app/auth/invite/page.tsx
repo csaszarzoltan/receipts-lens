@@ -7,6 +7,7 @@ import { acceptInvite } from "@/lib/api";
 import { setSessionToken } from "@/lib/auth";
 import { householdRoleLabel } from "@/lib/roles";
 import type { HouseholdRole } from "@/lib/types";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * Family invite acceptance (F1.3): the invite link carries ?token=...; the
@@ -14,6 +15,7 @@ import type { HouseholdRole } from "@/lib/types";
  * returns a session — the user is signed straight in.
  */
 function InviteInner() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token");
@@ -67,7 +69,7 @@ function InviteInner() {
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-card dark:bg-slate-900">
         <div className="text-center">
           <span className="text-3xl" aria-hidden="true">👨‍👩‍👧</span>
-          <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">Családi meghívó</h1>
+          <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">{t("familyMembers")}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Csatlakozz a háztartáshoz a ReceiptLens-ben
           </p>

@@ -40,7 +40,7 @@ export default function ConsumerDashboardPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-          Áttekintés
+          {t("overviewTitle")}
         </h1>
         <EmptyState
           icon="⚠️"
@@ -59,7 +59,7 @@ export default function ConsumerDashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            Áttekintés
+            {t("overviewTitle")}
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {t("overviewSubtitle")}
@@ -86,9 +86,9 @@ export default function ConsumerDashboardPage() {
               {formatMoney(daily_remaining.daily_remaining, daily_remaining.currency)}
             </p>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {daily_remaining.days_left} nap van hátra a hónapból — a havi
+              {daily_remaining.days_left} {t("dailyRemainingHint")}
               keretből {formatMoney(daily_remaining.remaining_this_month, daily_remaining.currency)}{" "}
-              maradt.
+              
             </p>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
               <div
@@ -97,14 +97,14 @@ export default function ConsumerDashboardPage() {
               />
             </div>
             <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-              A havi keret {daily_remaining.pct_used}%-át használtad el eddig.
+               {daily_remaining.pct_used}
             </p>
           </div>
         ) : (
           <EmptyState
             icon="🎯"
-            title="Még nincs havi kereted"
-            description="Állíts be háztartási keretet, és minden nap megmondjuk, mennyit költhetsz még biztonságosan."
+            title={t("noBudgetSet")}
+            description={t("noBudgetSetHint")}
             action={{ label: t("noBudgetSet"), href: "/budget" }}
           />
         )}
@@ -121,7 +121,7 @@ export default function ConsumerDashboardPage() {
               {t("monthlySpending")}
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {monthly_by_category.month} havi költés — összesen{" "}
+              {monthly_by_category.month} {t("monthlySpending")} — {t("totalSpentLabel")}{" "}
               {formatMoney(monthly_by_category.total_spent, monthly_by_category.currency)}.
             </p>
           </div>
@@ -189,7 +189,7 @@ export default function ConsumerDashboardPage() {
             <EmptyState
               icon="✅"
               title={t("allClear")}
-              description="Jelenleg egyetlen előfizetésednél sem észleltünk áremelést."
+              description={t("noPriceAlerts")}
             />
           </div>
         ) : (
@@ -203,7 +203,7 @@ export default function ConsumerDashboardPage() {
                   {alert.message}
                 </p>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Havonta {formatMoney(alert.monthly_cost, alert.currency)} — érdemes
+                   {formatMoney(alert.monthly_cost, alert.currency)} — érdemes
                   átnézni a díjat.
                 </p>
               </li>
@@ -249,7 +249,7 @@ export default function ConsumerDashboardPage() {
                   </h3>
                   {subscription.price_increase ? (
                     <span className="inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-                      Drágult
+                      {t("warning")}
                     </span>
                   ) : null}
                 </div>
@@ -319,8 +319,7 @@ function HouseholdBlock({ household }: { household: HouseholdStatus }) {
         </ul>
       ) : (
         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-          {household.member_breakdown_note ??
-            "A háztartás tagjai az új belépési móddal csatlakozhatnak."}
+          {household.member_breakdown_note ?? t("overviewSubtitle")}
         </p>
       )}
     </div>
@@ -347,7 +346,7 @@ function RecentReceiptsBlock({ receipts }: { receipts: RecentReceipt[] }) {
           <EmptyState
             icon="🧾"
             title={t("noReceipts")}
-            description="Fotózd le az első nyugtát, és máris elkezdjük követni a költéseidet."
+            description={t("noReceiptsHint")}
             action={{ label: t("addReceipt"), href: "/upload" }}
           />
         </div>
