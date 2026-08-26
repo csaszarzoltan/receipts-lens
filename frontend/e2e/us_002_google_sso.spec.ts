@@ -91,7 +91,7 @@ test.describe("US-002: Google SSO bejelentkezés (evolúciós)", () => {
     expect(probe.status(), "consumer/dashboard Bearer-rel 200 kell").toBe(200);
 
     // Topbar: Kilépés csak bejelentkezve
-    const logoutBtn = page.getByRole("button", { name: "Kilépés" });
+    const logoutBtn = page.getByRole("button", { name: /Kilépés|Log out/i });
     await expect(logoutBtn).toBeVisible({ timeout: 8000 });
     await expectAssetsAndNoCrash(page, "/dashboard (US-002 AC3)");
   });
