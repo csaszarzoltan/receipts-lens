@@ -57,6 +57,7 @@ import type {
   WorkspaceVersion,
 } from "./types";
 import { authHeaders } from "./auth";
+import { AI_SCAN_ENABLED } from "./featureFlags";
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -264,11 +265,18 @@ export async function uploadReceipt(
  * AI-mode upload: posts `ai_scan=true` so the backend runs the LLM vision
  * path (with automatic Tesseract fallback). The response carries `source`
  * plus, in AI mode, `ai_result` and `tesseract_result` for comparison.
+ *
+ * Production gate: throws when NEXT_PUBLIC_AI_SCAN_ENABLED was not enabled
+ * at build time — no caller (UI, hook or console) can trigger vision OCR
+ * from a build where the feature is off.
  */
 export async function uploadReceiptWithAi(
   file: File,
   onProgress?: (percent: number) => void,
 ): Promise<AiScanUploadResponse> {
+  if (!AI_SCAN_ENABLED) {
+    throw new ApiError(403, "AI Scan is coming soon — part of the Pro plan.");
+  }
   return uploadWithProgress<AiScanUploadResponse>(
     "/product/receipts/upload",
     file,
