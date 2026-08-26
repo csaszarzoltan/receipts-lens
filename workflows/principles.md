@@ -69,18 +69,25 @@ Minden idézet: `Forrás | Verbatim (szó szerint, "...") | Kontextus | Dátum |
 | Fejlesztési tempó | changelog commits / hó | changelog scrape |
 Átlag = feature siker-score. Az ADR „Elvetve” táblája mellé tedd — onnantól szám, nem vélemény.
 
-### Orchestration (párhuzamos külső agentek)
+### Orchestration — Hermes is bányászik (resilient) + evaluator rangsorol
 ```
-Hermes koordinátor (ledger reset)
- ├─ gemini #1: Reddit + HN  (párhuzamos, GEMINI_CLI_TRUST_WORKSPACE=true)
- ├─ gemini #2: Twitter/X + Product Hunt + App Store  (párhuzamos)
- ├─ gemini #3: News/RSS + V2EX  (párhuzamos)
- └─ (gyűjtés után) agy: competitor scrape + szintézis  (SZEKVENCIÁLISAN — egyszerre 1, kvóta!)
-→ analyst (Hermes): JTBD + Top Themes (freq×intensity) + competitor matrix
-→ docs/research/YYYY-MM-DD-deep-dive.md (Sources + evidence quotes)
-→ docs/decisions/ADR-NNN.md
+Koordinátor: Hermes (ledger reset: /tmp/ledger-deep-YYYY-MM-DD.json)
+ ├─ Hermes natív miner (TÖBB MÓDSZER, mind próbáld, ha egyik üres → következő):
+ │   1) web_search + web_extract  2) agent-reach (exa / opencli reddit)  3) jina/defuddle
+ │   4) browser_helper (JS-heavy)  5) blocked-page-recovery (Wayback)  6) research-toolkit arXiv
+ │   → /tmp/voc-hermes-*.md (8-12 verbatim + no source found ahol üres — NE állj le)
+ ├─ gemini #1: Reddit + HN  (párhuzamos, GEMINI_CLI_TRUST_WORKSPACE=true) — ha kvóta → "no data" és tovább
+ ├─ gemini #2: Twitter/X + Product Hunt + App Store  (párhuzamos) — ha kvóta → "no data" és tovább
+ └─ agy: competitor scrape + szintézis  (SZEKVENCIÁLISAN — egyszerre 1, kvóta!)
+
+→ Evaluator (analyst, Hermes): deduplikál + klaszter (pain/JTBD/feature-gap) + freq×intensity
+  → ötlet-jelöltek → 1-5 pontozás (Kereslet 30% + Gap 25% + Hatás 20% + Megvalósíthatóság 15% + Bevétel 10%)
+  → Rangsorolt backlog tábla + Top 5 részletezés (pitch, 3 idézet, kockázat, következő Research/ADR/Kanban lépés)
+  → docs/research/YYYY-MM-DD-deep-dive.md (ledger Sources + evidence quotes, --min-coverage 0.5)
+  → docs/decisions/ADR-NNN.md (prioritás alapján)
+Resilience: ha egy miner nem tér vissza adattal (kvóta/hiba), a többi adatából dolgozunk — hiányt jelöljük, nem blokkolunk.
 ```
-Prompt-sablonok: `docs/research/prompts/gemini-miner.md` (VOC bányász) + `docs/research/prompts/agy-scorer.md` (competitor/feature scorer).
+Prompt/runbookok: `docs/research/prompts/hermes-miner.md` (többmódszeres létra + ledger) + `gemini-miner.md` + `agy-scorer.md` + **`evaluator.md`** (rangsoroló + grooming-ready Top 5 + képlet).
 
 
 ## Session elveszett? Nem baj
