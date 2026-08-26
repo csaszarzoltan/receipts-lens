@@ -92,3 +92,10 @@ Prompt/runbookok: `docs/research/prompts/hermes-miner.md` (többmódszeres létr
 
 ## Session elveszett? Nem baj
 Minden tudás git-ben. Session = beszélgetés history, nem storage.
+
+## Evolúciós rendszer (kötelező — röviden)
+- **Master:** `docs/methodology/EVOLUTIONARY-SYSTEM.md` — 7 fázis (research → US+gui_flow → RED → stop-gate → GREEN → CI gate → canary)
+- **Függelék:** `docs/methodology/BROWSER-HELPER-MCP.md` — valós Browser Helper endpointok, nem kitalált `browser_get_*` nevek
+- **Stop-gate:** prototípus emberi OK nélkül nincs `src/`/`app/` módosítás (kivétel: tiszta backend/logikai fix — Fast-Track)
+- **BDD-gate:** `scripts/bdd-gate.sh` — nincs `us_NNN` spec → release blokkolva
+- **Continuous:** push gate (<2p) + nightly (15p) + canary (`hermes cron --no-agent`, 30-60p) + local watch

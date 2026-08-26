@@ -139,6 +139,8 @@ As a {szerep} I want {mit} So that {miért — JTBD}.
 | **Prod canary** (élő, 30-60p) | folyamatos | **hermes cron `no_agent`** (`scripts/e2e-canary-*.sh`) | `playwright.prod.config.ts` (`baseURL=https://prod`, nincs webServer) + `/health` probe | 0 LLM-token | Telegram + kanban `BLOCKED` kártya + `notepad` freq |
 | **Local watch** (dev) | fejlesztés közben | `npx playwright test --watch` | `webServer reuseExistingServer:true` | 0 | lokális |
 
+**Részletek:** `docs/methodology/BROWSER-HELPER-MCP.md` — 6 képességcsoport valós endpointokkal (`/agent/observe` accessibility, `/agent/act` snapshot-free, `/page/analyze`, etc.), tenant izoláció, record→replay.
+
 **Config konvenció:**
 
 - `playwright.config.ts` = dev (BE+FE `webServer`, `workers:1`, `timeout:25s`)

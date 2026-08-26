@@ -29,5 +29,10 @@
 2. `docs/decisions/ADR-*.md` + `docs/engineering-standards.md`
 3. Kódgráf (ha indexelve) / `git log`
 
+## Módszertan (kötelező)
+- **Evolúciós rendszer (master):** `docs/methodology/EVOLUTIONARY-SYSTEM.md` — 7 fázis, behavior-first, 100% E2E, stop-gate
+- **Browser Helper függelék:** `docs/methodology/BROWSER-HELPER-MCP.md` — valós endpointok, 6 képességcsoport, tenant izoláció
+- **Deep research runbookok:** `docs/research/prompts/` (hermes-miner, gemini-miner, agy-scorer, evaluator)
+
 ## LLM-függetlenség
 A módszertan bármelyik LLM-mel megy. A szerepek funkciók, nem eszközök. Kötelező minimum: dokumentálj (`docs/`) + tesztelj. Eszközválasztás szabad.
