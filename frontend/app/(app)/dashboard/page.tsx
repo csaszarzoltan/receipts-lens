@@ -24,7 +24,7 @@ import { useTranslation } from "@/lib/i18n";
  *   5. {t("householdStatus")} (közös háztartási keret + tagok)
  *   6. {t("recentReceipts")}
  *
- * Lakossági nyelvezet: nincs üzleti szakkifejezés. Üres állapotnál a blokk
+ * Consumer language: no business jargon. in the empty state the block
  * onboarding/első lépés CTA-ra mutat.
  */
 export default function ConsumerDashboardPage() {

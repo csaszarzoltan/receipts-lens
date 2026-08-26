@@ -109,7 +109,7 @@ function InviteInner() {
 
 export default function InvitePage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-sm text-slate-500">Betöltés…</p></div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-sm text-slate-500">Loading…</p></div>}>
       <InviteInner />
     </Suspense>
   );
