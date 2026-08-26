@@ -54,3 +54,4 @@ logs/
 
 # Ephemeral prod smoke harness (Playwright toggles — clobbers .next)
 frontend/.prod-smoke/
+.env.e2e
