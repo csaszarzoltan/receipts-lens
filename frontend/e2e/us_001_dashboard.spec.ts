@@ -53,7 +53,7 @@ test.describe("US-001: Dashboard megnyitás (evolúciós — session → élő a
     await page.waitForLoadState("domcontentloaded");
     await page.waitForTimeout(3500);
 
-    await expect(page.getByRole("heading", { name: "Áttekintés" }).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: /Áttekintés|Overview/ }).first()).toBeVisible({ timeout: 10_000 });
     // Élő adat jele: a dashboard API Bearer-rel 200 (nem skeleton)
     const probe = await page.request.get(`${BASE}/api/api/v1/consumer/dashboard`, {
       headers: { Authorization: `Bearer ${SESSION_TOKEN}` },
@@ -97,7 +97,7 @@ test.describe("US-001: Dashboard megnyitás (evolúciós — session → élő a
       return;
     }
     await expect(dialog).toBeVisible({ timeout: 8_000 });
-    const skip = dialog.getByRole("button", { name: /Kihagyás/i });
+    const skip = dialog.getByRole("button", { name: /Kihagyás|Skip/i });
     await expect(skip).toBeVisible();
     await skip.click();
     await expect(dialog).toBeHidden({ timeout: 8_000 });
@@ -112,7 +112,7 @@ test.describe("US-001: Dashboard megnyitás (evolúciós — session → élő a
 
     const maybeDialog = page.locator('[role="dialog"][aria-modal="true"]').first();
     if ((await maybeDialog.count()) > 0 && (await maybeDialog.isVisible())) {
-      const skip = maybeDialog.getByRole("button", { name: /Kihagyás/i });
+      const skip = maybeDialog.getByRole("button", { name: /Kihagyás|Skip/i });
       if ((await skip.count()) > 0) await skip.click();
       await expect(maybeDialog).toBeHidden({ timeout: 8000 });
       await page.waitForTimeout(500);
@@ -120,7 +120,7 @@ test.describe("US-001: Dashboard megnyitás (evolúciós — session → élő a
     await expect(page.locator("#main-content").first()).toBeVisible({ timeout: 10_000 });
     const h1 = page.locator("#main-content h1").first();
     await expect(h1).toBeVisible({ timeout: 10_000 });
-    await expect(h1).toContainText(/Áttekintés/i);
+    await expect(h1).toContainText(/Áttekintés|Overview/i);
     // sidebar jelen van a DOM-ban (behavior proof: nem tűnt el)
     await expect(page.locator('aside[aria-label="Sidebar navigation"]')).toBeAttached({ timeout: 6000 });
     await expectAssetsAndNoCrash(page, "/dashboard (AC4)");
