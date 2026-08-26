@@ -32,6 +32,20 @@ const NAV_DASHBOARD: Record<Locale, string> = {
   ro: "Panou general",
 };
 
+// /upload h1 per locale (i18n addReceipt)
+const UPLOAD_H1: Record<Locale, string> = {
+  en: "Add receipt",
+  hu: "Nyugta hozzáadása",
+  de: "Beleg hinzufügen",
+  fr: "Ajouter un ticket",
+  es: "Añadir ticket",
+  it: "Aggiungi scontrino",
+  pt: "Adicionar recibo",
+  nl: "Bonnetje toevoegen",
+  pl: "Dodaj paragon",
+  ro: "Adaugă bon",
+};
+
 // Login page markers
 const LOGIN_MARKERS: Record<Locale, string> = {
   en: "Continue with Google",
@@ -134,3 +148,20 @@ test("US-004: contract — minden locale-ban minden kulcs jelen van (compile + r
   });
   expect(probe).toBeTruthy();
 });
+
+for (const locale of LOCALES) {
+  test(`US-004: 10× locales — ${locale}: /upload h1 lefordítva, crash nincs`, async ({ page }) => {
+    test.setTimeout(60_000);
+    await seed(page, locale, true);
+    await page.goto("/upload");
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForTimeout(1500);
+    await expect(page.getByRole("heading", { name: UPLOAD_H1[locale] })).toBeVisible({ timeout: 8000 });
+    const overlayGone = await page.evaluate(() => {
+      const portal = document.querySelector("nextjs-portal");
+      if (!portal?.shadowRoot) return true;
+      return !portal.shadowRoot.textContent?.includes("Unhandled Runtime Error");
+    });
+    expect(overlayGone, `${locale} /upload crash`).toBe(true);
+  });
+}

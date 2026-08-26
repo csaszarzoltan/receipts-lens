@@ -8,8 +8,10 @@ import EmptyState from "@/components/EmptyState";
 import Modal from "@/components/Modal";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatDateTime } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export default function ExportsPage() {
+  const { t } = useTranslation();
   const { data: connectionsData, error: connectionsError, isLoading: connectionsLoading, mutate: mutateConnections } = useSWR<{ items: Connection[] }>(
     "/product/connections",
     getConnections,
@@ -43,7 +45,7 @@ export default function ExportsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Export Center</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("exports")}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             CSV, QuickBooks and Xero connections plus export history.
           </p>

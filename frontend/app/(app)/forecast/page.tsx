@@ -8,6 +8,7 @@ import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 import StatusBadge from "@/components/StatusBadge";
 import { formatMoney } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 /**
  * Forecast page — spending predictions from the ForecastEngine, anomaly
@@ -15,6 +16,7 @@ import { formatMoney } from "@/lib/utils";
  * /forecasts* endpoints.
  */
 export default function ForecastPage() {
+  const { t } = useTranslation();
   const { data: forecast, error: forecastError, isLoading: forecastLoading } = useSWR<ForecastResult>(
     "/forecasts",
     () => getForecast({ period: "monthly", horizon: 1 }),
@@ -45,7 +47,7 @@ export default function ForecastPage() {
   if (forecastError && anomaliesError && varianceError) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Előrejelzés</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("forecast")}</h1>
         <EmptyState icon="⚠️" title="Could not load forecast data" description="Check that the backend is running." />
       </div>
     );
@@ -54,7 +56,7 @@ export default function ForecastPage() {
   if (!hasData) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Előrejelzés</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("forecast")}</h1>
         <EmptyState
           icon="📊"
           title="Not enough data"
@@ -84,7 +86,7 @@ export default function ForecastPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Előrejelzés</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("forecast")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {forecast.period} · {forecast.currency} · horizon {1} period
           {forecast.narrative ? ` — ${forecast.narrative}` : ""}

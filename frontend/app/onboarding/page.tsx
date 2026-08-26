@@ -217,7 +217,7 @@ export default function OnboardingPage() {
                   Kész — az első nyugtád feldolgozva
                 </p>
                 <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  {outcome.vendor ?? "Ismeretlen eladó"}
+                  {outcome.vendor ?? t("vendor")}
                 </p>
                 <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
                   {outcome.total !== null

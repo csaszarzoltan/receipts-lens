@@ -8,8 +8,10 @@ import EmptyState from "@/components/EmptyState";
 import StatusBadge from "@/components/StatusBadge";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatMoney } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export default function AccountingPage() {
+  const { t } = useTranslation();
   const { data, error, isLoading } = useSWR("/product/receipts?limit=100", () =>
     searchReceipts({ limit: 100 }),
   );
@@ -24,7 +26,7 @@ export default function AccountingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Accounting</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("accounting")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Export readiness — pick a receipt to see its validation result.
         </p>

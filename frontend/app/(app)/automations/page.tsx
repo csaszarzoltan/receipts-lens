@@ -7,8 +7,10 @@ import type { AutomationRule } from "@/lib/types";
 import EmptyState from "@/components/EmptyState";
 import Modal from "@/components/Modal";
 import { SkeletonCard } from "@/components/Skeleton";
+import { useTranslation } from "@/lib/i18n";
 
 export default function AutomationsPage() {
+  const { t } = useTranslation();
   const { data, error, isLoading, mutate } = useSWR<{ items: AutomationRule[] }>(
     "/product/automation-rules",
     getRules,
@@ -43,7 +45,7 @@ export default function AutomationsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Automations</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("automations")}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Rules that run automatically when a receipt is uploaded.
           </p>

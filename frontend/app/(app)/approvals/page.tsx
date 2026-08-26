@@ -9,8 +9,10 @@ import Modal from "@/components/Modal";
 import StatusBadge from "@/components/StatusBadge";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatDateTime, formatMoney } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export default function ApprovalsPage() {
+  const { t } = useTranslation();
   const { data, error, isLoading, mutate } = useSWR<{ items: Approval[] }>(
     "/product/approvals",
     () => getApprovals(),
@@ -52,7 +54,7 @@ export default function ApprovalsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Approvals</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("approvals")}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Receipts that need sign-off before export.
           </p>
