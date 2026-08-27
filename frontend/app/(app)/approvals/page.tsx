@@ -37,7 +37,7 @@ export default function ApprovalsPage() {
     setPolicySaving(true);
     try {
       await createApprovalPolicy({
-        name: policyName || "Default policy",
+        name: policyName || t("defaultPolicy"),
         threshold: Number(policyThreshold) || 500,
         currency: "USD",
       });
@@ -56,7 +56,7 @@ export default function ApprovalsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("approvals")}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Receipts that need sign-off before export.
+            {t("approvalsDesc")}
           </p>
         </div>
         <button type="button" onClick={() => setPolicyOpen(true)} className="btn-secondary text-sm">
@@ -84,7 +84,7 @@ export default function ApprovalsPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="font-semibold text-slate-900 dark:text-slate-100">
-                    {approval.vendor || "Unknown vendor"}
+                    {approval.vendor || t("unknownShort")}
                   </h2>
                   <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
                     {approval.policy_name ?? approval.policy_id} · {formatDateTime(approval.created_at)}
@@ -106,7 +106,7 @@ export default function ApprovalsPage() {
                     disabled={deciding === approval.approval_id}
                     className="btn-primary flex-1 text-sm"
                   >
-                    {deciding === approval.approval_id ? "…" : "✓ Approve"}
+                    {deciding === approval.approval_id ? "…" : t("approveLabel")}
                   </button>
                   <button
                     type="button"
@@ -114,12 +114,12 @@ export default function ApprovalsPage() {
                     disabled={deciding === approval.approval_id}
                     className="btn-secondary flex-1 text-sm"
                   >
-                    ✕ Reject
+                    {t("rejectLabel")}
                   </button>
                 </div>
               ) : (
                 <p className="mt-4 text-xs text-slate-400">
-                  Decided by {approval.decided_by ?? "system"} at {formatDateTime(approval.decided_at)}
+                  {t("decidedByLabel")} {approval.decided_by ?? "system"} {t("atLabel")} {formatDateTime(approval.decided_at)}
                 </p>
               )}
             </li>
@@ -137,7 +137,7 @@ export default function ApprovalsPage() {
               Cancel
             </button>
             <button type="button" onClick={createPolicy} disabled={policySaving} className="btn-primary text-sm">
-              {policySaving ? "Creating…" : "Create policy"}
+              {policySaving ? t("creatingLabel") : t("createPolicyLabel")}
             </button>
           </>
         }
@@ -145,19 +145,19 @@ export default function ApprovalsPage() {
         <div className="space-y-4">
           <div>
             <label htmlFor="policy-name" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
-              Policy name
+              {t("policyNameLabel")}
             </label>
             <input
               id="policy-name"
               className="input"
               value={policyName}
               onChange={(event) => setPolicyName(event.target.value)}
-              placeholder="e.g. High-value receipts"
+              placeholder={t("highValuePlaceholder")}
             />
           </div>
           <div>
             <label htmlFor="policy-threshold" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
-              Threshold (USD)
+              {t("thresholdLabel")}
             </label>
             <input
               id="policy-threshold"

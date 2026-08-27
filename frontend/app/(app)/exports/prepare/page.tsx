@@ -43,9 +43,9 @@ export default function ExportPreparePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Prepare export</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("prepareExportTitle")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Select receipts and validate them before exporting.
+          {t("prepareExportDesc")}
         </p>
       </div>
 
@@ -54,10 +54,10 @@ export default function ExportPreparePage() {
       ) : error ? (
         <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
       ) : items.length === 0 ? (
-        <EmptyState icon="📄" title="No receipts yet" description="Upload receipts to prepare an export." action={{ label: "Upload a receipt", href: "/upload" }} />
+        <EmptyState icon="📄" title={t("noReceipts")} description={t("prepareEmptyDesc")} action={{ label: t("uploadReceiptLabel"), href: "/upload" }} />
       ) : (
         <>
-          <ul className="card divide-y divide-slate-100 dark:divide-slate-800" aria-label="Receipt selection">
+          <ul className="card divide-y divide-slate-100 dark:divide-slate-800" aria-label={t("receiptListLabel")}>
             {items.map((item) => (
               <li key={item.receipt_id}>
                 <label className="flex cursor-pointer items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-900">
@@ -68,7 +68,7 @@ export default function ExportPreparePage() {
                     className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                   />
                   <span className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-100">
-                    {item.receipt.vendor || "Unknown vendor"}
+                    {item.receipt.vendor || t("unknownShort")}
                   </span>
                   <span className="text-sm text-slate-500 dark:text-slate-400">
                     {formatMoney(item.receipt.total, item.receipt.currency)}
@@ -80,21 +80,21 @@ export default function ExportPreparePage() {
 
           <div className="flex items-center gap-3">
             <button type="button" onClick={run} disabled={selected.size === 0 || busy} className="btn-primary">
-              {busy ? "Validating…" : `Validate ${selected.size} receipt${selected.size === 1 ? "" : "s"}`}
+              {busy ? t("validatingLabel") : `${t("validateReceiptsLabel")} ${selected.size}`}
             </button>
             {selected.size === 0 ? (
-              <span className="text-sm text-slate-400">Select at least one receipt.</span>
+              <span className="text-sm text-slate-400">{t("selectAtLeastOne")}</span>
             ) : null}
           </div>
 
           {preparation ? (
-            <section className="card p-5" aria-label="Preparation result">
+            <section className="card p-5" aria-label={t("resultLabel")}>
               <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                Result: <span className="capitalize">{preparation.status}</span>
+                {t("resultLabel")} <span className="capitalize">{preparation.status}</span>
               </h2>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                {preparation.valid_ids.length} ready · {preparation.blocked.length} blocked ·{" "}
-                {preparation.warnings.length} warnings
+                {preparation.valid_ids.length} {t("readyLabel")} · {preparation.blocked.length} {t("blockedLabel")} ·{" "}
+                {preparation.warnings.length} {t("warningsCountLabel")}
               </p>
               {preparation.blocked.length > 0 ? (
                 <ul className="mt-3 space-y-1">

@@ -51,8 +51,7 @@ export default function InboxPage() {
       <div>
         <h1 className="text-2xl font-bold">{t("inbox")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Forward receipts to <strong>{data?.address ?? "your family inbox address"}</strong>. Each
-          attachment is validated and tracked independently.
+          {t("inboxForwardPrefix")} <strong>{data?.address ?? "your family inbox address"}</strong>. {t("inboxForwardSuffix")}
         </p>
       </div>
       {isLoading ? (
@@ -68,7 +67,7 @@ export default function InboxPage() {
         <EmptyState
           icon="📧"
           title="No emails received"
-          description="Forward a receipt image to start processing."
+          description={t("inboxEmptyDesc")}
         />
       ) : (
         <ul className="space-y-4" aria-label="Inbound emails">
@@ -77,7 +76,7 @@ export default function InboxPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="font-semibold">{email.subject}</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">from {email.sender}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t("fromLabel")} {email.sender}</p>
                 </div>
                 <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-semibold">
                   {email.status}
@@ -102,7 +101,7 @@ export default function InboxPage() {
                           disabled={retrying === a.attachment_id}
                           onClick={() => retry(email.email_id, a.attachment_id)}
                         >
-                          {retrying === a.attachment_id ? "Retrying…" : "Retry"}
+                          {retrying === a.attachment_id ? t("retryingLabel") : t("retry")}
                         </button>
                       )}
                     </div>
