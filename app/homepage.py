@@ -37,7 +37,7 @@ def render_homepage(*, name: str, version: str, description: str) -> str:
         '<a href="/docs">/docs</a>' if not prod else ""
     )
     return f"""<!doctype html>
-<html lang="hu">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -85,13 +85,12 @@ def render_homepage(*, name: str, version: str, description: str) -> str:
   <header class="hero">
     <span class="version">v{safe_version}</span>
     <h1>{safe_name}</h1>
-    <p>{safe_description} A szolgáltatás nyugtaképekből strukturált adatokat készít,
-      és API-n keresztül biztosít feldolgozási, riportálási és elemzési műveleteket.</p>
-    <div class="status" aria-label="Szolgáltatás állapota: működik">
+    <p>{safe_description} The service creates structured data from receipt images and provides processing, reporting and analytics operations via the API.</p>
+    <div class="status" aria-label="Service status: operational">
       <span class="dot" aria-hidden="true"></span>
-      <span>Szolgáltatás állapota: működik</span>
+      <span>Service status: operational</span>
     </div>
-    <nav class="actions" aria-label="API dokumentáció">
+    <nav class="actions" aria-label="API documentation">
       <a class="button" href="/dashboard">Forecast dashboard</a>
       <a class="button secondary" href="/workspace">Open workspace</a>
       {docs_button}
@@ -100,27 +99,22 @@ def render_homepage(*, name: str, version: str, description: str) -> str:
     </nav>
   </header>
 
-  <section class="grid" aria-label="Támogatott műveletek">
-    <article class="card"><h2>Nyugta feldolgozása</h2><p>Egy kép feltöltése vagy biztonságosan
-      ellenőrzött publikus kép-URL feldolgozása, strukturált mezőkkel és confidence értékekkel.</p></article>
-    <article class="card"><h2>Kötegelt feldolgozás</h2><p>Több nyugta szinkron vagy aszinkron
-      feldolgozása, job státusszal és opcionális webhookkal.</p></article>
-    <article class="card"><h2>Riportok és kategorizálás</h2><p>CSV/PDF riport, automatikus
-      kategorizálás és duplikált nyugták ellenőrzése.</p></article>
-    <article class="card"><h2>Költségkeretek és analitika</h2><p>Budget CRUD, költési összesítések,
-      trendek és küszöbérték-alapú riasztások.</p></article>
-    <article class="card"><h2><a href="/dashboard" style="color:inherit;text-decoration:none">Előrejelzések</a></h2>
-      <p>Következő havi kiadás előrejelzés, anomália-detekció és költségvetési
-      eltérés-projekciók.</p></article>
+  <section class="grid" aria-label="Supported operations">
+    <article class="card"><h2>Receipt processing</h2><p>Upload a single image or a safely validated public image URL with structured fields and confidence scores.</p></article>
+    <article class="card"><h2>Batch processing</h2><p>Process multiple receipts synchronously or asynchronously with job status and optional webhook.</p></article>
+    <article class="card"><h2>Reports &amp; categorization</h2><p>CSV/PDF reports, automatic categorization and duplicate receipt checks.</p></article>
+    <article class="card"><h2>Budgets &amp; analytics</h2><p>Budget CRUD, spending summaries, trends and threshold-based alerts.</p></article>
+    <article class="card"><h2><a href="/dashboard" style="color:inherit;text-decoration:none">Forecasts</a></h2>
+      <p>Next-month spending forecast, anomaly detection and budget variance projections.</p></article>
   </section>
 
   <section class="card" style="margin-top:20px">
-    <h2>Rövid példa nyugtafeltöltésre</h2>
-    <p>PowerShellben a beépített <code>curl.exe</code> használata ajánlott:</p>
+    <h2>Quick receipt upload example</h2>
+    <p>In PowerShell, use the built-in <code>curl.exe</code>:</p>
     <pre><code>curl.exe -X POST "http://127.0.0.1:8000/v1/parse-receipt" `
   -F "file=@C:\\Receipts\\receipt.jpg"</code></pre>
   </section>
-  <footer>ReceiptLens API • részletes kipróbálás: {footer_docs_link}</footer>
+  <footer>ReceiptLens API • try it: {footer_docs_link}</footer>
 </main>
 </body>
 </html>"""
