@@ -26,7 +26,7 @@ export default function ExportsPage() {
   const runs = runsData?.items ?? [];
 
   async function create() {
-    await createConnection({ name: name || "My connection", provider, mapping: {} });
+    await createConnection({ name: name || t("myConnectionDefault"), provider, mapping: {} });
     setCreateOpen(false);
     setName("");
     mutateConnections();
@@ -47,7 +47,7 @@ export default function ExportsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("exports")}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            CSV, QuickBooks and Xero connections plus export history.
+            {t("exportsDesc")}
           </p>
         </div>
         <button type="button" onClick={() => setCreateOpen(true)} className="btn-primary text-sm">
@@ -62,7 +62,7 @@ export default function ExportsPage() {
         ) : connectionsError ? (
           <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
         ) : connections.length === 0 ? (
-          <EmptyState icon="🔌" title={t("noRules")} description="Create a CSV, QuickBooks or Xero connection to export receipts." />
+          <EmptyState icon="🔌" title={t("noRules")} description={t("createConnectionDesc")} />
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2" aria-label={t("integrations")}>
             {connections.map((connection) => (
@@ -79,7 +79,7 @@ export default function ExportsPage() {
                         : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                     }`}
                   >
-                    {connection.active ? "Active" : "Inactive"}
+                    {connection.active ? t("activeLabel") : t("inactiveLabel")}
                   </span>
                 </div>
                 <button
@@ -88,7 +88,7 @@ export default function ExportsPage() {
                   disabled={testing === connection.connection_id}
                   className="btn-secondary mt-4 text-sm"
                 >
-                  {testing === connection.connection_id ? "Testing…" : "🔍 Test connection"}
+                  {testing === connection.connection_id ? t("testingLabel") : t("testConnectionLabel")}
                 </button>
               </li>
             ))}
@@ -99,7 +99,7 @@ export default function ExportsPage() {
       <section aria-label={t("exports")}>
         <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">{t("exports")}</h2>
         {runs.length === 0 ? (
-          <EmptyState icon="📦" title={t("notEnoughData")} description="Export runs will appear here." />
+          <EmptyState icon="📦" title={t("notEnoughData")} description={t("exportsEmptyDesc")} />
         ) : (
           <ul className="card divide-y divide-slate-100 dark:divide-slate-800">
             {runs.map((run) => (
@@ -119,18 +119,18 @@ export default function ExportsPage() {
         onClose={() => setCreateOpen(false)}
         footer={
           <>
-            <button type="button" onClick={() => setCreateOpen(false)} className="btn-secondary text-sm">Cancel</button>
-            <button type="button" onClick={create} className="btn-primary text-sm">Create connection</button>
+            <button type="button" onClick={() => setCreateOpen(false)} className="btn-secondary text-sm">{t("cancel")}</button>
+            <button type="button" onClick={create} className="btn-primary text-sm">{t("createConnectionLabel")}</button>
           </>
         }
       >
         <div className="space-y-4">
           <div>
-            <label htmlFor="conn-name" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Name</label>
-            <input id="conn-name" className="input" value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Accounting export" />
+            <label htmlFor="conn-name" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("nameLabel")}</label>
+            <input id="conn-name" className="input" value={name} onChange={(event) => setName(event.target.value)} placeholder={t("accountingExportPlaceholder")} />
           </div>
           <div>
-            <label htmlFor="conn-provider" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Provider</label>
+            <label htmlFor="conn-provider" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("providerLabel")}</label>
             <select id="conn-provider" className="input" value={provider} onChange={(event) => setProvider(event.target.value)}>
               <option value="csv">CSV</option>
               <option value="quickbooks">QuickBooks</option>
