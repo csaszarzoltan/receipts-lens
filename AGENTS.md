@@ -29,6 +29,9 @@
 2. `docs/decisions/ADR-*.md` + `docs/engineering-standards.md`
 3. Kódgráf (ha indexelve) / `git log`
 
+## Bootstrap (új agentnek — másold egyben!)
+> `docs/methodology/AGENT-BOOTSTRAP-PROMPT.md` — másolható prompt új session ELSŐ üzeneteként. Elmondja mit olvasson és hogyan dolgozzon (7 fázis + Browser Helper valós API + bug 3 tier).
+
 ## Módszertan (kötelező)
 - **Evolúciós rendszer (master):** `docs/methodology/EVOLUTIONARY-SYSTEM.md` — 7 fázis, behavior-first, 100% E2E, stop-gate
 - **Browser Helper függelék:** `docs/methodology/BROWSER-HELPER-MCP.md` — valós endpointok, 6 képességcsoport, tenant izoláció

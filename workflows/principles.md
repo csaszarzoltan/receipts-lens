@@ -7,6 +7,8 @@
 - Stack: **FastAPI + Next.js workspace** (élő v1.4 — lásd AGENTS.md). Új stack-döntés → ADR
 - Teszt: `pytest -q` (BE, `tests/`), `npm run build` + `tsc` (FE, `frontend/`). Indítás: `docker compose up` vagy `./start-dev.sh`
 
+> **Új agent?** `docs/methodology/AGENT-BOOTSTRAP-PROMPT.md` — másold egyben az ELSŐ üzenetbe.
+
 ## Validációs scope
 | Változás | Mit kell futtatni |
 |---|---|
