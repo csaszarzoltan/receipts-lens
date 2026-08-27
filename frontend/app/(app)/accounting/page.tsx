@@ -28,7 +28,7 @@ export default function AccountingPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("accounting")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Export readiness — pick a receipt to see its validation result.
+          {t("exportReadinessDesc")}
         </p>
       </div>
 
@@ -44,9 +44,9 @@ export default function AccountingPage() {
             <table className="w-full min-w-[420px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                  <th className="px-4 py-3">Merchant</th>
-                  <th className="px-4 py-3 text-right">Total</th>
-                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">{t("merchant")}</th>
+                  <th className="px-4 py-3 text-right">{t("total")}</th>
+                  <th className="px-4 py-3">{t("status")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -59,7 +59,7 @@ export default function AccountingPage() {
                     }`}
                   >
                     <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">
-                      {item.receipt.vendor || "Unknown vendor"}
+                      {item.receipt.vendor || t("unknownVendor")}
                     </td>
                     <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">
                       {formatMoney(item.receipt.total, item.receipt.currency)}
@@ -73,20 +73,20 @@ export default function AccountingPage() {
 
           <section className="card p-5" aria-label="Validation result">
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              Validation
+              {t("validationTitle")}
             </h2>
             {!selectedId ? (
               <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-                Select a receipt to see its export-readiness validation.
+                {t("selectReceiptHint")}
               </p>
             ) : validationLoading ? (
-              <p className="mt-4 text-sm text-slate-400">Loading validation…</p>
+              <p className="mt-4 text-sm text-slate-400">{t("loadingValidation")}</p>
             ) : validation ? (
               <div className="mt-4 space-y-4">
                 <StatusBadge status={validation.readiness} />
                 {validation.errors.length > 0 ? (
                   <div>
-                    <h3 className="text-sm font-semibold text-rose-600 dark:text-rose-400">Errors</h3>
+                    <h3 className="text-sm font-semibold text-rose-600 dark:text-rose-400">{t("errorsHeader")}</h3>
                     <ul className="mt-1 space-y-1">
                       {validation.errors.map((err, index) => (
                         <li key={index} className="text-sm text-rose-600 dark:text-rose-400">• {err.message}</li>
@@ -96,7 +96,7 @@ export default function AccountingPage() {
                 ) : null}
                 {validation.warnings.length > 0 ? (
                   <div>
-                    <h3 className="text-sm font-semibold text-amber-600 dark:text-amber-400">Warnings</h3>
+                    <h3 className="text-sm font-semibold text-amber-600 dark:text-amber-400">{t("warningsHeader")}</h3>
                     <ul className="mt-1 space-y-1">
                       {validation.warnings.map((warn, index) => (
                         <li key={index} className="text-sm text-amber-600 dark:text-amber-400">• {warn.message}</li>
@@ -106,12 +106,12 @@ export default function AccountingPage() {
                 ) : null}
                 {validation.errors.length === 0 && validation.warnings.length === 0 ? (
                   <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                    ✓ This receipt is ready for export.
+                    ✓ {t("readyForExport")}
                   </p>
                 ) : null}
               </div>
             ) : (
-              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">No validation result.</p>
+              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">{t("noValidationResult")}</p>
             )}
           </section>
         </div>

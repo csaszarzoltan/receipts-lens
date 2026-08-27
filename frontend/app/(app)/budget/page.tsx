@@ -55,8 +55,8 @@ export default function BudgetPage() {
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("budget")}</h1>
         <EmptyState
           icon="🎯"
-          title="No budget set"
-          description="Create a budget to track category spending and projected overruns."
+          title={t("noBudgetSet")}
+          description={t("createBudgetHint")}
         />
       </div>
     );
@@ -72,34 +72,34 @@ export default function BudgetPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("budget")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          {data.currency} · {projections.length} categories · projected end-of-period spend vs budget
+          {data.currency} · {projections.length} {t("categoriesLabel")} · {t("budgetVarianceDesc")}
         </p>
       </div>
 
       <section aria-label="Budget summary" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="card p-5">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total budgeted</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t("totalBudgeted")}</p>
           <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
             {formatMoney(totalBudgeted, data.currency)}
           </p>
         </div>
         <div className="card p-5">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Projected spend</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t("projectedSpendLabel")}</p>
           <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-100">
             {formatMoney(totalProjected, data.currency)}
           </p>
         </div>
         <div className="card p-5">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">At risk</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t("atRisk")}</p>
           <p className="mt-2 text-2xl font-semibold text-amber-600 dark:text-amber-400">
-            {warning.length} warning · {overBudget.length} over
+            {warning.length} {t("warningLabel")} · {overBudget.length} {t("overLabel")}
           </p>
         </div>
       </section>
 
       <section className="card p-5" aria-label="Budget variance chart">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          Budget vs projected spend by category
+          {t("budgetVsProjectedTitle")}
         </h2>
         <VarianceChart data={points} height={300} />
       </section>
@@ -108,11 +108,11 @@ export default function BudgetPage() {
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
-              <th className="px-5 py-3">Category</th>
-              <th className="px-5 py-3 text-right">Budgeted</th>
-              <th className="px-5 py-3 text-right">Projected</th>
-              <th className="px-5 py-3 text-right">Overage</th>
-              <th className="px-5 py-3">Status</th>
+              <th className="px-5 py-3">{t("categoryHeader")}</th>
+              <th className="px-5 py-3 text-right">{t("budgetedHeader")}</th>
+              <th className="px-5 py-3 text-right">{t("projectedHeader")}</th>
+              <th className="px-5 py-3 text-right">{t("overageHeader")}</th>
+              <th className="px-5 py-3">{t("statusHeader")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
