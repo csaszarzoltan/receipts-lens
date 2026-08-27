@@ -50,6 +50,7 @@ const APP_ROUTES: string[] = [
   "/integrations/demo-connection-id",
   "/automations/demo-rule-id",
   "/automations/demo-rule-id/runs",
+  "/automations/demo-rule-id/runs/demo-run-id",
 ];
 
 // Magyar sztringek amik ANGOL beállításnál TILTOTTAK — ha bármelyik
