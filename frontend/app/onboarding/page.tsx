@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { getPreferences, savePreferences, uploadReceipt } from "@/lib/api";
 import { setAuthState } from "@/lib/auth";
 import { cx } from "@/lib/utils";
-import { useTranslation } from "@/lib/i18n";
+import { getLocale, useTranslation } from "@/lib/i18n";
 
 /**
  * Consumer onboarding — the 3-step first-run flow (F1.5 of
@@ -217,7 +217,7 @@ export default function OnboardingPage() {
                 </p>
                 <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
                   {outcome.total !== null
-                    ? `${outcome.total.toLocaleString("hu-HU", { maximumFractionDigits: 2 })} ${outcome.currency ?? ""}`
+                    ? `${outcome.total.toLocaleString(getLocale() === "hu" ? "hu-HU" : "en-US", { maximumFractionDigits: 2 })} ${outcome.currency ?? ""}`
                     : t("noReceipts")}
                 </p>
                 {outcome.confidenceLevel ? (
