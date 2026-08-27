@@ -2,15 +2,30 @@
  * Shared formatting helpers — currency, dates, file sizes, classes.
  */
 
+const LOCALE_TO_INTL: Record<string, string> = {
+  en: "en-US", hu: "hu-HU", de: "de-DE", fr: "fr-FR", es: "es-ES",
+  it: "it-IT", pt: "pt-PT", nl: "nl-NL", pl: "pl-PL", ro: "ro-RO",
+};
+
+function currentIntlLocale(): string {
+  if (typeof window === "undefined") return "en-US";
+  try {
+    const stored = window.localStorage.getItem("receiptlens.locale");
+    if (stored && LOCALE_TO_INTL[stored]) return LOCALE_TO_INTL[stored];
+  } catch { /* ignore */ }
+  return "en-US";
+}
+
 /** Format an amount in a given currency, e.g. 1234.5, "USD" → "$1,234.50". */
 export function formatMoney(
   amount: number | null | undefined,
   currency: string | null | undefined = "USD",
-  locale = "en-US",
+  locale?: string,
 ): string {
   if (amount === null || amount === undefined || Number.isNaN(amount)) return "—";
+  const effLocale = locale ?? currentIntlLocale();
   try {
-    return new Intl.NumberFormat(locale, {
+    return new Intl.NumberFormat(effLocale, {
       style: "currency",
       currency: currency ?? "USD",
       minimumFractionDigits: 2,
@@ -25,12 +40,12 @@ export function formatMoney(
 /** Format an ISO date (YYYY-MM-DD) or ISO datetime for display. */
 export function formatDate(
   iso: string | null | undefined,
-  locale = "en-US",
+  locale?: string,
 ): string {
   if (!iso) return "—";
   const date = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(locale ?? currentIntlLocale(), {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -40,12 +55,12 @@ export function formatDate(
 /** Format a datetime with time, e.g. "Aug 5, 2026, 3:04 PM". */
 export function formatDateTime(
   iso: string | null | undefined,
-  locale = "en-US",
+  locale?: string,
 ): string {
   if (!iso) return "—";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(locale ?? currentIntlLocale(), {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);

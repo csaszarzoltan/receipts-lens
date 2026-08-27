@@ -217,7 +217,7 @@ export default function OnboardingPage() {
                 </p>
                 <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
                   {outcome.total !== null
-                    ? `${outcome.total.toLocaleString(getLocale() === "hu" ? "hu-HU" : "en-US", { maximumFractionDigits: 2 })} ${outcome.currency ?? ""}`
+                    ? `${outcome.total.toLocaleString(({ en: "en-US", hu: "hu-HU", de: "de-DE", fr: "fr-FR", es: "es-ES", it: "it-IT", pt: "pt-PT", nl: "nl-NL", pl: "pl-PL", ro: "ro-RO" } as Record<string, string>)[getLocale()] ?? "en-US", { maximumFractionDigits: 2 })} ${outcome.currency ?? ""}`
                     : t("noReceipts")}
                 </p>
                 {outcome.confidenceLevel ? (
