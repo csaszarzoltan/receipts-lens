@@ -36,8 +36,8 @@ export default function PermissionsSettingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Permissions</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Role-based access matrix.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("permissions")}</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("roleAccessMatrix")}</p>
         </div>
       </div>
 
@@ -45,7 +45,7 @@ export default function PermissionsSettingsPage() {
         <table className="w-full min-w-[520px] text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
-              <th className="px-4 py-3">Permission</th>
+              <th className="px-4 py-3">{t("permissionHeader")}</th>
               {roles.map((role) => (
                 <th key={role} className="px-4 py-3 text-center">{roleLabel(role)}</th>
               ))}
@@ -75,7 +75,7 @@ export default function PermissionsSettingsPage() {
         </table>
       </div>
       <p className="text-xs text-slate-400">
-        Changes are saved immediately via PUT /product/permissions.
+        {t("changesSavedNote")}
       </p>
     </div>
   );

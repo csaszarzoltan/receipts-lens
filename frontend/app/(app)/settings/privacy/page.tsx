@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { purgeExpired, setRetention } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 
 export default function PrivacySettingsPage() {
+  const { t } = useTranslation();
   const [days, setDays] = useState("365");
   const [retentionSaved, setRetentionSaved] = useState(false);
   const [purgeResult, setPurgeResult] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export default function PrivacySettingsPage() {
     setBusy(true);
     try {
       const result = await purgeExpired();
-      setPurgeResult(`Purged ${result.purged} expired records.`);
+      setPurgeResult(`${t("purgedPrefix")}${result.purged}${t("purgedSuffix")}`);
     } finally {
       setBusy(false);
     }
@@ -33,16 +35,16 @@ export default function PrivacySettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Privacy</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("privacy")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Retention, data download and purge controls.
+          {t("retentionSubtitle")}
         </p>
       </div>
 
       <section className="card max-w-lg p-5">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Retention policy</h2>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("retentionPolicy")}</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Receipts older than this many days are eligible for purging.
+          {t("retentionHint")}
         </p>
         <div className="mt-4 flex gap-3">
           <input
@@ -57,18 +59,18 @@ export default function PrivacySettingsPage() {
             Save
           </button>
           {retentionSaved ? (
-            <span className="self-center text-sm text-emerald-600 dark:text-emerald-400" role="status">Saved ✓</span>
+            <span className="self-center text-sm text-emerald-600 dark:text-emerald-400" role="status">{t("saved")}</span>
           ) : null}
         </div>
       </section>
 
       <section className="card max-w-lg p-5">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Purge expired data</h2>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("purgeExpiredData")}</h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Permanently deletes records past the retention window. This cannot be undone.
+          {t("purgeHint")}
         </p>
         <button type="button" onClick={purge} disabled={busy} className="btn-secondary mt-4 text-sm">
-          {busy ? "Working…" : "Purge expired records"}
+          {busy ? t("working") : t("purgeButton")}
         </button>
         {purgeResult ? (
           <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400" role="status">{purgeResult}</p>

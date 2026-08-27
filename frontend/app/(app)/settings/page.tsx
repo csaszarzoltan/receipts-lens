@@ -17,7 +17,7 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("settings")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Manage your household, members and privacy.
+          {t("settingsSubtitle")}
         </p>
       </div>
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Settings sections">

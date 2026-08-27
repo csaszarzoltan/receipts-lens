@@ -28,12 +28,12 @@ export default function DiagnosticsSettingsPage() {
   }
 
   const rows: Array<[string, string | number | boolean]> = [
-    ["Version", data.version],
-    ["Database", data.database],
-    ["Receipt count", data.receipt_count],
-    ["Failed jobs", data.failed_jobs],
-    ["PWA", data.pwa ? "enabled" : "disabled"],
-    ["OCR engine", data.ocr],
+    [t("versionLabel"), data.version],
+    [t("databaseLabel"), data.database],
+    [t("receiptCountLabel"), data.receipt_count],
+    [t("failedJobsLabel"), data.failed_jobs],
+    [t("pwaLabel"), data.pwa ? "enabled" : "disabled"],
+    [t("ocrEngineLabel"), data.ocr],
   ];
 
   return (
@@ -57,7 +57,7 @@ export default function DiagnosticsSettingsPage() {
       </section>
 
       <button type="button" onClick={download} className="btn-primary text-sm">
-        ⬇ Download diagnostics bundle
+        ⬇ {t("downloadDiagnosticsBundle")}
       </button>
     </div>
   );

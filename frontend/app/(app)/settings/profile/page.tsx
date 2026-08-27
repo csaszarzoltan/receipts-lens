@@ -47,11 +47,11 @@ export default function ProfileSettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("settings")}</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Settings · Profile</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("settingsProfileSubtitle")}</p>
       </div>
 
       <section className="card max-w-lg p-5">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Preferences</h2>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("preferencesTitle")}</h2>
         {isLoading ? (
           <p className="mt-3 text-sm text-slate-400">Loading…</p>
         ) : error ? (
@@ -77,7 +77,7 @@ export default function ProfileSettingsPage() {
               </p>
             </div>
             <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-200">
-              <span>Compact mode</span>
+              <span>{t("compactMode")}</span>
               <input
                 type="checkbox"
                 checked={compact}
@@ -86,7 +86,7 @@ export default function ProfileSettingsPage() {
               />
             </label>
             <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-200">
-              <span>High contrast</span>
+              <span>{t("highContrast")}</span>
               <input
                 type="checkbox"
                 checked={highContrast}
@@ -95,14 +95,14 @@ export default function ProfileSettingsPage() {
               />
             </label>
             <p className="text-xs text-slate-400">
-              Onboarding: {data?.onboarding_done ? "complete ✓" : "not done yet"}
+              {t("onboardingLabel")} {data?.onboarding_done ? t("onboardingComplete") : t("onboardingNotDone")}
             </p>
             <button type="button" onClick={save} disabled={saving} className="btn-primary text-sm">
-              {saving ? "Saving…" : "Save preferences"}
+              {saving ? t("saving") : t("savePreferences")}
             </button>
             {saved ? (
               <span className="ml-2 text-sm text-emerald-600 dark:text-emerald-400" role="status">
-                Saved ✓
+                {t("saved")}
               </span>
             ) : null}
           </div>
