@@ -68,7 +68,7 @@ export default function ForecastPage() {
   }
 
   const forecastPoints: ForecastPoint[] = (forecast.forecasts ?? []).map((entry) => ({
-    label: entry.category === "overall" ? "Overall" : entry.category,
+    label: entry.category === "overall" ? t("overallLabel") : entry.category,
     projected: entry.next_period_total,
     low: entry.confidence_low,
     high: entry.confidence_high,
@@ -88,14 +88,14 @@ export default function ForecastPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("forecast")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          {forecast.period} · {forecast.currency} · horizon {1} period
+          {forecast.period} · {forecast.currency} · {t("horizonLabel")} {1} {t("periodSuffix")}
           {forecast.narrative ? ` — ${forecast.narrative}` : ""}
         </p>
       </div>
 
       <section className="card p-5" aria-label={t("forecastTitle")}>
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          Next period projections
+          {t("nextPeriodProjections")}
         </h2>
         <ForecastChart data={forecastPoints} height={280} />
       </section>
@@ -107,7 +107,7 @@ export default function ForecastPage() {
           </h2>
           {variancePoints.length === 0 ? (
             <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-              No budgets configured yet.
+              {t("noBudgetsConfigured")}
             </p>
           ) : (
             <>
@@ -139,18 +139,18 @@ export default function ForecastPage() {
           </h2>
           {anomalyEntries.length === 0 ? (
             <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-              No unusual spending detected.
+              {t("noUnusualSpending")}
             </p>
           ) : (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-[420px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                    <th className="py-2 pr-3">Period</th>
-                    <th className="py-2 pr-3">Category</th>
-                    <th className="py-2 pr-3 text-right">Expected</th>
-                    <th className="py-2 pr-3 text-right">Actual</th>
-                    <th className="py-2 text-right">Score</th>
+                    <th className="py-2 pr-3">{t("periodHeader")}</th>
+                    <th className="py-2 pr-3">{t("category")}</th>
+                    <th className="py-2 pr-3 text-right">{t("expectedHeader")}</th>
+                    <th className="py-2 pr-3 text-right">{t("actualHeader")}</th>
+                    <th className="py-2 text-right">{t("scoreHeader")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
