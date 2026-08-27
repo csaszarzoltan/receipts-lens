@@ -30,8 +30,11 @@ export const viewport: Viewport = {
  * `dark` class straight from localStorage (receiptlens.theme) or the OS
  * prefers-color-scheme, so a dark-preference reload never flashes white.
  * Keep in sync with components/ThemeToggle.tsx.
+ * Also sets html lang from receiptlens.locale so pre-login E2E (addInitScript)
+ * is visible before hydration.
  */
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('receiptlens.theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();`;
+const LOCALE_INIT_SCRIPT = `(function(){try{var l=localStorage.getItem('receiptlens.locale');if(l&&['en','hu','de','fr','es','it','pt','nl','pl','ro'].indexOf(l)>=0)document.documentElement.lang=l;}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -43,7 +46,12 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('receiptlens.theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark')}catch(e){}})();`,
+            __html: LOCALE_INIT_SCRIPT,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: THEME_INIT_SCRIPT,
           }}
         />
       </head>

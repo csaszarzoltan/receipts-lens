@@ -6,6 +6,7 @@ import Link from "next/link";
 import { requestMagicLink, verifyMagicLink } from "@/lib/api";
 import { setSessionToken } from "@/lib/auth";
 import { useTranslation } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 /**
  * Magic-link flow (F1.3):
@@ -71,6 +72,10 @@ function MagicLinkInner() {
           </p>
         </div>
 
+        <div className="mt-4">
+          <LanguageSwitcher />
+        </div>
+
         {token ? (
           <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-300" aria-live="polite">
             {busy ? t("magicLinkSignIn") : error ?? t("magicLinkChecking")}
@@ -85,7 +90,7 @@ function MagicLinkInner() {
                 id="magic-email"
                 type="email"
                 className="input"
-                placeholder="te@pelda.hu"
+                placeholder={t("emailPlaceholder")}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
@@ -109,7 +114,7 @@ function MagicLinkInner() {
             )}
 
             <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-              Vagy{" "}
+              {t("orDivider")}{" "}
               <Link href="/login" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
                 {t("login")}
               </Link>

@@ -8,6 +8,7 @@ import { setSessionToken } from "@/lib/auth";
 import { householdRoleLabel } from "@/lib/roles";
 import type { HouseholdRole } from "@/lib/types";
 import { useTranslation, getLocale } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 /**
  * Family invite acceptance (F1.3): the invite link carries ?token=...; the
@@ -71,8 +72,12 @@ function InviteInner() {
           <span className="text-3xl" aria-hidden="true">👨‍👩‍👧</span>
           <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">{t("familyMembers")}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Join the household in ReceiptLens
+            {t("joinHouseholdHint")}
           </p>
+        </div>
+
+        <div className="mt-4">
+          <LanguageSwitcher />
         </div>
 
         {info ? (
@@ -95,9 +100,9 @@ function InviteInner() {
               {busy ? t("sending") : t("sendInvite")}
             </button>
             <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-              Vagy{" "}
+              {t("orDivider")}{" "}
               <Link href="/login" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-                sign in with household
+                {t("signInWithHousehold")}
               </Link>
             </p>
           </div>

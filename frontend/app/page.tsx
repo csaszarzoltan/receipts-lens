@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 /** Landing / marketing page for unauthenticated visitors. */
 export default function HomePage() {
@@ -71,6 +72,12 @@ export default function HomePage() {
           ))}
         </section>
       </main>
+
+      <div className="mx-auto mt-8 flex max-w-xs justify-center">
+        <div className="w-full max-w-xs">
+          <LanguageSwitcher />
+        </div>
+      </div>
 
       <footer className="border-t border-slate-200 py-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
         {t("landingFooter")}

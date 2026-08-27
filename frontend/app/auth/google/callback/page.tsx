@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { setSessionToken } from "@/lib/auth";
 import { useTranslation } from "@/lib/i18n";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 /**
  * Google SSO callback page — reads session_token from the URL fragment
@@ -63,6 +64,10 @@ function GoogleCallbackInner() {
           <span className="text-3xl" aria-hidden="true">🔎</span>
           <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">ReceiptLens</h1>
         </div>
+        <div className="mt-4">
+          <LanguageSwitcher />
+        </div>
+
         {error ? (
           <p className="mt-6 text-center text-sm text-red-600 dark:text-red-400" role="alert">
             {error}

@@ -44,11 +44,11 @@ export default function LoginPage() {
 
         {/* Language selector — 10 locales, no auth required. Stored in localStorage; synced to backend on login. */}
         <div className="mt-4">
-          <label htmlFor="login-locale" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
+          <label htmlFor="pre-login-locale" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
             {t("language")}
           </label>
           <select
-            id="login-locale"
+            id="pre-login-locale"
             className="input"
             value={locale}
             onChange={(event) => setLocale(event.target.value as Locale)}
