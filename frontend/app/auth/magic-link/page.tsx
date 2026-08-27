@@ -7,6 +7,7 @@ import { requestMagicLink, verifyMagicLink } from "@/lib/api";
 import { setSessionToken } from "@/lib/auth";
 import { useTranslation } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 
 /**
  * Magic-link flow (F1.3):
@@ -64,6 +65,7 @@ function MagicLinkInner() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 dark:from-brand-950 dark:to-slate-950">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-card dark:bg-slate-900">
+        <div className="flex justify-end"><ThemeToggle /></div>
         <div className="text-center">
           <span className="text-3xl" aria-hidden="true">🔎</span>
           <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">ReceiptLens</h1>

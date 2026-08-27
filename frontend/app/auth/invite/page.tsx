@@ -9,6 +9,7 @@ import { householdRoleLabel } from "@/lib/roles";
 import type { HouseholdRole } from "@/lib/types";
 import { useTranslation, getLocale } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 
 /**
  * Family invite acceptance (F1.3): the invite link carries ?token=...; the
@@ -68,6 +69,7 @@ function InviteInner() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 dark:from-brand-950 dark:to-slate-950">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-card dark:bg-slate-900">
+        <div className="flex justify-end"><ThemeToggle /></div>
         <div className="text-center">
           <span className="text-3xl" aria-hidden="true">👨‍👩‍👧</span>
           <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">{t("familyMembers")}</h1>

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useTranslation } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
@@ -13,6 +14,7 @@ export default function HomePage() {
           <span aria-hidden="true">\uD83D\uDD0E</span> ReceiptLens
         </Link>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Link
             href="/login"
             className="inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"

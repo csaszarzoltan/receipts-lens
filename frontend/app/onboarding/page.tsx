@@ -8,6 +8,7 @@ import { setAuthState } from "@/lib/auth";
 import { cx } from "@/lib/utils";
 import { getLocale, useTranslation } from "@/lib/i18n";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 
 /**
  * Consumer onboarding — the 3-step first-run flow (F1.5 of
@@ -140,6 +141,7 @@ export default function OnboardingPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 py-8 dark:from-brand-950 dark:to-slate-950">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-card dark:bg-slate-900">
+        <div className="flex justify-end"><ThemeToggle /></div>
         <div className="mb-4">
           <LanguageSwitcher />
         </div>
