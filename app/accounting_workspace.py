@@ -92,15 +92,15 @@ class AccountingWorkspace:
         for field in required:
             if payload.get(field) in (None, ""):
                 errors.append({"code": f"missing_{field}", "field": field,
-                               "message": f"A(z) {field} mező kötelező."})
+                               "message": f"The \"{field}\" field is required."})
         total = payload.get("total")
         tax = payload.get("tax")
         if total is not None and float(total) < 0:
             errors.append({"code": "negative_total", "field": "total",
-                           "message": "A végösszeg nem lehet negatív."})
+                           "message": "Total cannot be negative."})
         if tax is not None and total is not None and float(tax) > float(total):
             errors.append({"code": "tax_exceeds_total", "field": "tax",
-                           "message": "Az adó nem lehet nagyobb a végösszegnél."})
+                           "message": "Tax cannot exceed the total."})
         return errors
 
     def _validate_date(self, payload: dict[str, Any], errors: list[dict[str, str]],
@@ -109,10 +109,10 @@ class AccountingWorkspace:
         try:
             if payload.get("date") and date.fromisoformat(payload["date"]) > datetime.now(UTC).date():
                 warnings.append({"code": "future_date", "field": "date",
-                                 "message": "A dátum a jövőben van."})
+                                 "message": "Date is in the future."})
         except ValueError:
             errors.append({"code": "invalid_date", "field": "date",
-                           "message": "A dátum formátuma érvénytelen."})
+                           "message": "Invalid date format."})
 
     def _validate_line_items(self, payload: dict[str, Any], total: Any,
                              warnings: list[dict[str, str]]) -> float:
@@ -121,7 +121,7 @@ class AccountingWorkspace:
         item_total = round(sum(float(i.get("amount", i.get("price", 0)) or 0) for i in items), 2)
         if total is not None and items and abs(item_total - float(total)) > 0.01:
             warnings.append({"code": "line_total_mismatch", "field": "line_items",
-                             "message": f"A tételsorok összege {item_total:.2f}, a végösszeg {float(total):.2f}."})
+                             "message": f"Line items total {item_total:.2f}, receipt total {float(total):.2f}."})
         return item_total
 
     def _validate_export_context(self, actor: Any, receipt_id: str, connection_id: str | None,
@@ -132,13 +132,13 @@ class AccountingWorkspace:
                                    (actor.tenant_id, receipt_id)).fetchone()
         if not metadata or not metadata["cost_center"]:
             warnings.append({"code": "missing_cost_center", "field": "cost_center",
-                             "message": "Nincs költséghely megadva."})
+                             "message": "No cost center set."})
         if connection_id:
             conn = self.db.execute("SELECT mapping FROM connections WHERE tenant_id=? AND connection_id=?",
                                    (actor.tenant_id, connection_id)).fetchone()
             if not conn:
                 errors.append({"code": "connection_missing", "field": "connection",
-                               "message": "Az exportkapcsolat nem található."})
+                               "message": "Export connection not found."})
 
     def validate(self, actor: Any, receipt_id: str, connection_id: str | None = None) -> dict[str, Any]:
         payload = self.receipt(actor.tenant_id, receipt_id)["payload"]

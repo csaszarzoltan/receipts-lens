@@ -161,8 +161,8 @@ async def upload_receipt(
     applied = advanced.apply_rules(current, result["receipt_id"], result["receipt"])
     result["applied_rules"] = applied
     if result["status"] == "needs_review":
-        advanced.notify(current.tenant_id, "review", "Nyugta ellenőrzést igényel",
-                        file.filename or "A feltöltött nyugta", result["receipt_id"])
+        advanced.notify(current.tenant_id, "review", "Receipt needs review",
+                        file.filename or "The uploaded receipt", result["receipt_id"])
     if ai_mode:
         source = str((parsed.confidence or {}).get("source") or SOURCE_TESSERACT)
         result["source"] = source

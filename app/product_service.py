@@ -687,9 +687,9 @@ class ProductService:
             items.append({
                 "task_id": "failed:" + row["job_id"], "type": "failed_job",
                 "priority": 10, "receipt_id": row["receipt_id"], "subject_id": row["job_id"],
-                "title": "Feldolgozási hiba",
-                "reason": row["error"] or "A nyugta feldolgozása sikertelen.",
-                "action_label": "Újrapróbálás", "action_url": "#upload",
+                "title": "Processing error",
+                "reason": row["error"] or "Receipt processing failed.",
+                "action_label": "Retry", "action_url": "#upload",
                 "created_at": row["created_at"],
             })
         reviews = self._db.execute(
@@ -702,9 +702,9 @@ class ProductService:
             items.append({
                 "task_id": "review:" + rid, "type": "review",
                 "priority": 20, "receipt_id": rid, "subject_id": rid,
-                "title": payload.get("vendor") or "Ellenőrzendő nyugta",
-                "reason": "Egy vagy több OCR-mező bizonyossága alacsony.",
-                "action_label": "Ellenőrzés", "action_url": f"#review?receipt={rid}",
+                "title": payload.get("vendor") or "Receipt needs review",
+                "reason": "OCR confidence is low for one or more fields.",
+                "action_label": "Review", "action_url": f"#review?receipt={rid}",
                 "created_at": row["created_at"],
             })
         blocker_rows = self._db.execute(
@@ -722,8 +722,8 @@ class ProductService:
             items.append({
                 "task_id": "export-blocker:" + receipt_id, "type": "export_blocker",
                 "priority": 25, "receipt_id": receipt_id, "subject_id": receipt_id,
-                "title": "Exportot blokkoló adat",
-                "reason": first["message"], "action_label": "Javítás",
+                "title": "Missing data blocks export",
+                "reason": first["message"], "action_label": "Fix",
                 "action_url": f"#receipts?receipt={receipt_id}&field={field}", "created_at": row["created_at"],
                 "issue_code": first["code"], "field": field,
             })
@@ -736,8 +736,8 @@ class ProductService:
                 items.append({
                     "task_id": "approval:" + row["approval_id"], "type": "approval",
                     "priority": 30, "receipt_id": row["receipt_id"], "subject_id": row["approval_id"],
-                    "title": "Jóváhagyásra vár",
-                    "reason": "A tétel döntést igényel.", "action_label": "Megnyitás",
+                    "title": "Waiting for approval",
+                    "reason": "This item needs a decision.", "action_label": "Open",
                     "action_url": f'#approvals?approval={row["approval_id"]}', "created_at": row["created_at"],
                 })
         return {"items": items[:limit], "total": len(items),

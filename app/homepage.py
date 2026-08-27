@@ -29,7 +29,7 @@ def render_homepage(*, name: str, version: str, description: str) -> str:
         if not prod else ""
     )
     redoc_button = (
-        '<a class="button secondary" href="/redoc">ReDoc megnyitása</a>'
+        '<a class="button secondary" href="/redoc">Open ReDoc</a>'
         if not prod else ""
     )
 
