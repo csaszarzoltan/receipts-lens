@@ -303,6 +303,20 @@ Prompt/runbookok: `docs/research/prompts/hermes-miner.md` + `gemini-miner.md` + 
 
 ---
 
+## 11b) Bug-kezelés — Lean protokoll (3 tier: fix-first, dokumentálj súly szerint)
+
+> Cél: a board ne szemetelődjön, de a tanulság ne vesszen el.
+
+| Tier | Mikor | Ticket? | Hogyan dokumentálj |
+|---|---|---|---|
+| **T1 — Micro-fix** (<30p, 1-3 file, nincs design) | elgépelés, import, typo, 1-soros guard | ❌ nincs ticket | commit `fix:` + CHANGELOG 1 sor |
+| **T2 — Pattern-bug** (ismétlődhet, API/UX-t érint, szabály kell) | Caddy `/api/*` strip, OGD schema, auth header, stb. | ❌ nincs ticket, de **kötelező 5 sor tanulság** | `docs/decisions/BUG-NNN-*.md` (hiba / ok / javítás / tanulság) VAGY `docs/engineering-standards.md` 1 checklist sor |
+| **T3 — Rendszer-bug** (>3 file, archi döntés, kutatás kell) | canary piros, schema drift, adatvesztés kockázat | ✅ **kötelező `hermes kanban create --board X "bug: ..." --priority high`** (+ research→ADR ha kell) | ticket = mikor/ki, BUG.md = mit tanultunk, commit = mit csináltunk |
+
+**Példa T2 (mai receipts-lens):** Caddy `/api/*` prefix levágása miatt a `/auth/google/*` 404 lett → fix: dual decorator `/auth` + `/api/auth` → tanulság: `engineering-standards` API szekció: „Minden Caddy mögötti route dual prefixet kap.”
+
+**Canary piros = automatikus T3** — a canary `BLOCKED` kártyát hoz létre, nem kell kézzel ticketet nyitni.
+
 ## 12) Tooling és file-struktúra
 
 ```

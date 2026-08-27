@@ -90,6 +90,16 @@ Resilience: ha egy miner nem tér vissza adattal (kvóta/hiba), a többi adatáb
 Prompt/runbookok: `docs/research/prompts/hermes-miner.md` (többmódszeres létra + ledger) + `gemini-miner.md` + `agy-scorer.md` + **`evaluator.md`** (rangsoroló + grooming-ready Top 5 + képlet).
 
 
+## Bug-kezelés — Lean (3 tier, fix-first)
+
+| Tier | Mikor | Ticket? | Dokumentálás |
+|---|---|---|---|
+| **T1 Micro-fix** (<30p, 1-3 file) | typo, import, guard | ❌ | commit `fix:` + CHANGELOG |
+| **T2 Pattern-bug** (ismétlődhet, API/UX) | Caddy strip, schema drift, auth header | ❌ de **5 sor tanulság kötelező** | `docs/decisions/BUG-NNN-*.md` vagy `engineering-standards` 1 sor |
+| **T3 Rendszer-bug** (>3 file, archi) | canary piros, adatvesztés kockázat | ✅ `hermes kanban create --board X "bug: ..."` | ticket + ADR ha kell |
+
+Canary piros = automatikus T3 (BLOCKED kártya). Részletek: `docs/methodology/EVOLUTIONARY-SYSTEM.md` 11b.
+
 ## Session elveszett? Nem baj
 Minden tudás git-ben. Session = beszélgetés history, nem storage.
 
