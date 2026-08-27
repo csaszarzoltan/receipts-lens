@@ -334,11 +334,11 @@ def magic_link_request(body: MagicLinkRequest) -> dict[str, Any]:
     created = service.create_magic_link(email)
     token = created["token"]
     link = LOGIN_LINK_TEMPLATE.format(base_url=AUTH_BASE_URL, token=token)
-    subject = "ReceiptLens — belépés"
+    subject = "ReceiptLens — sign in"
     body_text = (
-        "Kattints a linkre a bejelentkezéshez:\n\n"
+        "Click the link to sign in:\n\n"
         f"{link}\n\n"
-        "A link 15 percig érvényes és egyszer használható."
+        "The link is valid for 15 minutes and can be used once."
     )
     result = _deliver_or_return(token, link, email, subject, body_text)
     result["email"] = email
@@ -422,11 +422,11 @@ def create_invite(
         base_url=AUTH_BASE_URL, token=token,
         household_id=household_id, invite_id=invite["invite_id"],
     )
-    subject = "ReceiptLens — családi meghívó"
+    subject = "ReceiptLens — family invite"
     body_text = (
-        f"Csatlakozz a ReceiptLens háztartáshoz ({household_id}):\n\n"
+        f"Join the ReceiptLens household ({household_id}):\n\n"
         f"{link}\n\n"
-        "A meghívó 7 napig érvényes."
+        "The invite is valid for 7 days."
     )
     delivery = _deliver_or_return(token, link, invite["email"], subject, body_text)
     return {
