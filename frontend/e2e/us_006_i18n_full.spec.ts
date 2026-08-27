@@ -21,6 +21,7 @@ const LOCALES: Locale[] = ["en","hu","de","fr","es","it","pt","nl","pl","ro"];
 
 // Minden AppShell route — /login és /onboarding kívül (külön US-005)
 const APP_ROUTES: string[] = [
+  "/",
   "/dashboard",
   "/receipts",
   "/upload",
