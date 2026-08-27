@@ -43,6 +43,13 @@ const APP_ROUTES: string[] = [
   "/settings/permissions",
   "/settings/privacy",
   "/settings/diagnostics",
+  "/settings/diagnostics/quality",
+  "/exports/prepare",
+  "/exports/runs/demo-run-id",
+  "/receipts/demo-receipt-id",
+  "/integrations/demo-connection-id",
+  "/automations/demo-rule-id",
+  "/automations/demo-rule-id/runs",
 ];
 
 // Magyar sztringek amik ANGOL beállításnál TILTOTTAK — ha bármelyik
@@ -88,8 +95,6 @@ const HU_BLOCKLIST: string[] = [
   "Bejelentkezés",
   "Még nincs nyugta",
   "Családi postafiók",
-  "Háztartás tulajdonosa",
-  "Felnőtt tag",
 ];
 
 async function seed(page: Page, locale: Locale): Promise<void> {
