@@ -86,7 +86,7 @@ for (const locale of LOCALES) {
   }
 }
 
-// Interaction: changing the select persists to localStorage and html lang
+// Interaction: changing the select persists to localStorage, html lang and visible copy
 test("US-007: pre-login — interaction: select hu → localStorage + html lang", async ({ page }) => {
   test.setTimeout(60_000);
   await seed(page, "en");
@@ -101,7 +101,23 @@ test("US-007: pre-login — interaction: select hu → localStorage + html lang"
   expect(stored).toBe("hu");
   const htmlLang = await page.getAttribute("html", "lang");
   expect(htmlLang).toBe("hu");
-  // Login page should now contain HU label after locale switch
+  // Login page should now contain HU label after locale switch (broadcast, no reload)
   const body = (await page.textContent("body")) ?? "";
   expect(body).toContain("Háztartás tulajdonosa");
+});
+
+test("US-007: pre-login — interaction: landing h1 flips hu without reload", async ({ page }) => {
+  test.setTimeout(60_000);
+  await seed(page, "en");
+  await page.goto("/");
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(1000);
+  const h1en = (await page.textContent("h1")) ?? "";
+  expect(h1en, "landing en h1").toContain("Scan receipts");
+  const switcher = page.locator("#pre-login-locale");
+  await expect(switcher).toBeVisible();
+  await switcher.selectOption("hu");
+  await page.waitForTimeout(500);
+  const h1hu = (await page.textContent("h1")) ?? "";
+  expect(h1hu, "landing flipped to hu without reload").toContain("Szkenneld");
 });

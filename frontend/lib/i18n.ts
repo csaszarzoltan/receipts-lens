@@ -8,7 +8,7 @@
  * Backend sync: preferences.language (GET/PUT /product/preferences)
  * mirrors the same Locale values. Default is \"en\".
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export const SUPPORTED_LOCALES = ["en", "hu", "de", "fr", "es", "it", "pt", "nl", "pl", "ro"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -5178,14 +5178,34 @@ export function setLocale(locale: Locale): void {
 
 /**
  * React hook: returns the active locale, the translation function and a
- * setter that persists the choice to localStorage.
+ * setter that persists the choice to localStorage — and broadcasts the
+ * change so *every* mounted useTranslation (e.g. the landing page) re-renders
+ * without a full page reload. Without this broadcast only the component that
+ * called setLocale would update.
  */
 export function useTranslation() {
   const [locale, setLocaleState] = useState<Locale>(() => getLocale());
 
+  useEffect(() => {
+    function onLocaleChange(event: Event) {
+      const next = (event as CustomEvent<Locale>).detail;
+      if (next && isValidLocale(next)) setLocaleState(next);
+    }
+    function onStorage(event: StorageEvent) {
+      if (event.key === LOCALE_KEY && event.newValue && isValidLocale(event.newValue)) setLocaleState(event.newValue);
+    }
+    window.addEventListener("receiptlens:locale", onLocaleChange as EventListener);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("receiptlens:locale", onLocaleChange as EventListener);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
   const changeLocale = useCallback((next: Locale) => {
     setLocale(next);
     setLocaleState(next);
+    try { window.dispatchEvent(new CustomEvent("receiptlens:locale", { detail: next })); } catch {}
   }, []);
 
   const translate = useCallback(
