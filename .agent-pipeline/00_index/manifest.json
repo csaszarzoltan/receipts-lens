@@ -1,0 +1,28 @@
+{
+  "tasks": {
+    "SPEC-ADR-004": {
+      "title": "Tax Pro Pack",
+      "status": "COMPLETED",
+      "retry_count": 0,
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-ADR-004.md",
+      "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_adr_004.py",
+      "last_updated": "2026-08-27T14:22:00Z"
+    },
+    "SPEC-ADR-005": {
+      "title": "Vision Pro OCR",
+      "status": "COMPLETED",
+      "retry_count": 0,
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-ADR-005.md",
+      "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_adr_005.py",
+      "last_updated": "2026-08-27T14:22:00Z"
+    },
+    "SPEC-ADR-006": {
+      "title": "QBO/Xero Sync and Accountant Invite",
+      "status": "COMPLETED",
+      "retry_count": 0,
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-ADR-006.md",
+      "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_adr_006.py",
+      "last_updated": "2026-08-27T14:22:00Z"
+    }
+  }
+}

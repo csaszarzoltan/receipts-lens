@@ -30,6 +30,9 @@ from app.homepage import render_homepage
 from app.ocr import ConfidenceReceipt, check_duplicates, parse_receipt_with_confidence
 from app.product_api import Actor, service
 from app.product_api import router as product_router
+from app.tax_api import router as tax_router
+from app.quota_api import router as quota_router
+from app.sync_api import router as sync_router
 from app.rate_limits import RateLimitMiddleware
 from app.report_generator import generate_csv, generate_pdf
 from app.reports import receipt_store
@@ -222,6 +225,9 @@ app.include_router(forecast_router)
 app.include_router(batch_router)
 app.include_router(subscriptions_router)
 app.include_router(auth_router)
+app.include_router(tax_router)
+app.include_router(quota_router)
+app.include_router(sync_router)
 
 
 # ---------------------------------------------------------------------------

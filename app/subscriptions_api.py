@@ -421,3 +421,8 @@ def cancel_guide(
         "steps": guide.steps,
         "url": guide.url,
     }
+
+
+def is_pro(tenant_id: str) -> bool:
+ import os
+ return tenant_id in {x.strip() for x in os.getenv("RECEIPTLENS_PRO_TENANTS","").split(",") if x.strip()}
