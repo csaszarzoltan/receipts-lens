@@ -86,11 +86,11 @@ function ReceiptsContent() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("receipts")}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {data?.total != null ? `${data.total} receipts` : "Search your receipts"}
+            {data?.total != null ? `${data.total} ${t("receiptsTotalSuffix")}` : t("receiptsSearchHint")}
           </p>
         </div>
         <a href="/upload" className="btn-primary">
-          ⬆ Upload
+          {t("uploadLabel")}
         </a>
       </div>
 
@@ -100,36 +100,36 @@ function ReceiptsContent() {
           setQuery(value);
           setOffset(0);
         }}
-        searchPlaceholder="Search by merchant…"
+        searchPlaceholder={t("searchByMerchant")}
         filters={[
           {
             name: "status",
-            label: "Status",
+            label: t("status"),
             value: status,
             onChange: (value) => {
               setStatus(value);
               setOffset(0);
             },
             options: getStatusOptions(t),
-            allLabel: "All statuses",
+            allLabel: t("allStatuses"),
           },
           {
             name: "category",
-            label: "Category",
+            label: t("category"),
             value: category,
             onChange: (value) => {
               setCategory(value);
               setOffset(0);
             },
             options: categories.map((value) => ({ value, label: value })),
-            allLabel: "All categories",
+            allLabel: t("allCategories"),
           },
         ]}
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
         <div className="md:col-span-1">
-          <label htmlFor="filter-date-from" className="sr-only">Date from</label>
+          <label htmlFor="filter-date-from" className="sr-only">{t("dateFromLabel")}</label>
           <input
             id="filter-date-from"
             type="date"
@@ -142,7 +142,7 @@ function ReceiptsContent() {
           />
         </div>
         <div className="md:col-span-1">
-          <label htmlFor="filter-date-to" className="sr-only">Date to</label>
+          <label htmlFor="filter-date-to" className="sr-only">{t("dateToLabel")}</label>
           <input
             id="filter-date-to"
             type="date"
@@ -157,7 +157,7 @@ function ReceiptsContent() {
         {hasFilters ? (
           <div className="flex items-center">
             <button type="button" onClick={resetFilters} className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">
-              ✕ Clear filters
+              {t("clearFilters")}
             </button>
           </div>
         ) : null}
@@ -173,22 +173,22 @@ function ReceiptsContent() {
         <EmptyState
           icon="⚠️"
           title={t("couldNotLoad")}
-          description="The backend may be offline. Check the server and retry."
+          description={t("backendOffline")}
         />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon="📄"
-          title={hasFilters ? "No matching receipts" : "No receipts yet"}
+          title={hasFilters ? t("noMatchingReceipts") : t("noReceiptsYetTitle")}
           description={
             hasFilters
-              ? "Try adjusting your search or filters."
-              : "Upload your first receipt to get started."
+              ? t("noMatchingHint")
+              : t("uploadReceiptHint")
           }
-          action={hasFilters ? undefined : { label: "Upload a receipt", href: "/upload" }}
+          action={hasFilters ? undefined : { label: t("uploadReceiptLabel"), href: "/upload" }}
         />
       ) : (
         <>
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Receipt list">
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label={t("receiptListLabel")}>
             {filtered.map((item) => (
               <li key={item.receipt_id}>
                 <ReceiptCard item={item} />
@@ -208,15 +208,15 @@ function ReceiptsContent() {
 
       {/* Table view for desktop power users */}
       {filtered.length > 0 ? (
-        <section className="card overflow-x-auto" aria-label="Receipt table">
+        <section className="card overflow-x-auto" aria-label={t("receiptTableLabel")}>
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                <th className="px-4 py-3">Merchant</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Category</th>
-                <th className="px-4 py-3 text-right">Total</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">{t("receiptTableMerchant")}</th>
+                <th className="px-4 py-3">{t("receiptTableDate")}</th>
+                <th className="px-4 py-3">{t("receiptTableCategory")}</th>
+                <th className="px-4 py-3 text-right">{t("receiptTableTotal")}</th>
+                <th className="px-4 py-3">{t("receiptTableStatus")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -224,7 +224,7 @@ function ReceiptsContent() {
                 <tr key={item.receipt_id} className="hover:bg-slate-50 dark:hover:bg-slate-900">
                   <td className="px-4 py-3">
                     <a href={`/receipts/${item.receipt_id}`} className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-                      {item.receipt.vendor || "Unknown vendor"}
+                      {item.receipt.vendor || t("unknownVendor")}
                     </a>
                   </td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{formatDate(item.receipt.date)}</td>

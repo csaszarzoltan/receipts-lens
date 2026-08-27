@@ -58,8 +58,8 @@ function ReviewWorkspace() {
     return (
       <EmptyState
         icon="✅"
-        title="All clear!"
-        description="No receipts need review right now."
+        title={t("allClearTitle")}
+        description={t("allClearDesc")}
       />
     );
   }
@@ -74,6 +74,7 @@ function ReviewWorkspace() {
 }
 
 function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) {
+  const { t } = useTranslation();
   const [saving, setSaving] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
@@ -100,10 +101,10 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
         { changes: {}, action: "complete" },
         item.version,
       );
-      setMessage("Marked as complete.");
+      setMessage(t("markedComplete"));
       onDone();
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed to complete.");
+      setMessage(err instanceof Error ? err.message : t("failedComplete"));
     } finally {
       setSaving(false);
     }
@@ -117,13 +118,13 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={imageUrl}
-              alt={`Receipt under review from ${item.receipt.vendor || "unknown vendor"}`}
+              alt={`${t("reviewDesc")} ${item.receipt.vendor || t("unknownVendorLabel")}`}
               className="h-64 w-full object-contain lg:h-full"
               loading="lazy"
             />
           ) : (
             <div className="flex h-64 items-center justify-center text-sm text-slate-400">
-              Image unavailable
+              {t("imageUnavailable")}
             </div>
           )}
         </div>
@@ -131,10 +132,10 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                {item.receipt.vendor || "Unknown vendor"}
+                {item.receipt.vendor || t("unknownVendorLabel")}
               </h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {item.receipt.date ?? "No date"} · v{item.version}
+                {item.receipt.date ?? t("noDateLabel")} · v{item.version}
               </p>
             </div>
             <StatusBadge status="needs_review" />
@@ -149,11 +150,11 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
               }
             />
             <span className="text-sm text-slate-500 dark:text-slate-400">
-              {item.receipt.line_items?.length ?? 0} line items
+              {item.receipt.line_items?.length ?? 0} {t("lineItemsSuffix")}
             </span>
             {item.receipt.confidence_level ? (
               <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                {item.receipt.confidence_level} confidence
+                {item.receipt.confidence_level} {t("confidenceSuffix")}
               </span>
             ) : null}
           </div>
@@ -162,9 +163,7 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
               role="alert"
               className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
             >
-              ⚠️ Uncertain amount — please verify the total against the receipt
-              image before confirming. A misread total would corrupt your
-              spending history.
+              {t("uncertainAmountWarning")}
             </div>
           ) : null}
           <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -183,7 +182,7 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
           </dl>
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <Link href={`/receipts/${item.receipt_id}`} className="btn-secondary text-sm">
-              Open full detail
+              {t("openFullDetail")}
             </Link>
             <button
               type="button"
@@ -191,7 +190,7 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
               disabled={saving}
               className="btn-primary text-sm"
             >
-              {saving ? "Saving…" : weak ? "✓ Confirm amount — complete" : "✓ Looks good — complete"}
+              {saving ? t("savingLabel") : weak ? t("confirmAmount") : t("looksGood")}
             </button>
             {message ? (
               <span className="text-xs text-emerald-600 dark:text-emerald-400" role="status">
@@ -212,7 +211,7 @@ export default function ReviewPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("review")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Receipts where OCR confidence was low — verify and confirm.
+          {t("reviewDesc")}
         </p>
       </div>
       <ReviewWorkspace />

@@ -9,8 +9,10 @@ import StatusBadge from "@/components/StatusBadge";
 import Money from "@/components/Money";
 import { Skeleton, SkeletonCard } from "@/components/Skeleton";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 function ReceiptDetailContent({ id }: { id: string }) {
+  const { t } = useTranslation();
   const { data: page, error, isLoading, mutate } = useSWR(`/receipt-detail/${id}`, () =>
     getReceipt(id),
   );
@@ -60,10 +62,10 @@ function ReceiptDetailContent({ id }: { id: string }) {
         project: project || null,
         cost_center: costCenter || null,
       });
-      setSaveMessage("Metadata saved.");
+      setSaveMessage(t("metadataSaved"));
       mutate();
     } catch (err) {
-      setSaveMessage(err instanceof Error ? err.message : "Save failed.");
+      setSaveMessage(err instanceof Error ? err.message : t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -75,11 +77,11 @@ function ReceiptDetailContent({ id }: { id: string }) {
     setSaveMessage(null);
     try {
       await updateLineItems(id, lineItems, item.version);
-      setSaveMessage("Line items saved.");
+      setSaveMessage(t("lineItemsSaved"));
       setEditing(false);
       mutate();
     } catch (err) {
-      setSaveMessage(err instanceof Error ? err.message : "Save failed.");
+      setSaveMessage(err instanceof Error ? err.message : t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -102,7 +104,7 @@ function ReceiptDetailContent({ id }: { id: string }) {
       <div className="space-y-4">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Receipt</h1>
         <p className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
-          Receipt not found, or the backend is unreachable.
+          {t("receiptNotFound")}
         </p>
       </div>
     );
@@ -121,24 +123,24 @@ function ReceiptDetailContent({ id }: { id: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {receipt.vendor || "Unknown vendor"}
+            {receipt.vendor || t("unknownVendorLabel")}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={item.status} />
-            <ConfidenceBadge value={avgConfidence} label="Average OCR confidence" />
+            <ConfidenceBadge value={avgConfidence} label={t("averageOcrConfidence")} />
             <span className="text-xs text-slate-500 dark:text-slate-400">
               {formatDateTime(item.created_at)}
             </span>
           </div>
         </div>
-        <a href="/receipts" className="btn-secondary">← All receipts</a>
+        <a href="/receipts" className="btn-secondary">{t("allReceiptsLink")}</a>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Receipt image */}
         <section className="card overflow-hidden" aria-label="Receipt image">
           <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
-            Scanned receipt
+            {t("scannedReceiptTitle")}
           </h2>
           {imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -150,7 +152,7 @@ function ReceiptDetailContent({ id }: { id: string }) {
             />
           ) : (
             <div className="flex h-80 items-center justify-center text-sm text-slate-400">
-              Image unavailable
+              {t("imageUnavailable")}
             </div>
           )}
         </section>
@@ -158,7 +160,7 @@ function ReceiptDetailContent({ id }: { id: string }) {
         {/* Extracted fields */}
         <section className="card" aria-label="Extracted data">
           <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
-            Extracted data
+            {t("extractedDataTitle")}
           </h2>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 py-4 text-sm">
             <div>
@@ -184,29 +186,29 @@ function ReceiptDetailContent({ id }: { id: string }) {
             <div className="col-span-2">
               <dt className="text-xs uppercase tracking-wide text-slate-400">Category</dt>
               <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">
-                {receipt.category ?? "Uncategorized"}
+                {receipt.category ?? t("uncategorizedLabel")}
               </dd>
             </div>
           </dl>
 
           <h3 className="border-t border-slate-200 px-5 pt-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
-            Metadata
+            {t("metadataTitle")}
           </h3>
           <div className="space-y-3 px-5 py-4">
             <div>
               <label htmlFor="tags" className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
-                Tags (comma separated)
+                {t("tagsLabel")}
               </label>
-              <input id="tags" className="input" value={tags} onChange={(event) => setTags(event.target.value)} placeholder="work, travel" />
+              <input id="tags" className="input" value={tags} onChange={(event) => setTags(event.target.value)} placeholder={t("tagsPlaceholder")} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="project" className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Project</label>
+                <label htmlFor="project" className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">{t("projectLabel")}</label>
                 <input id="project" className="input" value={project} onChange={(event) => setProject(event.target.value)} />
               </div>
             </div>
             <button type="button" onClick={saveMetadata} disabled={saving} className="btn-secondary text-sm">
-              {saving ? "Saving…" : "Save metadata"}
+              {saving ? t("savingLabel") : t("saveMetadataLabel")}
             </button>
           </div>
         </section>
@@ -215,24 +217,24 @@ function ReceiptDetailContent({ id }: { id: string }) {
       {/* Line items */}
       <section className="card" aria-label="Line items">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3 dark:border-slate-800">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Line items</h2>
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t("lineItemsTitle")}</h2>
           {!editing ? (
             <button type="button" onClick={() => setEditing(true)} className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">
-              Edit items
+              {t("editItemsLabel")}
             </button>
           ) : null}
         </div>
         {lineItems.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-slate-500 dark:text-slate-400">No line items extracted.</p>
+          <p className="px-5 py-6 text-sm text-slate-500 dark:text-slate-400">{t("noLineItems")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] text-left text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                  <th className="px-5 py-2">Item</th>
-                  <th className="px-5 py-2 text-right">Price</th>
-                  <th className="px-5 py-2 text-right">Qty</th>
-                  <th className="px-5 py-2">Category</th>
+                  <th className="px-5 py-2">{t("itemHeader")}</th>
+                  <th className="px-5 py-2 text-right">{t("priceHeader")}</th>
+                  <th className="px-5 py-2 text-right">{t("qtyHeader")}</th>
+                  <th className="px-5 py-2">{t("categoryHeader")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -268,12 +270,12 @@ function ReceiptDetailContent({ id }: { id: string }) {
         {editing ? (
           <div className="flex items-center gap-2 border-t border-slate-200 px-5 py-3 dark:border-slate-800">
             <button type="button" onClick={saveLineItems} disabled={saving} className="btn-primary text-sm">
-              {saving ? "Saving…" : "Save line items"}
+              {saving ? t("savingLabel") : t("saveLineItemsLabel")}
             </button>
             <button type="button" onClick={() => setEditing(false)} className="btn-secondary text-sm">
-              Cancel
+              {t("cancel")}
             </button>
-            <span className="text-xs text-slate-400">Uses optimistic concurrency (If-Match v{item.version})</span>
+            <span className="text-xs text-slate-400">{t("optimisticConcurrencyHint")} v{item.version})</span>
           </div>
         ) : null}
         {saveMessage ? (
@@ -285,11 +287,11 @@ function ReceiptDetailContent({ id }: { id: string }) {
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card" aria-label="OCR boxes">
           <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
-            OCR text ({boxes.length})
+            {t("ocrTextTitle")} ({boxes.length})
           </h2>
           <ul className="max-h-64 overflow-y-auto px-5 py-4">
             {boxes.length === 0 ? (
-              <li className="text-sm text-slate-400">No OCR boxes available.</li>
+              <li className="text-sm text-slate-400">{t("noOcrBoxes")}</li>
             ) : (
               boxes.map((box, index) => (
                 <li key={index} className="mb-2 flex items-center justify-between gap-3 text-sm">
@@ -304,10 +306,10 @@ function ReceiptDetailContent({ id }: { id: string }) {
 
       <section className="card" aria-label="History">
         <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
-          History
+          {t("historyTitle")}
         </h2>
         {history.length === 0 ? (
-          <p className="px-5 py-4 text-sm text-slate-400">No history entries yet.</p>
+          <p className="px-5 py-4 text-sm text-slate-400">{t("noHistory")}</p>
         ) : (
           <ol className="px-5 py-4">
             {history.map((entry, index) => (
