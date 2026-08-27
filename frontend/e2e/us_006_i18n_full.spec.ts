@@ -45,7 +45,8 @@ const APP_ROUTES: string[] = [
 ];
 
 // Magyar sztringek amik ANGOL beállításnál TILTOTTAK — ha bármelyik
-// megjelenik en mellett, a nyelvkezelés törött.
+// megjelenik en mellett, a nyelvkezelés törött. 40+ elem: eredeti 18 +
+// nav + főbb oldal-címek + action label-ek — így a teljes UI anti-HU.
 const HU_BLOCKLIST: string[] = [
   "Családtagok",
   "Háztartás tulajdonosa",
@@ -65,6 +66,29 @@ const HU_BLOCKLIST: string[] = [
   "Folytatás Google-lel",
   "Ismeretlen üzlet",
   "A tagok szerinti bontás",
+  // nav + fő címek (hu módban látszanak, en módban tilosak)
+  "Áttekintés",
+  "Vásárlások",
+  "Nyugta hozzáadása",
+  "Jóváhagyások",
+  "Beállítások",
+  "Háztartási keret",
+  "Könyvelési ellenőrzés",
+  "Előfizetések",
+  "Összesítés",
+  "Bevezető",
+  "Fiók létrehozása",
+  "Összes kiadás",
+  "Költségvetés állapota",
+  "Ellenőrzés",
+  "Ismétlődések",
+  "Automatizálás",
+  "Kijelentkezés",
+  "Bejelentkezés",
+  "Még nincs nyugta",
+  "Családi postafiók",
+  "Háztartás tulajdonosa",
+  "Felnőtt tag",
 ];
 
 async function seed(page: Page, locale: Locale): Promise<void> {
