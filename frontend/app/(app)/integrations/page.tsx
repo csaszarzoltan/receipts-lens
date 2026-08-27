@@ -52,7 +52,7 @@ export default function IntegrationsPage() {
     try {
       const result = await startQuickBooksOAuth();
       window.location.assign(result.authorization_url);
-    } catch (error) { setQboError(error instanceof Error ? error.message : "Could not start QuickBooks connection"); }
+    } catch (error) { setQboError(error instanceof Error ? error.message : t("couldNotStartQB")); }
     finally { setQboBusy(false); }
   }
 
@@ -60,25 +60,25 @@ export default function IntegrationsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Integrations</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("integrations")}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Connect ReceiptLens to your accounting tools.
+            {t("integrationsDesc")}
           </p>
         </div>
-        <button type="button" onClick={() => setOpen(true)} className="btn-primary text-sm">+ Add integration</button>
+        <button type="button" onClick={() => setOpen(true)} className="btn-primary text-sm">{t("addIntegration")}</button>
       </div>
 
       <section className="card overflow-hidden" aria-labelledby="qbo-heading">
         <div className="border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-cyan-50 p-5 dark:border-slate-800 dark:from-emerald-950/40 dark:to-cyan-950/30">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div><p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Recommended next step</p><h2 id="qbo-heading" className="mt-1 text-xl font-bold text-slate-900 dark:text-white">QuickBooks Online sandbox</h2><p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-300">Connect a sandbox company, validate account and tax mappings, then export with replay protection and reconciliation evidence.</p></div>
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">Not connected</span>
+            <div><p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">{t("recommendedNextStep")}</p><h2 id="qbo-heading" className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{t("qboSandboxTitle")}</h2><p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-300">{t("qboSandboxDesc")}</p></div>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">{t("notConnectedBadge")}</span>
           </div>
         </div>
         <div className="grid gap-4 p-5 md:grid-cols-3">
-          {[['1','Connect company','OAuth state is tenant-bound and credentials are encrypted.'],['2','Validate mapping','Choose expense accounts and tax treatment before posting.'],['3','Export and verify','Retry only failed items and compare the remote purchase.']].map(([n,title,body])=><div key={n} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-300">{n}</span><h3 className="mt-3 font-semibold">{title}</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{body}</p></div>)}
+          {[['1',t("connectCompany"),t("connectCompanyDesc")],['2',t("validateMapping"),t("validateMappingDesc")],['3',t("exportAndVerify"),t("exportAndVerifyDesc")]].map(([n,title,body])=><div key={n} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-300">{n}</span><h3 className="mt-3 font-semibold">{title}</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{body}</p></div>)}
         </div>
-        <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 px-5 py-4 dark:border-slate-800"><button type="button" onClick={connectQuickBooks} disabled={qboBusy} className="btn-primary text-sm" aria-describedby="qbo-disclosure">{qboBusy ? "Connecting…" : "Connect QuickBooks"}</button><p id="qbo-disclosure" className="text-xs text-slate-500">Sandbox only. You will review requested accounting scopes before leaving ReceiptLens.</p>{qboError ? <p role="alert" className="w-full text-sm text-rose-700">{qboError}</p> : null}</div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 px-5 py-4 dark:border-slate-800"><button type="button" onClick={connectQuickBooks} disabled={qboBusy} className="btn-primary text-sm" aria-describedby="qbo-disclosure">{qboBusy ? t("connectingQB") : t("connectQuickBooks")}</button><p id="qbo-disclosure" className="text-xs text-slate-500">{t("sandboxDisclosure")}</p>{qboError ? <p role="alert" className="w-full text-sm text-rose-700">{qboError}</p> : null}</div>
       </section>
 
       {isLoading ? (
@@ -89,7 +89,7 @@ export default function IntegrationsPage() {
       ) : error ? (
         <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
       ) : connections.length === 0 ? (
-        <EmptyState icon="🔌" title="No integrations yet" description="Add a CSV, QuickBooks or Xero connection to get started." />
+        <EmptyState icon="🔌" title={t("noIntegrationsYet")} description={t("noIntegrationsHint")} />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Integrations">
           {connections.map((connection) => (
@@ -111,7 +111,7 @@ export default function IntegrationsPage() {
                       : "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
                   }`}
                 >
-                  {connection.reauthorization_required ? "Reauthorization required" : connection.health}
+                  {connection.reauthorization_required ? t("reauthRequired") : connection.health}
                 </span>
               </Link>
               <button
@@ -120,7 +120,7 @@ export default function IntegrationsPage() {
                 disabled={testing === connection.connection_id}
                 className="btn-secondary mt-4 w-full text-sm"
               >
-                {testing === connection.connection_id ? "Testing…" : "Test connection"}
+                {testing === connection.connection_id ? t("testingConnection") : t("testConnection")}
               </button>
             </li>
           ))}
@@ -129,22 +129,22 @@ export default function IntegrationsPage() {
 
       <Modal
         open={open}
-        title="Add integration"
+        title={t("addIntegrationTitle")}
         onClose={() => setOpen(false)}
         footer={
           <>
-            <button type="button" onClick={() => setOpen(false)} className="btn-secondary text-sm">Cancel</button>
-            <button type="button" onClick={create} className="btn-primary text-sm">Add</button>
+            <button type="button" onClick={() => setOpen(false)} className="btn-secondary text-sm">{t("cancel")}</button>
+            <button type="button" onClick={create} className="btn-primary text-sm">{t("addButton")}</button>
           </>
         }
       >
         <div className="space-y-4">
           <div>
-            <label htmlFor="int-name" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Name</label>
-            <input id="int-name" className="input" value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. My accountant" />
+            <label htmlFor="int-name" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("nameLabel")}</label>
+            <input id="int-name" className="input" value={name} onChange={(event) => setName(event.target.value)} placeholder={t("namePlaceholder")} />
           </div>
           <div role="radiogroup" aria-label="Provider">
-            <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Provider</p>
+            <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">{t("providerLabel")}</p>
             <div className="grid grid-cols-3 gap-2">
               {PROVIDERS.map((option) => (
                 <button
