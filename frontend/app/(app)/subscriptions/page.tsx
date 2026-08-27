@@ -27,10 +27,10 @@ function daysUntil(iso: string): number {
   return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 }
 
-function daysLabel(days: number): string {
-  if (days === 0) return "renews today";
-  if (days === 1) return "renews tomorrow";
-  return `renews in ${days} days`;
+function daysLabel(days: number, t: (k: any) => string): string {
+  if (days === 0) return t("renewsToday");
+  if (days === 1) return t("renewsTomorrow");
+  return `${t("renewsInDays")} ${days} ${t("daysSuffix")}`;
 }
 
 export default function SubscriptionsPage() {
@@ -89,19 +89,18 @@ export default function SubscriptionsPage() {
             {t("subscriptions")}
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Renewals, price changes and cancellation guides for your recurring
-            expenses.
+            {t("subscriptionsDesc")}
           </p>
         </div>
         <label className="flex cursor-pointer items-center gap-3">
           <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Email alerts
+            {t("emailAlertsLabel")}
           </span>
           <button
             type="button"
             role="switch"
             aria-checked={emailAlertsOn}
-            aria-label="Email alerts"
+            aria-label={t("emailAlertsLabel")}
             disabled={prefLoading}
             onClick={() => toggleEmailAlerts(!emailAlertsOn)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
@@ -134,8 +133,8 @@ export default function SubscriptionsPage() {
       ) : items.length === 0 ? (
         <EmptyState
           icon="🔄"
-          title="No subscriptions detected"
-          description="At least 2 matching transactions are needed to detect a subscription."
+          title={t("noSubscriptionsDetectedTitle")}
+          description={t("noSubscriptionsDetectedDesc")}
         />
       ) : (
         <>
@@ -146,7 +145,7 @@ export default function SubscriptionsPage() {
             >
               <div className="card p-5">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Active subscriptions
+                  {t("activeSubscriptionsLabel")}
                 </p>
                 <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
                   {summary.total}
@@ -154,7 +153,7 @@ export default function SubscriptionsPage() {
               </div>
               <div className="card p-5">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Monthly cost
+                  {t("monthlyCostLabel")}
                 </p>
                 <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
                   {formatMoney(summary.monthly_total, "USD")}
@@ -164,9 +163,9 @@ export default function SubscriptionsPage() {
           ) : null}
 
           {upcoming.length > 0 ? (
-            <section aria-label="Upcoming renewals">
+            <section aria-label={t("upcomingRenewalsTitle")}>
               <h2 className="mb-2 text-base font-semibold text-slate-900 dark:text-slate-100">
-                Upcoming renewals
+                {t("upcomingRenewalsTitle")}
               </h2>
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {upcoming.map((s) => (
@@ -176,7 +175,7 @@ export default function SubscriptionsPage() {
                         {s.merchant}
                       </h3>
                       <span className="inline-flex rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-                        {daysLabel(daysUntil(s.renewal_date))}
+                        {daysLabel(daysUntil(s.renewal_date), t)}
                       </span>
                     </div>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
@@ -190,9 +189,9 @@ export default function SubscriptionsPage() {
           ) : null}
 
           {priceChanges.length > 0 ? (
-            <section aria-label="Price changes">
+            <section aria-label={t("priceChangesTitle")}>
               <h2 className="mb-2 text-base font-semibold text-slate-900 dark:text-slate-100">
-                Price changes
+                {t("priceChangesTitle")}
               </h2>
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {priceChanges.map((s) => (
@@ -205,7 +204,7 @@ export default function SubscriptionsPage() {
                         {s.merchant}
                       </h3>
                       <span className="inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-                        Price increased
+                        {t("priceIncreasedBadge")}
                       </span>
                     </div>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
@@ -218,21 +217,21 @@ export default function SubscriptionsPage() {
             </section>
           ) : null}
 
-          <section aria-label="All subscriptions">
+          <section aria-label={t("allSubscriptionsTitle")}>
             <h2 className="mb-2 text-base font-semibold text-slate-900 dark:text-slate-100">
-              All subscriptions
+              {t("allSubscriptionsTitle")}
             </h2>
             <div className="card overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                    <th className="px-4 py-3">Merchant</th>
-                    <th className="px-4 py-3">Frequency</th>
-                    <th className="px-4 py-3">Renewal</th>
-                    <th className="px-4 py-3 text-right">Monthly</th>
-                    <th className="px-4 py-3 text-right">Annualized</th>
-                    <th className="px-4 py-3">Trend</th>
-                    <th className="px-4 py-3">Guide</th>
+                    <th className="px-4 py-3">{t("merchant")}</th>
+                    <th className="px-4 py-3">{t("frequencyHeader")}</th>
+                    <th className="px-4 py-3">{t("renewalHeader")}</th>
+                    <th className="px-4 py-3 text-right">{t("monthlyHeader")}</th>
+                    <th className="px-4 py-3 text-right">{t("annualizedHeader")}</th>
+                    <th className="px-4 py-3">{t("trendHeader")}</th>
+                    <th className="px-4 py-3">{t("guideHeader")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -259,11 +258,11 @@ export default function SubscriptionsPage() {
                       <td className="px-4 py-3">
                         {s.trend === "up" ? (
                           <span className="text-rose-600 dark:text-rose-400">
-                            ↑ up
+                            ↑ {t("trendUp")}
                           </span>
                         ) : (
                           <span className="text-emerald-600 dark:text-emerald-400">
-                            → stable
+                            → {t("trendStable")}
                           </span>
                         )}
                       </td>
@@ -273,7 +272,7 @@ export default function SubscriptionsPage() {
                           onClick={() => setGuideFor(s)}
                           className="text-brand-600 hover:underline dark:text-brand-400"
                         >
-                          Cancel guide
+                          {t("cancelGuideLabel")}
                         </button>
                       </td>
                     </tr>
@@ -304,21 +303,21 @@ export default function SubscriptionsPage() {
                 </h2>
                 <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
                   {guideFor.frequency} · {formatMoney(guideFor.amount, "USD")}{" "}
-                  per charge
+                  {t("perChargeLabel")}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setGuideFor(null)}
                 className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
-                aria-label="Close"
+                aria-label={t("closeLabel")}
               >
                 ✕
               </button>
             </div>
 
             {guideLoading ? (
-              <p className="mt-4 text-sm text-slate-400">Loading guide…</p>
+              <p className="mt-4 text-sm text-slate-400">{t("loadingGuide")}</p>
             ) : guide ? (
               <ol className="mt-4 list-decimal space-y-2 pl-5">
                 {guide.steps.map((step, index) => (
@@ -332,7 +331,7 @@ export default function SubscriptionsPage() {
               </ol>
             ) : (
               <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-                No cancellation guide available for this merchant.
+                {t("noCancelGuide")}
               </p>
             )}
 
@@ -343,7 +342,7 @@ export default function SubscriptionsPage() {
                 rel="noopener noreferrer"
                 className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700"
               >
-                Open {guide.merchant} account
+                Open {guide.merchant} {t("openAccountSuffix")}
               </a>
             ) : null}
           </div>

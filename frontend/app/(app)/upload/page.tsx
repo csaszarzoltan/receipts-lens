@@ -34,7 +34,7 @@ export default function UploadPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("addReceipt")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Take a photo or drop a receipt image — OCR extracts the data instantly.
+          {t("uploadDesc")}
         </p>
       </div>
 
@@ -47,19 +47,17 @@ export default function UploadPage() {
         >
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              <span aria-hidden="true">✨</span> AI Scan — coming soon
+              <span aria-hidden="true">✨</span> {t("aiScanComingSoon")}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-              Vision AI reads blurry photos, handwritten amounts and unusual
-              layouts. It will be part of the Pro plan — classic OCR works
-              today for every upload.
+              {t("aiScanDesc")}
             </p>
           </div>
           <span
             className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-            title="AI Scan is not available in this environment"
+            title={t("aiScanNotAvailable")}
           >
-            Pro
+            {t("proBadge")}
           </span>
         </div>
       )}
@@ -67,17 +65,17 @@ export default function UploadPage() {
       <DropZone onFiles={(files) => enqueue(files, { aiScan: AI_SCAN_ENABLED && aiScan })} />
 
       {entries.length > 0 ? (
-        <section className="space-y-3" aria-label="Upload progress">
+        <section className="space-y-3" aria-label={t("uploadProgressLabel")}>
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              Uploading ({entries.length})
+              {t("uploadingTitle")} ({entries.length})
             </h2>
             <button
               type="button"
               onClick={clear}
               className="text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             >
-              Clear all
+              {t("clearAllLabel")}
             </button>
           </div>
           <UploadQueue entries={entries} onRemove={remove} />
@@ -85,8 +83,8 @@ export default function UploadPage() {
       ) : (
         <EmptyState
           icon="📤"
-          title="Ready when you are"
-          description="Your processed receipts will appear here with their OCR results."
+          title={t("readyWhenYouAre")}
+          description={t("readyWhenYouAreDesc")}
         />
       )}
 
@@ -95,14 +93,13 @@ export default function UploadPage() {
 
       <section className="card p-5">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          Batch processing
+          {t("batchProcessingTitle")}
         </h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Dropping multiple files at once processes them in parallel via the
-          batch API — each file above is uploaded individually for a live preview.
+          {t("batchProcessingDesc")}
         </p>
         <Link href="/receipts" className="btn-secondary mt-4 text-sm">
-          See processed receipts →
+          {t("seeProcessedReceipts")}
         </Link>
       </section>
     </div>

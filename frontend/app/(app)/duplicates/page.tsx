@@ -34,7 +34,7 @@ export default function DuplicatesPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("duplicates")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Potential duplicate receipts detected by the matching engine.
+          {t("duplicatesDesc")}
         </p>
       </div>
 
@@ -48,8 +48,8 @@ export default function DuplicatesPage() {
       ) : items.length === 0 ? (
         <EmptyState
           icon="🔄"
-          title="No duplicates found"
-          description="Your receipt data looks clean."
+          title={t("duplicatesNoFoundTitle")}
+          description={t("duplicatesNoFoundDesc")}
         />
       ) : (
         <ul className="space-y-4" aria-label="Duplicate candidates">
@@ -58,7 +58,7 @@ export default function DuplicatesPage() {
             return (
               <li key={key} className="card p-5">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Match confidence:{" "}
+                  {t("matchConfidenceLabel")}{" "}
                   <span className="font-medium text-slate-700 dark:text-slate-200">
                     {Math.round(candidate.confidence * 100)}%
                   </span>
@@ -66,20 +66,20 @@ export default function DuplicatesPage() {
                 <div className="mt-3 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
                     <p className="font-medium text-slate-900 dark:text-slate-100">
-                      {candidate.left.vendor || "Unknown"}
+                      {candidate.left.vendor || t("unknownShort")}
                     </p>
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      {candidate.left.date ?? "No date"} ·{" "}
+                      {candidate.left.date ?? t("noDateShort")} ·{" "}
                       {formatMoney(candidate.left.total, candidate.left.currency)}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">{candidate.left_id}</p>
                   </div>
                   <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
                     <p className="font-medium text-slate-900 dark:text-slate-100">
-                      {candidate.right.vendor || "Unknown"}
+                      {candidate.right.vendor || t("unknownShort")}
                     </p>
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      {candidate.right.date ?? "No date"} ·{" "}
+                      {candidate.right.date ?? t("noDateShort")} ·{" "}
                       {formatMoney(candidate.right.total, candidate.right.currency)}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">{candidate.right_id}</p>
@@ -92,7 +92,7 @@ export default function DuplicatesPage() {
                     disabled={busy === key}
                     className="btn-primary flex-1 text-sm"
                   >
-                    Keep left, remove right
+                    {t("keepLeftRemoveRight")}
                   </button>
                   <button
                     type="button"
@@ -100,7 +100,7 @@ export default function DuplicatesPage() {
                     disabled={busy === key}
                     className="btn-secondary flex-1 text-sm"
                   >
-                    Keep right, remove left
+                    {t("keepRightRemoveLeft")}
                   </button>
                 </div>
               </li>
