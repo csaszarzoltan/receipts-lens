@@ -635,13 +635,45 @@ async def parse_receipt_route(
     file: UploadFile | None = File(default=None, description="Receipt image file"),
     image_url: str | None = Form(default=None, description="Public URL of a receipt image"),
     ai_scan: str | None = Form(default=None, description="Enable AI-mode OCR (vision LLM with Tesseract fallback)"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict:
     """Parse a receipt image returned as structured JSON.
 
     Send either **file** (multipart upload) or **image_url** (form field).
     With **ai_scan=true** the response exposes ``source`` plus
     ``ai_result`` / ``tesseract_result`` payloads.
+
+    Quota gate (ADR-005): when a tenant is identifiable (Bearer session
+    or X-Tenant-ID) the Free 25/mo limit is enforced before OCR —
+    402 quota_exceeded when exhausted; Pro unlimited.
     """
+    # Quota wiring for the legacy public OCR entrypoint — only when
+    # we can resolve a tenant; unauthenticated calls remain rate-limited
+    # via RateLimitMiddleware (5/60) but do not consume quota.
+    _quota_tenant: str | None = None
+    if authorization and authorization.strip().startswith("Bearer "):
+        try:
+            _quota_tenant = service.resolve_session(authorization.strip().removeprefix("Bearer ").strip())["tenant_id"]
+        except Exception:
+            _quota_tenant = None
+    elif x_tenant_id:
+        _quota_tenant = x_tenant_id.strip() or None
+    if _quota_tenant is not None:
+        from app.quota import quota_store
+        from app.subscriptions_api import is_pro
+
+        _q = quota_store.incr_and_check(_quota_tenant, pro=is_pro(_quota_tenant))
+        if not _q["allowed"]:
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "code": "quota_exceeded",
+                    "message": "Free limit reached — upgrade to Pro for unlimited scans ($5/mo).",
+                    "quota": _q,
+                },
+            )
     if file is not None and image_url is not None:
         raise HTTPException(
             status_code=400,
