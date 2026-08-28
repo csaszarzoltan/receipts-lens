@@ -134,6 +134,20 @@ async def upload_receipt(
 ) -> dict[str, Any]:
     if not service.can_write(current):
         raise HTTPException(403, "Read-only role cannot upload receipts")
+    # Quota gate (ADR-005): Free 25/mo, Pro unlimited — check before OCR.
+    from app.quota import quota_store
+    from app.subscriptions_api import is_pro
+
+    quota = quota_store.incr_and_check(current.tenant_id, pro=is_pro(current.tenant_id))
+    if not quota["allowed"]:
+        raise HTTPException(
+            402,
+            {
+                "code": "quota_exceeded",
+                "message": "Free limit reached — upgrade to Pro for unlimited scans ($5/mo).",
+                "quota": quota,
+            },
+        )
     if file.content_type and not file.content_type.startswith("image/"): raise HTTPException(415, "An image file is required")
     data = await file.read()
     if not data: raise HTTPException(422, "The uploaded file is empty")

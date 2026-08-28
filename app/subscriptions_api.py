@@ -19,8 +19,10 @@ detection (``AccountingWorkspace.recurring()``):
 The email-alert toggle preference is persisted through
 ``AdvancedWorkspace.save_preferences()`` so it survives across sessions.
 """
+
 from __future__ import annotations
 
+import os
 import re as _re
 from collections import defaultdict
 from datetime import UTC, date, datetime
@@ -53,6 +55,7 @@ _email_alert_preferences: dict[str, dict[str, bool]] = defaultdict(dict)
 # ---------------------------------------------------------------------------
 # Request / response models
 # ---------------------------------------------------------------------------
+
 
 class _EmailAlertRequest(BaseModel):
     """Body for the email-alert toggle endpoint."""
@@ -149,9 +152,7 @@ def list_subscriptions(current: Actor = Depends(_actor)) -> dict[str, Any]:
         "subscriptions": subscriptions,
         "summary": {
             "total": len(subscriptions),
-            "monthly_total": round(
-                sum(s["monthly_cost"] for s in subscriptions), 2
-            ),
+            "monthly_total": round(sum(s["monthly_cost"] for s in subscriptions), 2),
         },
     }
 
@@ -159,6 +160,7 @@ def list_subscriptions(current: Actor = Depends(_actor)) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Trend-data endpoint — dashboard chart data
 # ---------------------------------------------------------------------------
+
 
 def get_subscription_trend_data(
     tenant: str = "demo",
@@ -228,24 +230,15 @@ def get_subscription_trend_data(
             q = (int(m[5:7]) - 1) // 3 + 1
             quarterly[f"{m[:4]}-Q{q}"] += monthly_totals[m]
         sorted_months_q = sorted(quarterly.keys(), reverse=True)
-        series = [
-            {"month": k, "amount": round(quarterly[k], 2)}
-            for k in sorted_months_q
-        ]
+        series = [{"month": k, "amount": round(quarterly[k], 2)} for k in sorted_months_q]
     elif period == "annual":
         annual: dict[str, float] = defaultdict(float)
         for m in sorted_months:
             annual[m[:4]] += monthly_totals[m]
         sorted_months_a = sorted(annual.keys(), reverse=True)
-        series = [
-            {"month": k, "amount": round(annual[k], 2)}
-            for k in sorted_months_a
-        ]
+        series = [{"month": k, "amount": round(annual[k], 2)} for k in sorted_months_a]
     else:
-        series = [
-            {"month": k, "amount": round(monthly_totals[k], 2)}
-            for k in sorted_months
-        ]
+        series = [{"month": k, "amount": round(monthly_totals[k], 2)} for k in sorted_months]
 
     total = sum(monthly_totals.values())
     count = len(monthly_totals) if monthly_totals else 1
@@ -293,6 +286,7 @@ def subscription_trend_data(
 # Renewal timeline endpoint — upcoming renewals with countdown
 # ---------------------------------------------------------------------------
 
+
 @router.get("/subscriptions/renewal-timeline")
 def renewal_timeline(
     current: Actor = Depends(_actor),
@@ -324,6 +318,7 @@ def renewal_timeline(
 # Email-alert toggle endpoint
 # ---------------------------------------------------------------------------
 
+
 def toggle_email_alert(
     subscription_id: str,
     enabled: bool = True,
@@ -352,9 +347,7 @@ def get_email_alert(
     current: Actor = Depends(_actor),
 ) -> dict[str, Any]:
     """Read back the email alert preference for a subscription."""
-    enabled = _email_alert_preferences.get(
-        current.tenant_id, {}
-    ).get(subscription_id, False)
+    enabled = _email_alert_preferences.get(current.tenant_id, {}).get(subscription_id, False)
     return {"subscription_id": subscription_id, "enabled": enabled}
 
 
@@ -375,6 +368,7 @@ def post_email_alert(
 # ---------------------------------------------------------------------------
 # Cancel guide endpoint (existing)
 # ---------------------------------------------------------------------------
+
 
 def _merchant_from_id(subscription_id: str) -> str:
     """Derive a merchant deterministically from an unresolvable sub id.
@@ -424,5 +418,7 @@ def cancel_guide(
 
 
 def is_pro(tenant_id: str) -> bool:
- import os
- return tenant_id in {x.strip() for x in os.getenv("RECEIPTLENS_PRO_TENANTS","").split(",") if x.strip()}
+    return tenant_id in {
+        x.strip() for x in os.getenv("RECEIPTLENS_PRO_TENANTS", "").split(",") if x.strip()
+    }
+

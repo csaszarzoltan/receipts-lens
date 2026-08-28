@@ -30,15 +30,15 @@ from app.homepage import render_homepage
 from app.ocr import ConfidenceReceipt, check_duplicates, parse_receipt_with_confidence
 from app.product_api import Actor, service
 from app.product_api import router as product_router
-from app.tax_api import router as tax_router
 from app.quota_api import router as quota_router
-from app.sync_api import router as sync_router
 from app.rate_limits import RateLimitMiddleware
 from app.report_generator import generate_csv, generate_pdf
 from app.reports import receipt_store
 from app.security import fetch_image_bytes
 from app.ssrf_guard import validate_scheme_and_host
 from app.subscriptions_api import router as subscriptions_router
+from app.sync_api import router as sync_router
+from app.tax_api import router as tax_router
 from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_vision
 
 logger = logging.getLogger("uvicorn.error")
@@ -219,6 +219,26 @@ class _UnconditionalCorsMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# ---------------------------------------------------------------------------
+# Prod alias — Caddy handle_path /api/* strips the leading /api before
+# proxying to 127.0.0.1:8130. New routers register at /api/v1/* on the
+# backend, so a prod request /api/v1/tax/categories would arrive as
+# /v1/tax/categories and 404. This middleware re-adds the prefix so both
+# prod (stripped) and direct-local (/api/v1) requests resolve.
+# No Caddy reload required — backend alias alone fixes prod 404.
+# ---------------------------------------------------------------------------
+
+class _ApiPrefixAliasMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        p = request.url.path
+        if p.startswith("/v1/"):
+            # Rewrite /v1/* -> /api/v1/* before routing.
+            # Keep query string intact; only mutate path.
+            request.scope["path"] = "/api" + p  # /v1/x -> /api/v1/x
+        return await call_next(request)
+
+
+app.add_middleware(_ApiPrefixAliasMiddleware)
 app.add_middleware(_UnconditionalCorsMiddleware)
 app.include_router(product_router)
 app.include_router(forecast_router)

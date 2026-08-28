@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useUpload } from "@/lib/hooks/useUpload";
+import { useQuota } from "@/lib/hooks/useQuota";
+import QuotaBar from "@/components/QuotaBar";
 import DropZone from "@/components/DropZone";
 import UploadQueue from "@/components/UploadQueue";
 import EmptyState from "@/components/EmptyState";
@@ -27,6 +29,7 @@ import { useTranslation } from "@/lib/i18n";
 export default function UploadPage() {
   const { t } = useTranslation();
   const { entries, enqueue, clear, remove, lastAiResult } = useUpload();
+  const { quota } = useQuota();
   const [aiScan, setAiScan] = useState(false);
 
   return (
@@ -61,6 +64,8 @@ export default function UploadPage() {
           </span>
         </div>
       )}
+
+      {quota ? <QuotaBar used={quota.used} limit={quota.limit} isPro={quota.pro} /> : null}
 
       <DropZone onFiles={(files) => enqueue(files, { aiScan: AI_SCAN_ENABLED && aiScan })} />
 
