@@ -1,0 +1,240 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-31",
+  "methodology_section": "3.1 Feature brief",
+  "brief_count": 29,
+  "briefs": [
+    {
+      "brief_id": "BRIEF-001",
+      "feature_id": "FEAT-001",
+      "title": "Nyilvános bemutatkozás és belépési útvonal",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-001-nyilvanos-bemutatkozas-es-belepesi-utvonal.md",
+      "story_count": 4
+    },
+    {
+      "brief_id": "BRIEF-002",
+      "feature_id": "FEAT-002",
+      "title": "Fiók létrehozása és munkamenet",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-002-fiok-letrehozasa-es-munkamenet.md",
+      "story_count": 6
+    },
+    {
+      "brief_id": "BRIEF-003",
+      "feature_id": "FEAT-003",
+      "title": "Google-belépés és fiók-összekapcsolás",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-003-google-belepes-es-fiok-osszekapcsolas.md",
+      "story_count": 4
+    },
+    {
+      "brief_id": "BRIEF-004",
+      "feature_id": "FEAT-004",
+      "title": "Kezdeti beállítás és első nyugta",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-004-kezdeti-beallitas-es-elso-nyugta.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-005",
+      "feature_id": "FEAT-005",
+      "title": "Háztartási áttekintő és napi teendők",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-005-haztartasi-attekinto-es-napi-teendok.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-006",
+      "feature_id": "FEAT-006",
+      "title": "Nyugta feltöltése és feldolgozási sor",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-006-nyugta-feltoltese-es-feldolgozasi-sor.md",
+      "story_count": 7
+    },
+    {
+      "brief_id": "BRIEF-007",
+      "feature_id": "FEAT-007",
+      "title": "AI-alapú nyugtafelismerés és bizonytalanság",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-007-ai-alapu-nyugtafelismeres-es-bizonytalansag.md",
+      "story_count": 6
+    },
+    {
+      "brief_id": "BRIEF-008",
+      "feature_id": "FEAT-008",
+      "title": "Nyugták listája, keresése és részletei",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-008-nyugtak-listaja-keresese-es-reszletei.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-009",
+      "feature_id": "FEAT-009",
+      "title": "Nyugtaellenőrzés és javítás",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-009-nyugtaellenorzes-es-javitas.md",
+      "story_count": 6
+    },
+    {
+      "brief_id": "BRIEF-010",
+      "feature_id": "FEAT-010",
+      "title": "Ismétlődő és duplikált nyugták kezelése",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-010-ismetlodo-es-duplikalt-nyugtak-kezelese.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-011",
+      "feature_id": "FEAT-011",
+      "title": "Kategorizálás és háztartási könyvelési besorolás",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-011-kategorizalas-es-haztartasi-konyvelesi-besorolas.md",
+      "story_count": 4
+    },
+    {
+      "brief_id": "BRIEF-012",
+      "feature_id": "FEAT-012",
+      "title": "Háztartási keretek és riasztások",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-012-haztartasi-keretek-es-riasztasok.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-013",
+      "feature_id": "FEAT-013",
+      "title": "Költési elemzés és előrejelzés",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-013-koltesi-elemzes-es-elorejelzes.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-014",
+      "feature_id": "FEAT-014",
+      "title": "Jelentések létrehozása és letöltése",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-014-jelentesek-letrehozasa-es-letoltese.md",
+      "story_count": 4
+    },
+    {
+      "brief_id": "BRIEF-015",
+      "feature_id": "FEAT-015",
+      "title": "Export-előkészítés és adatátadás",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-015-export-elokeszites-es-adatatadas.md",
+      "story_count": 6
+    },
+    {
+      "brief_id": "BRIEF-016",
+      "feature_id": "FEAT-016",
+      "title": "Háztartási együttműködés és családi postafiók",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-016-haztartasi-egyuttmukodes-es-csaladi-postafiok.md",
+      "story_count": 6
+    },
+    {
+      "brief_id": "BRIEF-017",
+      "feature_id": "FEAT-017",
+      "title": "Könyvelő meghívása és biztonságos megosztás",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-017-konyvelo-meghivasa-es-biztonsagos-megosztas.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-018",
+      "feature_id": "FEAT-018",
+      "title": "Külső szolgáltatások csatlakoztatása",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-018-kulso-szolgaltatasok-csatlakoztatasa.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-019",
+      "feature_id": "FEAT-019",
+      "title": "Szinkronizálás és egyeztetés",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-019-szinkronizalas-es-egyeztetes.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-020",
+      "feature_id": "FEAT-020",
+      "title": "Jóváhagyások és kontrollált változtatások",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-020-jovahagyasok-es-kontrollalt-valtoztatasok.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-021",
+      "feature_id": "FEAT-021",
+      "title": "Automatizálások és feldolgozási szabályok",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-021-automatizalasok-es-feldolgozasi-szabalyok.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-022",
+      "feature_id": "FEAT-022",
+      "title": "Előfizetés, kvóta és használati korlátok",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-022-elofizetes-kvota-es-hasznalati-korlatok.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-023",
+      "feature_id": "FEAT-023",
+      "title": "Adózási munkaterület és auditcsomag",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-023-adozasi-munkaterulet-es-auditcsomag.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-024",
+      "feature_id": "FEAT-024",
+      "title": "Profil, nyelv, pénznem és megjelenés",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-024-profil-nyelv-penznem-es-megjelenes.md",
+      "story_count": 6
+    },
+    {
+      "brief_id": "BRIEF-025",
+      "feature_id": "FEAT-025",
+      "title": "Adatvédelem, megőrzés és törlés",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-025-adatvedelem-megorzes-es-torles.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-026",
+      "feature_id": "FEAT-026",
+      "title": "Értesítések és állapotüzenetek",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-026-ertesitesek-es-allapotuzenetek.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-027",
+      "feature_id": "FEAT-027",
+      "title": "Hozzáférhetőség és reszponzív navigáció",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-027-hozzaferhetoseg-es-reszponziv-navigacio.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-028",
+      "feature_id": "FEAT-028",
+      "title": "Rendszerállapot, biztonság és működési átláthatóság",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-028-rendszerallapot-biztonsag-es-mukodesi-atlathatosag.md",
+      "story_count": 4
+    },
+    {
+      "brief_id": "BRIEF-029",
+      "feature_id": "FEAT-029",
+      "title": "OCR-minőség és adminisztratív diagnosztika",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-029-ocr-minoseg-es-adminisztrativ-diagnosztika.md",
+      "story_count": 4
+    }
+  ]
+}
