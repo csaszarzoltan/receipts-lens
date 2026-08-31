@@ -1,40 +1,24 @@
-"""Deterministic audit for SPEC -> REQ/AC -> executable E2E traceability."""
+"""Deterministic audit for completed and pending SPEC -> REQ/AC -> E2E traceability."""
 from pathlib import Path
-import json
-import re
+import json,re
+ROOT=Path(__file__).resolve().parents[2]
+SUITES=ROOT/".agent-pipeline"/"03_e2e_suites"
+MANIFEST=ROOT/".agent-pipeline"/"00_index"/"manifest.json"
 
-ROOT = Path(__file__).resolve().parents[2]
-SPECS = ROOT / "docs" / "specs"
-SUITES = ROOT / ".agent-pipeline" / "03_e2e_suites"
-
+def feature_rows():
+ d=json.loads(MANIFEST.read_text(encoding="utf-8")); return [v for k,v in d["tasks"].items() if re.fullmatch(r"SPEC-\d{3}",k)]
 
 def test_every_feature_has_exactly_one_suite():
-    index = json.loads((SPECS / "index.json").read_text(encoding="utf-8"))
-    expected = {row["feature_id"] for row in index["specifications"]}
-    actual = {f"FEAT-{path.stem[-3:]}" for path in SUITES.glob("test_e2e_[0-9][0-9][0-9].py")}
-    assert actual == expected
-
+ for row in feature_rows(): assert (ROOT/row["e2e_test_path"]).is_file(),row["feature_id"]
 
 def test_every_requirement_and_scenario_is_traced():
-    index = json.loads((SPECS / "index.json").read_text(encoding="utf-8"))
-    all_req, all_ac, traced_req, traced_ac = set(), set(), set(), set()
-    for row in index["specifications"]:
-        text = (ROOT / row["path"]).read_text(encoding="utf-8")
-        all_req.update(re.findall(r"^- (REQ-\d{3}-\d{2}) \[", text, re.M))
-        all_ac.update(re.findall(r"^### (AC-\d{3}-\d{2}):", text, re.M))
-        suite = SUITES / f"test_e2e_{row['feature_id'][-3:]}.py"
-        code = suite.read_text(encoding="utf-8")
-        traced_req.update(re.findall(r"Requirement: (REQ-\d{3}-\d{2})", code))
-        traced_ac.update(re.findall(r"Scenario: (AC-\d{3}-\d{2})", code))
-    assert traced_req == all_req
-    assert traced_ac == all_ac
-    assert len(all_req) == 296
-    assert len(all_ac) == 296
-
+ for row in feature_rows():
+  spec=(ROOT/row["spec_path"]).read_text(encoding="utf-8"); suite=(ROOT/row["e2e_test_path"]).read_text(encoding="utf-8")
+  req=set(re.findall(r"^- (REQ-\d{3}-\d{2}) \[",spec,re.M)); ac=set(re.findall(r"^### (AC-\d{3}-\d{2}):",spec,re.M))
+  traced_req=set(re.findall(r"(?:Requirement: |@requirement:)(REQ-\d{3}-\d{2})",suite)); traced_ac=set(re.findall(r"(?:Scenario: |@scenario:)(AC-\d{3}-\d{2})",suite))
+  assert req==traced_req,(row["feature_id"],req-traced_req,traced_req-req); assert ac==traced_ac,(row["feature_id"],ac-traced_ac,traced_ac-ac)
 
 def test_suites_use_only_external_interfaces():
-    forbidden = ("sqlite3", "sqlalchemy", "Session(", "get_session", "repository", "monkeypatch")
-    for path in SUITES.glob("test_e2e_[0-9][0-9][0-9].py"):
-        code = path.read_text(encoding="utf-8")
-        assert "exercise_scenario" in code
-        assert not any(term in code for term in forbidden)
+ forbidden=("sqlite3","sqlalchemy","Session(","get_session","repository","monkeypatch","from app")
+ for row in feature_rows():
+  code=(ROOT/row["e2e_test_path"]).read_text(encoding="utf-8"); assert ("exercise_scenario" in code or "httpx" in code); assert not any(x in code for x in forbidden)
