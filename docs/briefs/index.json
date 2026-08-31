@@ -2,7 +2,7 @@
   "schema_version": 1,
   "generated_at": "2026-08-31",
   "methodology_section": "3.1 Feature brief",
-  "brief_count": 29,
+  "brief_count": 37,
   "briefs": [
     {
       "brief_id": "BRIEF-001",
@@ -235,6 +235,70 @@
       "status": "READY_FOR_SPEC",
       "path": ".product/briefs/BRIEF-029-ocr-minoseg-es-adminisztrativ-diagnosztika.md",
       "story_count": 4
+    },
+    {
+      "brief_id": "BRIEF-030",
+      "feature_id": "FEAT-030",
+      "title": "Jelszó nélküli belépés e-mailes hivatkozással",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-030-jelszo-nelkuli-belepes-e-mailes-hivatkozassal.md",
+      "story_count": 4
+    },
+    {
+      "brief_id": "BRIEF-031",
+      "feature_id": "FEAT-031",
+      "title": "Mentett nyugtanézetek és visszatérő keresések",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-031-mentett-nyugtanezetek-es-visszatero-keresesek.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-032",
+      "feature_id": "FEAT-032",
+      "title": "Nyugta változástörténete és auditálható javítás",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-032-nyugta-valtozastortenete-es-auditalhato-javitas.md",
+      "story_count": 4
+    },
+    {
+      "brief_id": "BRIEF-033",
+      "feature_id": "FEAT-033",
+      "title": "Szokatlan költések felismerése és magyarázata",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-033-szokatlan-koltesek-felismerese-es-magyarazata.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-034",
+      "feature_id": "FEAT-034",
+      "title": "E-mailben érkező nyugták fogadása",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-034-e-mailben-erkezo-nyugtak-fogadasa.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-035",
+      "feature_id": "FEAT-035",
+      "title": "Ismétlődő kiadások és előfizetések felismerése",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-035-ismetlodo-kiadasok-es-elofizetesek-felismerese.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-036",
+      "feature_id": "FEAT-036",
+      "title": "Pénznemváltás és átváltási árfolyam kezelése",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-036-penznemvaltas-es-atvaltasi-arfolyam-kezelese.md",
+      "story_count": 5
+    },
+    {
+      "brief_id": "BRIEF-037",
+      "feature_id": "FEAT-037",
+      "title": "Diagnosztikai csomag és támogatási hibaelemzés",
+      "status": "READY_FOR_SPEC",
+      "path": ".product/briefs/BRIEF-037-diagnosztikai-csomag-es-tamogatasi-hibaelemzes.md",
+      "story_count": 5
     }
   ]
 }

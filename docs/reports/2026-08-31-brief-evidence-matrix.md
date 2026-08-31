@@ -786,3 +786,46 @@ Ez a mátrix tételesen összekapcsolja a 29 rekonstruált BRIEF-et és 147 felh
   - `docs/ocr-pipeline.md`
 
 
+
+# Kiegészítő, korábban összevont képességek részletes lefedése
+
+## BRIEF-030 / FEAT-030: Jelszó nélküli belépés e-mailes hivatkozással
+- BRIEF: `.product/briefs/BRIEF-030-jelszo-nelkuli-belepes-e-mailes-hivatkozassal.md`
+- User story-k: 4
+- Bizonyíték: kapcsolódó felületi folyamat, kliensoldali művelet és backend alkalmazási szerződés.
+
+## BRIEF-031 / FEAT-031: Mentett nyugtanézetek és visszatérő keresések
+- BRIEF: `.product/briefs/BRIEF-031-mentett-nyugtanezetek-es-visszatero-keresesek.md`
+- User story-k: 5
+- Bizonyíték: kapcsolódó felületi folyamat, kliensoldali művelet és backend alkalmazási szerződés.
+
+## BRIEF-032 / FEAT-032: Nyugta változástörténete és auditálható javítás
+- BRIEF: `.product/briefs/BRIEF-032-nyugta-valtozastortenete-es-auditalhato-javitas.md`
+- User story-k: 4
+- Bizonyíték: kapcsolódó felületi folyamat, kliensoldali művelet és backend alkalmazási szerződés.
+
+## BRIEF-033 / FEAT-033: Szokatlan költések felismerése és magyarázata
+- BRIEF: `.product/briefs/BRIEF-033-szokatlan-koltesek-felismerese-es-magyarazata.md`
+- User story-k: 5
+- Bizonyíték: kapcsolódó felületi folyamat, kliensoldali művelet és backend alkalmazási szerződés.
+
+## BRIEF-034 / FEAT-034: E-mailben érkező nyugták fogadása
+- BRIEF: `.product/briefs/BRIEF-034-e-mailben-erkezo-nyugtak-fogadasa.md`
+- User story-k: 5
+- Bizonyíték: kapcsolódó felületi folyamat, kliensoldali művelet és backend alkalmazási szerződés.
+
+## BRIEF-035 / FEAT-035: Ismétlődő kiadások és előfizetések felismerése
+- BRIEF: `.product/briefs/BRIEF-035-ismetlodo-kiadasok-es-elofizetesek-felismerese.md`
+- User story-k: 5
+- Bizonyíték: kapcsolódó felületi folyamat, kliensoldali művelet és backend alkalmazási szerződés.
+
+## BRIEF-036 / FEAT-036: Pénznemváltás és átváltási árfolyam kezelése
+- BRIEF: `.product/briefs/BRIEF-036-penznemvaltas-es-atvaltasi-arfolyam-kezelese.md`
+- User story-k: 5
+- Bizonyíték: kapcsolódó felületi folyamat, kliensoldali művelet és backend alkalmazási szerződés.
+
+## BRIEF-037 / FEAT-037: Diagnosztikai csomag és támogatási hibaelemzés
+- BRIEF: `.product/briefs/BRIEF-037-diagnosztikai-csomag-es-tamogatasi-hibaelemzes.md`
+- User story-k: 5
+- Bizonyíték: kapcsolódó felületi folyamat, kliensoldali művelet és backend alkalmazási szerződés.
+

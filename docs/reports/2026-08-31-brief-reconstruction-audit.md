@@ -53,3 +53,19 @@ A végrehajtott ellenőrzések eredményeit a tesztfuttató eszközök segítsé
 7. **Regressziós és rekonstrukciós tesztfuttatás (`pytest tests/unit/test_brief_reconstruction.py` & `pytest tests/unit/test_brief_quality_gates.py`):**
    - **Eredmény:** SIKERES (PASSED). Mind a 9 dedikált rekonstrukciós és minőségi kapu teszt hiba nélkül lefutott (9 passed).
 
+
+## Második teljes rekonstrukciós ellenőrzés
+
+- A korábbi 29 BRIEF mellé 8 önálló, addig túl tág BRIEF-ekbe rejtett felhasználói eredmény került: jelszó nélküli belépés, mentett nézetek, változástörténet, anomáliák, e-mailes nyugtafogadás, ismétlődő kiadások, pénznemváltás és diagnosztikai csomag.
+- Végső készlet: **37 BRIEF és 185 egyedi user story**.
+- A három meglévő BRIEF-könyvtár tartalma egységesítve lett; az autoritatív hely a `.product/briefs`.
+- Csonka történet: **0**. Tiltott technikai részlet: **0**. Pontos duplikátum: **0**.
+- Legnagyobb páronkénti szöveghasonlóság: **0.761**.
+- Célzott BRIEF-tesztek: **3 sikeres**.
+
+## Teljes regresszió
+
+- A teljes Pytest regresszió ténylegesen elindult.
+- A 120 másodperces futási korlátnál 55 százalékos előrehaladásnál időtúllépés miatt megszakadt.
+- A részfutás több, a BRIEF-módosításoktól független meglévő teszthibát jelzett; a teljes hibajegyzék a futás befejezetlensége miatt nem tekinthető véglegesnek.
+- Teljes regressziós sikert ezért nem állítunk. A célzott BRIEF-minőségi tesztek 3/3 sikeresek.
