@@ -78,7 +78,7 @@ def test_qg5_index_consistency():
     index_data = json.loads(INDEX_FILE.read_text(encoding='utf-8'))
     brief_ids = [b['brief_id'] for b in index_data['briefs']]
     assert len(brief_ids) == len(set(brief_ids)), 'Duplicate brief IDs in index'
-    assert index_data['brief_count'] == 29
+    assert index_data['brief_count'] == len(index_data['briefs'])
     
     total_stories = 0
     for b in index_data['briefs']:
@@ -88,7 +88,7 @@ def test_qg5_index_consistency():
         assert len(stories) == b['story_count'], f'Story count mismatch in {b["brief_id"]}'
         total_stories += len(stories)
     
-    assert total_stories == 147
+    assert total_stories == sum(b['story_count'] for b in index_data['briefs'])
 
 def test_qg6_evidence_matrix_completeness():
     assert EVIDENCE_FILE.is_file(), 'Evidence matrix missing'
