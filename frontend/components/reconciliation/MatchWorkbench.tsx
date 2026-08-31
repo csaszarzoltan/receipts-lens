@@ -1,0 +1,4 @@
+"use client";
+import {useEffect,useState} from "react";
+import {listItems,type FeatureItem} from "@/lib/reconciliation";
+export default function MatchWorkbench(){const [items,setItems]=useState<FeatureItem[]>([]);const [status,setStatus]=useState("loading");useEffect(()=>{listItems().then(x=>{setItems(x);setStatus("ready")}).catch(()=>setStatus("error"))},[]);return <section data-testid="reconciliation-page"><h1>Bank- és kártyatranzakciók párosítása</h1><p data-testid="reconciliation-status" aria-live="polite">{status}</p><div data-testid="reconciliation-evidence">{items.length} elem</div><button data-testid="reconciliation-primary-action" type="button">Új művelet</button>{status==="error"&&<button data-testid="reconciliation-conflict" onClick={()=>location.reload()}>Újrapróbálás</button>}</section>}

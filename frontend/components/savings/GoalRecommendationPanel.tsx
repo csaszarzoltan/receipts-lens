@@ -1,0 +1,4 @@
+"use client";
+import {useEffect,useState} from "react";
+import {listItems,type FeatureItem} from "@/lib/savings";
+export default function GoalRecommendationPanel(){const [items,setItems]=useState<FeatureItem[]>([]);const [status,setStatus]=useState("loading");useEffect(()=>{listItems().then(x=>{setItems(x);setStatus("ready")}).catch(()=>setStatus("error"))},[]);return <section data-testid="savings_goals-page"><h1>Kiadási célok és megtakarítási lehetőségek</h1><p data-testid="savings_goals-status" aria-live="polite">{status}</p><div data-testid="savings_goals-evidence">{items.length} elem</div><button data-testid="savings_goals-primary-action" type="button">Új művelet</button>{status==="error"&&<button data-testid="savings_goals-conflict" onClick={()=>location.reload()}>Újrapróbálás</button>}</section>}

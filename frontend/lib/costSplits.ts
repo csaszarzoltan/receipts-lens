@@ -1,0 +1,2 @@
+export type FeatureItem={id:string;tenant_id:string;status:string;revision:number;client_reference:string;data:Record<string,unknown>};
+export async function listItems():Promise<FeatureItem[]> { const tenant=localStorage.getItem("receipts-lens-tenant")||"demo"; const token=localStorage.getItem("receipts-lens-session-token")||""; const r=await fetch("/api/v2/cost-splits",{headers:{"X-Tenant-ID":tenant,"X-Role":localStorage.getItem("receipts-lens-role")||"admin",Authorization:`Bearer ${token}`}}); if(!r.ok) throw new Error(`HTTP ${r.status}`); return (await r.json()).items; }

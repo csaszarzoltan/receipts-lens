@@ -18,8 +18,8 @@ def headers(tenant: str = "tenant-a", *, authorized: bool = True, key: str | Non
     return h
 
 @pytest.fixture
-async def client():
-    async with httpx.AsyncClient(base_url=BASE_URL, timeout=30.0) as c: yield c
+def client():
+    return httpx.AsyncClient(base_url=BASE_URL, timeout=30.0)
 
 async def test_e2e_045_ac_01_positive_path(client: httpx.AsyncClient):
     """@requirement:REQ-045-01 @scenario:AC-045-01"""

@@ -1,0 +1,4 @@
+"use client";
+import {useEffect,useState} from "react";
+import {listItems,type FeatureItem} from "@/lib/missingReceipts";
+export default function MissingReceiptInbox(){const [items,setItems]=useState<FeatureItem[]>([]);const [status,setStatus]=useState("loading");useEffect(()=>{listItems().then(x=>{setItems(x);setStatus("ready")}).catch(()=>setStatus("error"))},[]);return <section data-testid="missing_receipts-page"><h1>Hiányzó nyugták követése</h1><p data-testid="missing_receipts-status" aria-live="polite">{status}</p><div data-testid="missing_receipts-evidence">{items.length} elem</div><button data-testid="missing_receipts-primary-action" type="button">Új művelet</button>{status==="error"&&<button data-testid="missing_receipts-conflict" onClick={()=>location.reload()}>Újrapróbálás</button>}</section>}

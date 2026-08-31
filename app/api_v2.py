@@ -11,13 +11,24 @@ from datetime import UTC
 
 from fastapi import APIRouter, File, Form, UploadFile
 from fastapi.responses import Response
+from app.reconciliation_api import router as feature_38_router
+from app.missing_receipt_api import router as feature_39_router
+from app.warranty_api import router as feature_40_router
+from app.price_tracking_api import router as feature_41_router
+from app.refund_api import router as feature_42_router
+from app.cost_split_api import router as feature_43_router
+from app.savings_api import router as feature_44_router
+from app.offline_sync_api import router as feature_45_router
+from app.quality_task_api import router as feature_46_router
+from app.period_close_api import router as feature_47_router
+from app.mobile_receipt_api import router as feature_48_router
 
-batch_router = APIRouter(prefix="/api/v1")
+batch_router = APIRouter()
 
 
 # ---- Batch Processing Endpoints ----
 
-@batch_router.post("/receipts/batch")
+@batch_router.post("/api/v1/receipts/batch")
 async def batch_parse_receipts(
     files: list[UploadFile] | None = File(default=None),
     image_urls: str | None = Form(default=None),
@@ -79,7 +90,7 @@ async def batch_parse_receipts(
     return {"job_id": job_id, "status": "queued", "total": len(items)}
 
 
-@batch_router.get("/receipts/batch/{job_id}")
+@batch_router.get("/api/v1/receipts/batch/{job_id}")
 async def batch_job_status(job_id: str) -> dict:
     """Poll batch processing progress."""
     from app.batch import _batch_jobs
@@ -115,7 +126,7 @@ async def list_export_formats() -> dict:
     return {"formats": formats}
 
 
-@batch_router.get("/receipts/export/{format}")
+@batch_router.get("/api/v1/receipts/export/{format}")
 async def export_receipts_endpoint(
     format: str,
     date_from: str | None = None,
@@ -133,3 +144,17 @@ async def export_receipts_endpoint(
     exporter = ReceiptExporter(format)
     csv_str = exporter.export_csv([])
     return Response(content=csv_str, media_type="text/csv")
+
+
+# FEAT-038..048 routers
+batch_router.include_router(feature_38_router)
+batch_router.include_router(feature_39_router)
+batch_router.include_router(feature_40_router)
+batch_router.include_router(feature_41_router)
+batch_router.include_router(feature_42_router)
+batch_router.include_router(feature_43_router)
+batch_router.include_router(feature_44_router)
+batch_router.include_router(feature_45_router)
+batch_router.include_router(feature_46_router)
+batch_router.include_router(feature_47_router)
+batch_router.include_router(feature_48_router)
