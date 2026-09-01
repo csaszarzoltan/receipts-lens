@@ -231,10 +231,14 @@ class _UnconditionalCorsMiddleware(BaseHTTPMiddleware):
 class _ApiPrefixAliasMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         p = request.url.path
-        if p.startswith("/v1/"):
-            # Rewrite /v1/* -> /api/v1/* before routing.
-            # Keep query string intact; only mutate path.
-            request.scope["path"] = "/api" + p  # /v1/x -> /api/v1/x
+        # Caddy handle_path /api/* strips the leading /api before proxying.
+        # Backend registers versioned APIs at /api/vN/*, so after the strip
+        # the request arrives as /vN/* (e.g. /v1/tax -> should be /api/v1/tax,
+        # /v2/cost-splits -> /api/v2/cost-splits). Rewrite any /v<digit>/ back
+        # to /api/v<digit>/ before routing. Covers /v1, /v2 and future versions.
+        if p.startswith("/v") and len(p) > 2 and p[2].isdigit() and (len(p) == 3 or p[3] == "/"):
+            # /v1, /v1/, /v1/x, /v2/x ... -> /api/vN/...
+            request.scope["path"] = "/api" + p
         return await call_next(request)
 
 
