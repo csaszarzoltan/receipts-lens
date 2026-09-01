@@ -41,7 +41,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
           setChecking(false);
           setAuthed(true);
         }
-      } catch {
+      } catch (err) {
+        console.error("resolveSession failed:", err);
         clearSessionToken();
         if (!cancelled) {
           setChecking(false);

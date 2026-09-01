@@ -7,7 +7,19 @@ export const SESSION_KEY = "receiptlens.session";
 let cachedSessionToken: string | null = null;
 
 export async function getOrCreateSessionToken(apiBase: string = "http://127.0.0.1:8123"): Promise<string> {
-  if (cachedSessionToken) return cachedSessionToken;
+  if (cachedSessionToken) {
+    try {
+      const meRes = await fetch(`${apiBase}/auth/session/me`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_token: cachedSessionToken }),
+      });
+      if (meRes.ok) return cachedSessionToken;
+    } catch {
+      // invalid or backend restarted
+    }
+    cachedSessionToken = null;
+  }
   try {
     const reqRes = await fetch(`${apiBase}/auth/magic-link-request`, {
       method: "POST",
