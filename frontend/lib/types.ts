@@ -482,6 +482,7 @@ export interface PermissionMatrix {
 
 export interface Preferences {
   language: string;
+  base_currency: string;
   compact: boolean;
   high_contrast: boolean;
   onboarding_done: boolean;

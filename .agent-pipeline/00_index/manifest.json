@@ -472,133 +472,133 @@
       "feature_id": "FEAT-038",
       "brief_id": "BRIEF-038",
       "title": "Bank- és kártyatranzakciók párosítása",
-      "status": "IMPLEMENTED_AWAITING_GUI_QA",
+      "status": "COMPLETED",
       "retry_count": 0,
-      "spec_path": ".agent-pipeline/02_specs/pending/SPEC-038-bank-es-kartyatranzakciok-parositasa.md",
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-038-bank-es-kartyatranzakciok-parositasa.md",
       "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_038.py",
       "requirements": 8,
       "acceptance_scenarios": 8,
-      "last_updated": "2026-08-31T16:19:00+02:00"
+      "last_updated": "2026-08-31T17:08:00+02:00"
     },
     "SPEC-039": {
       "feature_id": "FEAT-039",
       "brief_id": "BRIEF-039",
       "title": "Hiányzó nyugták követése",
-      "status": "IMPLEMENTED_AWAITING_GUI_QA",
+      "status": "COMPLETED",
       "retry_count": 0,
-      "spec_path": ".agent-pipeline/02_specs/pending/SPEC-039-hianyzo-nyugtak-kovetese.md",
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-039-hianyzo-nyugtak-kovetese.md",
       "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_039.py",
       "requirements": 8,
       "acceptance_scenarios": 8,
-      "last_updated": "2026-08-31T16:19:00+02:00"
+      "last_updated": "2026-08-31T17:08:00+02:00"
     },
     "SPEC-040": {
       "feature_id": "FEAT-040",
       "brief_id": "BRIEF-040",
       "title": "Garanciák és visszaküldési határidők",
-      "status": "IMPLEMENTED_AWAITING_GUI_QA",
+      "status": "COMPLETED",
       "retry_count": 0,
-      "spec_path": ".agent-pipeline/02_specs/pending/SPEC-040-garanciak-es-visszakuldesi-hataridok.md",
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-040-garanciak-es-visszakuldesi-hataridok.md",
       "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_040.py",
       "requirements": 8,
       "acceptance_scenarios": 8,
-      "last_updated": "2026-08-31T16:19:00+02:00"
+      "last_updated": "2026-08-31T17:08:00+02:00"
     },
     "SPEC-041": {
       "feature_id": "FEAT-041",
       "brief_id": "BRIEF-041",
       "title": "Háztartási bevásárlási árfigyelés",
-      "status": "IMPLEMENTED_AWAITING_GUI_QA",
+      "status": "COMPLETED",
       "retry_count": 0,
-      "spec_path": ".agent-pipeline/02_specs/pending/SPEC-041-haztartasi-bevasarlasi-arfigyeles.md",
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-041-haztartasi-bevasarlasi-arfigyeles.md",
       "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_041.py",
       "requirements": 8,
       "acceptance_scenarios": 8,
-      "last_updated": "2026-08-31T16:19:00+02:00"
+      "last_updated": "2026-08-31T17:08:00+02:00"
     },
     "SPEC-042": {
       "feature_id": "FEAT-042",
       "brief_id": "BRIEF-042",
       "title": "Visszatérítések és sztornók egyeztetése",
-      "status": "IMPLEMENTED_AWAITING_GUI_QA",
+      "status": "COMPLETED",
       "retry_count": 0,
-      "spec_path": ".agent-pipeline/02_specs/pending/SPEC-042-visszateritesek-es-sztornok-egyeztetese.md",
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-042-visszateritesek-es-sztornok-egyeztetese.md",
       "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_042.py",
       "requirements": 8,
       "acceptance_scenarios": 8,
-      "last_updated": "2026-08-31T16:19:00+02:00"
+      "last_updated": "2026-08-31T17:08:00+02:00"
     },
     "SPEC-043": {
       "feature_id": "FEAT-043",
       "brief_id": "BRIEF-043",
       "title": "Megosztott vásárlások és költségfelosztás",
-      "status": "IMPLEMENTED_AWAITING_GUI_QA",
+      "status": "COMPLETED",
       "retry_count": 0,
-      "spec_path": ".agent-pipeline/02_specs/pending/SPEC-043-megosztott-vasarlasok-es-koltsegfelosztas.md",
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-043-megosztott-vasarlasok-es-koltsegfelosztas.md",
       "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_043.py",
       "requirements": 8,
       "acceptance_scenarios": 8,
-      "last_updated": "2026-08-31T16:19:00+02:00"
+      "last_updated": "2026-08-31T17:08:00+02:00"
     },
     "SPEC-044": {
       "feature_id": "FEAT-044",
       "brief_id": "BRIEF-044",
       "title": "Kiadási célok és megtakarítási lehetőségek",
-      "status": "IMPLEMENTED_AWAITING_GUI_QA",
+      "status": "COMPLETED",
       "retry_count": 0,
-      "spec_path": ".agent-pipeline/02_specs/pending/SPEC-044-kiadasi-celok-es-megtakaritasi-lehetosegek.md",
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-044-kiadasi-celok-es-megtakaritasi-lehetosegek.md",
       "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_044.py",
       "requirements": 8,
       "acceptance_scenarios": 8,
-      "last_updated": "2026-08-31T16:19:00+02:00"
+      "last_updated": "2026-08-31T17:08:00+02:00"
     },
     "SPEC-045": {
       "feature_id": "FEAT-045",
       "brief_id": "BRIEF-045",
       "title": "Offline nyugtarögzítés és későbbi szinkronizálás",
-      "status": "IMPLEMENTED_AWAITING_GUI_QA",
+      "status": "COMPLETED",
       "retry_count": 0,
-      "spec_path": ".agent-pipeline/02_specs/pending/SPEC-045-offline-nyugtarogzites-es-kesobbi-szinkronizalas.md",
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-045-offline-nyugtarogzites-es-kesobbi-szinkronizalas.md",
       "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_045.py",
       "requirements": 8,
       "acceptance_scenarios": 8,
-      "last_updated": "2026-08-31T16:19:00+02:00"
+      "last_updated": "2026-08-31T17:08:00+02:00"
     },
     "SPEC-046": {
       "feature_id": "FEAT-046",
       "brief_id": "BRIEF-046",
       "title": "Adatminőségi feladatközpont",
-      "status": "IMPLEMENTED_AWAITING_GUI_QA",
+      "status": "COMPLETED",
       "retry_count": 0,
-      "spec_path": ".agent-pipeline/02_specs/pending/SPEC-046-adatminosegi-feladatkozpont.md",
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-046-adatminosegi-feladatkozpont.md",
       "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_046.py",
       "requirements": 8,
       "acceptance_scenarios": 8,
-      "last_updated": "2026-08-31T16:19:00+02:00"
+      "last_updated": "2026-08-31T17:08:00+02:00"
     },
     "SPEC-047": {
       "feature_id": "FEAT-047",
       "brief_id": "BRIEF-047",
       "title": "Könyvelési időszak lezárása",
-      "status": "IMPLEMENTED_AWAITING_GUI_QA",
+      "status": "COMPLETED",
       "retry_count": 0,
-      "spec_path": ".agent-pipeline/02_specs/pending/SPEC-047-konyvelesi-idoszak-lezarasa.md",
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-047-konyvelesi-idoszak-lezarasa.md",
       "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_047.py",
       "requirements": 8,
       "acceptance_scenarios": 8,
-      "last_updated": "2026-08-31T16:19:00+02:00"
+      "last_updated": "2026-08-31T17:08:00+02:00"
     },
     "SPEC-048": {
       "feature_id": "FEAT-048",
       "brief_id": "BRIEF-048",
       "title": "Mobil nyugtakezelési munkafolyamat optimalizálása",
-      "status": "IMPLEMENTED_AWAITING_GUI_QA",
+      "status": "COMPLETED",
       "retry_count": 0,
-      "spec_path": ".agent-pipeline/02_specs/pending/SPEC-048-mobil-nyugtakezelesi-munkafolyamat-optimalizalasa.md",
+      "spec_path": ".agent-pipeline/02_specs/done/SPEC-048-mobil-nyugtakezelesi-munkafolyamat-optimalizalasa.md",
       "e2e_test_path": ".agent-pipeline/03_e2e_suites/test_e2e_048.py",
       "requirements": 8,
       "acceptance_scenarios": 8,
-      "last_updated": "2026-08-31T16:19:00+02:00"
+      "last_updated": "2026-08-31T17:08:00+02:00"
     }
   }
 }

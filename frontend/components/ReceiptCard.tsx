@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReceiptItem } from "@/lib/types";
-import Money from "@/components/Money";
+import ConvertedMoney from "@/components/ConvertedMoney";
 import StatusBadge from "@/components/StatusBadge";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { formatDate } from "@/lib/utils";
@@ -29,11 +29,7 @@ export default function ReceiptCard({ item }: ReceiptCardProps) {
         <StatusBadge status={item.status} />
       </div>
       <div className="mt-3 flex items-center justify-between">
-        <Money
-          amount={receipt.total}
-          currency={receipt.currency}
-          className="text-lg font-semibold text-slate-900 dark:text-slate-100"
-        />
+        <span className="text-lg font-semibold text-slate-900 dark:text-slate-100"><ConvertedMoney amount={receipt.total} currency={receipt.currency} /></span>
         {receipt.confidence && Object.keys(receipt.confidence).length > 0 ? (
           <ConfidenceBadge
             value={Math.min(...Object.values(receipt.confidence).filter((v) => v > 0), 1)}

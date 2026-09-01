@@ -50,7 +50,7 @@ Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási adate
 
 ## 5. Funkcionális követelmények
 
-- REQ-036-01 [MUST]: Felhasználóként szeretném a nyugta eredeti pénznemét és összegét megőrizni, hogy a forrásadat visszakövethető maradjon.
+- REQ-036-01 [MUST]: Az eredeti összeg és pénznem megmarad; eltérő alapdeviza esetén mellette a legfrissebb dátumhelyes árfolyammal számított alapdevizás összeg jelenik meg, az összesítések pedig alapdevizában készülnek.
 - REQ-036-02 [MUST]: Felhasználóként szeretném az összeget a háztartás alap pénznemében is látni, hogy összehasonlítható legyen a többi költéssel.
 - REQ-036-03 [MUST]: Jogosult felhasználóként szeretném megadni vagy javítani az alkalmazott árfolyamot, hogy hibás automatikus alapadat esetén kontrollálhassam az átváltást.
 - REQ-036-04 [MUST]: Felhasználóként szeretném látni az átváltás során használt árfolyamot és kerekítést, hogy a számítás auditálható legyen.

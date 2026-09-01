@@ -311,18 +311,24 @@ class AdvancedWorkspace:
     def preferences(self, tenant_id: str, role: str) -> dict[str, Any]:
         row = self.db.execute("SELECT payload FROM user_preferences WHERE tenant_id=? AND role=?",
                               (tenant_id, role)).fetchone()
-        return json.loads(row[0]) if row else {"language": "en", "compact": False,
+        return json.loads(row[0]) if row else {"language": "en", "base_currency": "USD", "compact": False,
                                                "high_contrast": False,
                                                "dashboard_widgets": ["kpis", "actions", "spending", "quality"]}
 
     def save_preferences(self, tenant_id: str, role: str, payload: dict[str, Any]) -> dict[str, Any]:
         allowed = {"language", "compact", "high_contrast", "dashboard_widgets",
-                   "onboarding_done", "email_alerts"}
+                   "onboarding_done", "email_alerts", "base_currency"}
         clean = {key: value for key, value in payload.items() if key in allowed}
+        if "base_currency" in clean:
+            currency = str(clean["base_currency"]).strip().upper()
+            if not re.fullmatch(r"[A-Z]{3}", currency):
+                raise ValueError("base_currency must be a three-letter ISO 4217 code")
+            clean["base_currency"] = currency
+        merged = {**self.preferences(tenant_id, role), **clean}
         with self.db:
             self.db.execute("INSERT OR REPLACE INTO user_preferences VALUES(?,?,?,?)",
-                            (tenant_id, role, json.dumps(clean, sort_keys=True), self._now()))
-        return clean
+                            (tenant_id, role, json.dumps(merged, sort_keys=True), self._now()))
+        return merged
 
     def record_export(self, tenant_id: str, format: str, requested: int,
                       exported: int, errors: list[str]) -> dict[str, Any]:

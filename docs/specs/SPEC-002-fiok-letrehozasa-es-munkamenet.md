@@ -57,7 +57,7 @@ Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási adate
 
 ## 5. Funkcionális követelmények
 
-- REQ-002-01 [MUST]: Új felhasználóként szeretnék e-mail-címmel és jelszóval fiókot létrehozni, hogy saját védett munkaterületem legyen.
+- REQ-002-01 [MUST]: A bejelentkezés egyetlen kapun, kézi szerepkör- vagy háztartásválasztás nélkül történik; hitelesítés után a rendszer automatikusan tölti be az aktív háztartást és az összes jogosultságot.
 - REQ-002-02 [MUST]: Felhasználóként szeretném, hogy hibás vagy hiányos regisztrációs adatoknál érthető javítási útmutatást kapjak, hogy be tudjam fejezni a regisztrációt.
 - REQ-002-03 [MUST]: Visszatérő felhasználóként szeretnék a hitelesítő adataimmal belépni, hogy hozzáférjek a saját nyugtáimhoz.
 - REQ-002-04 [MUST]: Bejelentkezett felhasználóként szeretném, hogy aktív használat közben a munkamenetem megmaradjon, hogy ne veszítsem el a folyamatban lévő munkámat.

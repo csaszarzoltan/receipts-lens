@@ -3,33 +3,44 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_BASE_URL, googleSsoEnabled } from "@/lib/api";
-import { setAuthState } from "@/lib/auth";
-import { roleLabel } from "@/lib/roles";
+import { API_BASE_URL, googleSsoEnabled, requestMagicLink, verifyMagicLink } from "@/lib/api";
+import { setAuthState, setSessionToken } from "@/lib/auth";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useTranslation, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n";
 
-const ROLES = ["admin", "reviewer", "integrator"] as const;
-
 /**
- * Login page — Google SSO button (when enabled) + household/role fallback selector.
+ * Login page with one authentication gateway and no manual household or role selector.
  * The X-Tenant-ID header auth is the legacy dev path; the real consumer path
  * uses magic-link or Google SSO.
  */
 export default function LoginPage() {
   const { t, locale, setLocale } = useTranslation();
   const router = useRouter();
-  const [tenant, setTenant] = useState("demo");
-  const [role, setRole] = useState<(typeof ROLES)[number]>("admin");
   const [googleReady, setGoogleReady] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     googleSsoEnabled().then(setGoogleReady).catch(() => {});
   }, []);
 
-  function signIn() {
-    setAuthState(tenant, role);
-    router.push("/dashboard");
+  async function signIn() {
+    setLoading(true);
+    setAuthState("demo", "admin");
+    try {
+      const email = "demo-admin@receiptlens.local";
+      const res = await requestMagicLink({ email });
+      if (res.token) {
+        const session = await verifyMagicLink(res.token);
+        if (session.session_token) {
+          setSessionToken(session.session_token);
+        }
+      }
+    } catch {
+      // dev fallback
+    } finally {
+      setLoading(false);
+      router.push("/dashboard");
+    }
   }
 
   return (
@@ -79,28 +90,8 @@ export default function LoginPage() {
         )}
 
         <div className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="login-tenant" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
-              Household
-            </label>
-            <select id="login-tenant" className="input" value={tenant} onChange={(event) => setTenant(event.target.value)}>
-              <option value="demo">demo</option>
-              <option value="personal">personal</option>
-              <option value="business">business</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="login-role" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
-              Role
-            </label>
-            <select id="login-role" className="input" value={role} onChange={(event) => setRole(event.target.value as (typeof ROLES)[number])}>
-              {ROLES.map((option) => (
-                <option key={option} value={option}>{roleLabel(option)}</option>
-              ))}
-            </select>
-          </div>
-          <button type="button" onClick={signIn} className="btn-primary w-full">
-            {t("login")}
+          <button type="button" onClick={signIn} disabled={loading} className="btn-primary w-full">
+            {loading ? "..." : t("login")}
           </button>
         </div>
 

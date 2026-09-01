@@ -67,6 +67,10 @@ test.describe("GUI-E2E: Settings, Integrations & Diagnostics (FEAT-018, FEAT-019
     async ({ page }) => {
       await page.goto("/settings/profile");
       await expect(page.locator("body")).toBeVisible();
+      const selector = page.getByTestId("base-currency-selector");
+      await expect(selector).toBeVisible();
+      await selector.selectOption("HUF");
+      await expect(page.getByRole("status")).toContainText("Currency saved");
     },
   );
 

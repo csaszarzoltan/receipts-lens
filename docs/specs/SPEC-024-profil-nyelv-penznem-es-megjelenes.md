@@ -58,7 +58,7 @@ Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási adate
 ## 5. Funkcionális követelmények
 
 - REQ-024-01 [MUST]: Felhasználóként szeretném a megjelenített nevemet és alapbeállításaimat módosítani, hogy a munkaterület engem tükrözzön.
-- REQ-024-02 [MUST]: Felhasználóként szeretnék a támogatott nyelvek között váltani, hogy a teljes felületet az általam értett nyelven használjam.
+- REQ-024-02 [MUST]: A Beállításokban explicit alapértelmezett pénznem választható, amely azonnal, tenant-szűrten mentődik, és a dashboard, KPI-k, összesítések és költségkeretek ezt használják.
 - REQ-024-03 [MUST]: Felhasználóként szeretném az alap pénznemet beállítani, hogy az összegek következetesen jelenjenek meg.
 - REQ-024-04 [MUST]: Felhasználóként szeretnék világos, sötét vagy rendszerhez igazodó témát választani, hogy kényelmesen használjam a felületet.
 - REQ-024-05 [MUST]: Látogatóként szeretném már bejelentkezés előtt nyelvet és témát váltani, hogy a belépési folyamat is megfelelő legyen.

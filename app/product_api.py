@@ -535,6 +535,7 @@ def get_preferences(current: Actor = Depends(actor)) -> dict[str, Any]:
     return advanced.preferences(current.tenant_id, current.role)
 
 @router.put("/product/preferences")
+@router.post("/product/preferences")
 def save_preferences(body: PreferencesRequest,
                      current: Actor = Depends(actor)) -> dict[str, Any]:
     if not service.can_write(current):

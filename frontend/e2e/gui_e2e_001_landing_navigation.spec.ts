@@ -41,12 +41,12 @@ test.describe("GUI-E2E: Public Landing, Auth & Navigation (FEAT-001 - FEAT-004)"
       const signInLink = page.locator("a[href='/login']").first();
       await signInLink.click();
       await expect(page).toHaveURL(/.*login/);
-      await expect(page.locator("#login-tenant")).toBeVisible();
+      await expect(page.locator("#login-tenant")).toHaveCount(0);
     },
   );
 
   test(
-    "AC-002-01: Login view handles household selection, role and sign-in action",
+    "AC-002-01: Login uses one gateway without household or role selectors",
     {
       annotation: [
         { type: "test-id", description: "TEST-GUI-002-01" },
@@ -56,12 +56,8 @@ test.describe("GUI-E2E: Public Landing, Auth & Navigation (FEAT-001 - FEAT-004)"
     },
     async ({ page }) => {
       await page.goto("/login");
-      const tenantSelect = page.locator("#login-tenant");
-      await expect(tenantSelect).toBeVisible();
-      await tenantSelect.selectOption("demo");
-      const roleSelect = page.locator("#login-role");
-      await expect(roleSelect).toBeVisible();
-      await roleSelect.selectOption("admin");
+      await expect(page.locator("#login-role")).toHaveCount(0);
+      await expect(page.locator("#login-tenant")).toHaveCount(0);
       const loginBtn = page.locator("button.btn-primary").first();
       await expect(loginBtn).toBeVisible();
     },
