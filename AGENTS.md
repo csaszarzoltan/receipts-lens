@@ -39,3 +39,10 @@
 
 ## LLM-függetlenség
 A módszertan bármelyik LLM-mel megy. A szerepek funkciók, nem eszközök. Kötelező minimum: dokumentálj (`docs/`) + tesztelj. Eszközválasztás szabad.
+
+## VERITAS 1.1 — szerep-határok + gate-használat (rövid)
+Normatív alap: `VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md`. Projektspecifikus profil: `METHODOLOGY.md` (RVAD 1.1).
+- Szerep-határok: Product Authority (értékdöntés) / Researcher (evidence, jóváhagyás nélkül) / Spec Author (spec, kód nélkül) / Test Author (teszt + RED, termékkód nélkül) / Implementer (minimális kód, spec/teszt-módosítás nélkül) / Reviewer (read-only) / Runner (determinisztikus gate-döntés) / Human Authority (termék, jog, security, production).
+- Default deny: tiltott file/útvonal esetén stop + eszkaláció, nem workaround.
+- Gate-sorrend: RED → célzott GREEN → teljes regresszió → traceability → független review → release. Cache-elt PASS csak Execution Equivalence mellett számítható be.
+- Konfliktus: kód/teszt vs jóváhagyott spec → spec az irányadó, eltérést eszkalálni + ADR-be írni.
