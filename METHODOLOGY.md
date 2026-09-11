@@ -1,18 +1,20 @@
-# Követelményvezérelt, Bizonyított AI-fejlesztési Rendszer
+# Követelményvezérelt, Bizonyított AI-fejlesztési Rendszer — VERITAS 1.1 projektspecifikus profil (ReceiptLens: FastAPI + Next.js + Alembic)
 
 **Rövid név:** RVAD, Requirements-driven Verified AI Development  
 **Verzió:** 1.1  
-**Státusz:** Összesített módszertani alapverzió  
+**Státusz:** VERITAS 1.1 projektspecifikus profil (ReceiptLens) — nem normatív alapverzió  
 **Dátum:** 2026-08-28  
 **Változás:** A traceability kézi YAML-karbantartása helyett Runner által generált, determinisztikus bizonyítási gráf
 
 > ## VERITAS 1.1 pointer (normatív alap)
-> **VERITAS 1.1** (`VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md`, 2026-09-09) a normatív, egységes módszertani alap. **RVAD 1.1** (ez a dokumentum) a ReceiptLens projektspecifikus profilja: ugyanazt a követelmény→teszt→implementáció→evidence láncot írja le a repo stackjére (FastAPI + Next.js + Alembic) és kapuira lebontva. Konfliktus esetén a VERITAS 1.1 az irányadó; az eltérést ADR-ben kell rögzíteni. Szerepkörök és gate-ek rövid kivonata az `AGENTS.md` végén.
+> **VERITAS 1.1** ([`VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md`](./VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md), 2026-09-09) a normatív, egységes módszertani alap. **RVAD 1.1** (ez a dokumentum) a ReceiptLens projektspecifikus profilja: ugyanazt a követelmény→teszt→implementáció→evidence láncot írja le a repo stackjére (FastAPI + Next.js + Alembic) és kapuira lebontva. Konfliktus esetén a VERITAS 1.1 az irányadó; az eltérést ADR-ben kell rögzíteni. Szerepkörök és gate-ek rövid kivonata az `AGENTS.md` végén.
+>
+> Amit ez a profil a VERITAS 1.1-hez hozzáad: a ReceiptLens-stackre lebontott konvenciók, parancsok és kapubeállítások — a 13. fejezet szerinti projektprofil (mappastruktúra, kódolási konvenciók, `pytest`/`ruff`/`mypy` parancsok, tiltott fájlok és műveletek), valamint a 15–16. fejezet szerinti determinisztikus kapuk (SPEC READY, célzott GREEN, teljes regresszió, Final Safety Gate) repo-specifikus alkalmazása. Normatív VERITAS-szabályt nem lazít.
   
 
 ## 0. A dokumentum célja
 
-Ez a módszertan olyan AI-támogatott szoftverfejlesztési rendszert határoz meg, amelyben:
+Ez a profil (VERITAS 1.1 alapján) olyan AI-támogatott szoftverfejlesztési rendszert határoz meg, amelyben:
 
 - a kívánt működés elsődleges és autoritatív forrása a jóváhagyott specifikáció;
 - minden fontos követelményhez futtatható teszt és ellenőrizhető bizonyíték tartozik;
@@ -1391,7 +1393,7 @@ Egyszerűbb LLM execution packet esetén szigorúbb, például három javítási
 
 # 13. Projektprofil
 
-A közös módszertani mag technológiafüggetlen. A konkrét projekt szabályai külön profilban legyenek.
+A közös VERITAS 1.1 mag technológiafüggetlen. A konkrét projekt szabályai külön profilban legyenek.
 
 ## 13.1. A projektprofil tartalma
 
@@ -1874,7 +1876,7 @@ Helyes megoldás: patch-, idő- és költséglimit, majd worktree-megőrzés és
 
 ## 21.8. Projektszabályok keverése a közös maggal
 
-Hiba: a módszertan egyetlen konkrét stackhez kötődik.
+Hiba: e profil egyetlen konkrét stackhez kötné a közös magot.
 
 Helyes megoldás: technológiafüggetlen core és külön projektprofil.
 
@@ -1932,7 +1934,7 @@ Csak igazolt igény esetén:
 - formálisabb szerződések;
 - cross-repository requirement graph.
 
-A magasabb szintek nem előfeltételei a módszertan használatának. Először a specifikáció és a tesztbizonyíték minőségét kell stabilizálni.
+A magasabb szintek nem előfeltételei e profil használatának. Először a specifikáció és a tesztbizonyíték minőségét kell stabilizálni.
 
 ---
 
@@ -1953,7 +1955,7 @@ Ha a rendszerből csak a legfontosabb részek vezethetők be, az alábbi minimum
 11. kritikus bizonytalanság esetén emberi stop-gate működik;
 12. PR előtt független review történik.
 
-Ez a tizenkét pont adja a módszertan legfontosabb értékét.
+Ez a tizenkét pont adja a VERITAS 1.1 / e profil legfontosabb értékét.
 
 ---
 
