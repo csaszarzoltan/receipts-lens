@@ -1,0 +1,45 @@
+name: VERITAS Compliance and Safety
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  veritas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml pytest ruff
+      - name: Verify policy integrity
+        run: python scripts/veritas_gate.py --check-policies
+      - name: Verify PR diff and metadata
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          VERITAS_DIFF_BASE="origin/${{ github.base_ref }}" python scripts/veritas_gate.py --verify-diff --verify-metadata --role auto
+      - name: VERITAS gate — check-all + metadata (push gate)
+        # Branch protection required check privat free tieren nem
+        # elerheto, ezert ez a gate push-ra IS fut — nem csak PR-ban.
+        # A local .githooks/pre-commit csak kenyelmi kontroll (--no-verify
+        # megkeruli), a valodi kenyszer ez a CI-lepes.
+        # Fugg: runner interface (scripts/veritas_gate.py).
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            export VERITAS_DIFF_BASE="origin/${{ github.base_ref }}"
+          fi
+          python scripts/veritas_gate.py --check-all --verify-metadata
+      - name: Full deterministic regression gate
+        run: python scripts/veritas_gate.py --run-suite

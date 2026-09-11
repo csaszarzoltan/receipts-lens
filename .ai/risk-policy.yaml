@@ -1,0 +1,61 @@
+# VERITAS 1.1 Risk Classification & Execution Path Policy
+# Receipts-lens R3 triggers: auth (auth_api, google_oidc, security,
+# credential_store, intuit_oauth), payment (subscriptions_api), migrations.
+
+default_risk: R2
+
+risk_classes:
+  R0:
+    name: "Dokumentáció / No-op"
+    description: "Dokumentáció, formázás, bizonyítottan viselkedéssemleges változás."
+    eligible_paths: ["fast_path"]
+    human_approval_required: false
+
+  R1:
+    name: "Kis, visszafordítható változás"
+    description: "Kis, visszafordítható változás stabil oracle és rollback mellett."
+    eligible_paths: ["fast_path", "standard_path"]
+    human_approval_required: false
+
+  R2:
+    name: "Termékviselkedés / Új feature"
+    description: "Új vagy módosuló termékviselkedés, belső API, UI vagy integráció."
+    eligible_paths: ["standard_path"]
+    human_approval_required: false
+
+  R3:
+    name: "Kritikus rendszerhatás"
+    description: "Security, privacy, pénzügy, előfizetés, breaking API, adatbázis migráció."
+    eligible_paths: ["assurance_path"]
+    human_approval_required: true
+
+  R4:
+    name: "Alkotmányos szint"
+    description: "Alkotmányos policy, autonómiahatár, evidence-integritás, kötelező emberi kapu."
+    eligible_paths: ["constitutional_change_path"]
+    human_approval_required: true
+    agent_activation_forbidden: true
+
+path_eligibility_oracle:
+  triggers_for_escalation_to_R3:
+    - touches: "app/auth_api.py"
+    - touches: "app/google_oidc.py"
+    - touches: "app/security.py"
+    - touches: "app/credential_store.py"
+    - touches: "app/intuit_oauth.py"
+    - touches: "app/subscriptions_api.py"
+    - touches: "app/subscription_alerts.py"
+    - touches: "alembic/**"
+    - introduces_new_dependency: true
+    - public_api_breaking_contract: true
+    - irreversible_data_migration: true
+
+human_stop_gates:
+  - authentication_or_authorization_change
+  - financial_or_subscription_change
+  - database_migration
+  - public_api_breaking_change
+  - domain_invariant_change
+  - constitutional_policy_change
+  - privacy_or_secret_handling
+  - repair_budget_exhaustion

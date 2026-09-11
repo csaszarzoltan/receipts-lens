@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# VERITAS pre-commit hook: staged diff + metadata gate.
+#
+# A hook KENYELMI kontroll: `git commit --no-verify` kapcsoloval
+# megkerulheto. A valodi kenyszer a CI (veritas job,
+# .github/workflows/veritas.yml).
+#
+# Mukodes: a runnerre (scripts/veritas_gate.py) delegal --staged
+# modban (diff + metadata a staged valtozasokon). Ha a runner hianyzik
+# vagy nem futtathato, beagyazott fail-closed fallback fut (kevert
+# app/** + tests/** diff blokkolva, test_id + requirements + scenario
+# marker kotelezo) — a hook soha nem PASS-ol csendben.
+set -euo pipefail
+
+fail() { echo "veritas pre-commit FAIL: $1" >&2; exit "${2:-1}"; }
+
+# Fail-closed: git repo + diff lekeres hiba eseten exit 2.
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  fail "nem git repository (fail-closed)" 2
+fi
+
+# A repo gyokerebol futtatunk, hogy a runner .ai/ policy-utvonalai
+# feloldhatok legyenek (a hook CWD-je barmely alkonyvtar lehet).
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" \
+  || fail "repo-gyoker lekerese sikertelen (fail-closed)" 2
+cd "$REPO_ROOT"
+
+# 1) Primer ut: runner staged modban.
+if [[ -f scripts/veritas_gate.py ]]; then
+  runner="scripts/veritas_gate.py"
+  if python3 "$runner" --verify-diff --verify-metadata --staged \
+      --role "${VERITAS_ROLE:-auto}"; then
+    echo "veritas pre-commit: PASS (runner staged diff + metadata)"
+    exit 0
+  fi
+  fail "runner staged gate blokkolt (reszletek fent)" 1
+fi
+
+# 2) Fallback: runner nelkul beagyazott fail-closed gate.
+echo "veritas pre-commit: runner hianyzik, beagyazott fallback gate" >&2
+staged="$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null)" \
+  || fail "staged diff lekerese sikertelen (fail-closed)" 2
+
+# Ures staged diff: nincs mit ellenorizni (git amugy is blokkolja
+# az ures commitot --allow-empty nelkul).
+if [[ -z "$staged" ]]; then
+  echo "veritas pre-commit: nincs staged valtozas, SKIP"
+  exit 0
+fi
+
+# Kevert diff gate: app/** es tests/** egy commitban tilos (R4-8).
+has_app=0
+has_tests=0
+while IFS= read -r f; do
+  case "$f" in
+    app/*) has_app=1 ;;
+    tests/*) has_tests=1 ;;
+  esac
+done <<<"$staged"
+if [[ "$has_app" -eq 1 && "$has_tests" -eq 1 ]]; then
+  fail "kevert app/** + tests/** diff egy commitban (kulon commit kell)"
+fi
+
+# Metadata gate: minden staged tests/**/*.py tartalmazzon
+# test_id + requirements + scenario markert.
+missing=0
+while IFS= read -r f; do
+  case "$f" in
+    tests/*.py)
+      content="$(git show ":$f" 2>/dev/null)" \
+        || fail "staged fajl olvasasa sikertelen: $f (fail-closed)" 2
+      for marker in 'pytest.mark.test_id' 'pytest.mark.requirements' 'pytest.mark.scenario'; do
+        if ! grep -qF "$marker" <<<"$content"; then
+          echo "veritas pre-commit FAIL: $f hianyzo marker: $marker" >&2
+          missing=1
+        fi
+      done
+      ;;
+  esac
+done <<<"$staged"
+if [[ "$missing" -eq 1 ]]; then
+  fail "metadata gate: test_id + requirements + scenario marker kotelezo tests/**/*.py-ben"
+fi
+
+echo "veritas pre-commit: PASS (fallback diff + metadata)"

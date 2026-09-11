@@ -1,0 +1,37 @@
+# VERITAS 1.1 — Constitutional Policy (R4 Core)
+# This file is authoritative and cannot be modified by autonomous agents.
+# Schema version: 1.1
+
+schema_version: "1.1"
+policy_id: "VERITAS-CONSTITUTIONAL-R4"
+status: "authoritative_immutable"
+
+constitutional_rules:
+  1: "Az alkotmányos policy agent által nem írható."
+  2: "A Governor saját hatáskörét nem bővítheti."
+  3: "Hiányzó vagy hibás evidence nem siker."
+  4: "Tiltott állapotátmenetet a Runner blokkol."
+  5: "Érvénytelen vagy előírás szerint aláíratlan policyval a Control Plane nem indul."
+  6: "Audit és evidence-integritás nem kapcsolható ki autonóm módon."
+  7: "Kötelező emberi kapu nem csökkenthető autonóm módon."
+  8: "Az Implementer nem módosíthatja a feladatát igazoló tesztet vagy specifikációt."
+  9: "Production write csak explicit capabilityvel és szükséges jóváhagyással történhet."
+  10: "A teljes regressziót nem helyettesítheti LLM-állítás."
+  11: "Exploration prototípus nem emelhető közvetlenül production-kóddá (Clean-Room kötelező)."
+  12: "Cache-elt evidence csak igazolt végrehajtási ekvivalencia mellett használható."
+
+fail_closed_modes:
+  NORMAL:
+    writes_allowed: true
+    description: "Standard operating mode with active policy checks."
+  READ_ONLY_DEGRADED:
+    writes_allowed: false
+    diagnostics_allowed: true
+    description: "Read-only analysis when verification or environment checks fail."
+  QUARANTINED:
+    writes_allowed: false
+    human_intervention_required: true
+    description: "Halted execution upon policy violation or tampering."
+  BOOTSTRAP_HALTED:
+    process_started: false
+    description: "Failure to bootstrap due to missing or invalid policies."

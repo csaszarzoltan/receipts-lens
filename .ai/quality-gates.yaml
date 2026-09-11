@@ -1,0 +1,87 @@
+# VERITAS 1.1 Quality Gates Configuration
+
+gates:
+  1_exploration_safety_gate:
+    requires_disposable_flag: true
+    forbids_production_write: true
+    forbids_real_pii: true
+
+  2_clean_room_promotion_gate:
+    forbids_prototype_source_code: true
+    forbids_prototype_lockfile: true
+    requires_approved_spec: true
+    requires_fresh_workspace: true
+
+  3_change_readiness_gate:
+    requires_problem_or_brief: true
+    requires_path_classification: true
+
+  4_spec_readiness_gate:
+    require_human_approval_for_reverse_engineered_specs: true
+    require_structured_requirement_ids: true
+    require_acceptance_scenarios: true
+    require_ui_api_contracts: true
+    require_no_open_blocking_questions: true
+
+  5_context_fitness_gate:
+    maximum_relevant_code_lines: 700
+    maximum_allowed_files: 6
+    maximum_dependency_hops: 3
+    maximum_architectural_boundaries: 2
+    maximum_requirements: 3
+
+  6_pre_test_safety_gate:
+    enforce_allow_deny_patterns: true
+    check_symlinks: true
+    secret_scan: true
+    reject_oversized_diff: true
+
+  7_red_gate:
+    require_failing_test_execution: true
+    reject_missing_test_as_red: true
+    require_structured_metadata: true
+
+  8_targeted_green_gate:
+    all_targeted_tests_must_pass: true
+    reject_skipped_as_evidence: true
+
+  9_full_regression_gate:
+    require_full_regression: true
+    require_lint_pass: true
+    require_typecheck_pass: true
+    require_build_pass: true
+
+  10_traceability_gate:
+    require_runner_generated_traceability: true
+    require_100_percent_requirement_coverage: true
+    reject_missing_test_id: true
+
+  11_execution_equivalence_gate:
+    allow_cache_only_with_identical_inputs: true
+    forbid_cache_for_security_and_auth: true
+    forbid_cache_for_migrations: true
+
+  12_independent_review_gate:
+    require_independent_reviewer_approval: true
+    max_review_rounds: 3
+
+  13_final_safety_gate:
+    scan_final_git_diff: true
+    verify_provenance: true
+    verify_no_leaked_secrets: true
+
+  14_release_gate:
+    require_closed_manifest: true
+    require_rollback_plan: true
+
+  15_process_proportionality_gate:
+    track_control_overhead: true
+    track_duplicate_verification: true
+    forbid_automatic_constitutional_relaxations: true
+
+repair_policy:
+  max_patch_iterations: 5
+  max_environment_retries: 1
+  max_duration_minutes: 30
+  on_limit_reached: preserve_and_escalate
+  on_policy_violation: stop_and_quarantine
