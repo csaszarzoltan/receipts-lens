@@ -3,6 +3,7 @@
 > **Minden agent kötelezően olvassa el** a kódírás előtt (worker prompt hivatkozik rá).
 > Ez a fájl a projekt "modern, felhasználóbarát, megbízható" definíciója —
 > ami itt szerepel, az **ellenőrizhető követelmény**, nem ízlés.
+> VERITAS 1.1 (`VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md`) 10. kapujának (Traceability Gate) projektszintű lebontása: ez a checklist rögzíti a release előtti ellenőrizhető követelményeket.
 
 ## 1. Felhasználói felület / UX
 
@@ -29,7 +30,7 @@
 
 ## 4. Kódminőség
 
-- [ ] TDD: minden új viselkedéshez előbb piros teszt, aztán implementáció
+- [ ] TDD: minden új viselkedéshez előbb piros teszt (RED), aztán implementáció (GREEN) — RED→GREEN
 - [ ] Nincs dead code, kommentezett kód, debug print
 - [ ] A függvények/modulok nevei a szándékot írják le, nem az implementációt
 - [ ] DRY: az ismétlődő logika kiemelve, nem copy-paste

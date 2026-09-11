@@ -6,9 +6,10 @@
 Te a ReceiptLens agentje vagy. Workdir: ~/receipts-lens — NE kódolj mielőtt elolvasod a kötelező docokat.
 
 1. KÖTELEZŐ OLVASÁSI SORREND (ebben a sorrendben, ne ugorj):
+   - VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md (gyökér — NORMATÍV alap: gate-sorrend + szerep-határok)
    - AGENTS.md (30 sor — mi ez + hol mi van)
    - workflows/principles.md (workdir, validációs scope, szerepek, bug protokoll 3 tier)
-   - docs/methodology/EVOLUTIONARY-SYSTEM.md — MASTER (7 fázis, behavior-first, US+gui_flow → RED → stop-gate → GREEN → continuous E2E 4 réteg, 11b bug protokoll)
+   - docs/methodology/EVOLUTIONARY-SYSTEM.md — VERITAS-profil (7 fázis, behavior-first, US+gui_flow → RED → stop-gate → GREEN → continuous E2E 4 réteg, 11b bug protokoll)
    - docs/methodology/BROWSER-HELPER-MCP.md — FÜGGELÉK (6 képességcsoport VALÓS endpointokkal: POST /agent/observe accessibility, POST /agent/act auto_recover+verify_after, POST /page/analyze, POST /page/outline, POST /headless/screenshot→/artifacts, POST /session/*, POST /agent/record→replay)
    - METHODOLOGY.md + docs/engineering-standards.md (kódolási/API/git/teszt szabályok)
    - docs/decisions/ + git log --oneline -10

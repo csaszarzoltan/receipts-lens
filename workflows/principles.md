@@ -18,13 +18,14 @@
 | `docs/*.md` | példa-ellenőrzés, nem teszt |
 | Bármelyik | commit előtt `git diff --stat` ellenőrzés |
 
-## Szerepek (funkciók, bármelyik LLM eljátszhatja)
-- researcher: kutatás → `docs/research/YYYY-MM-DD-*.md` (max 5 oldal, comparison table)
-- analyst: szintézis → `docs/decisions/ADR-*.md` (max 1 oldal)
-- developer: max 3 file/kártya, RED→GREEN bizonyítás
-- tester: teljes suite zöld mielőtt "kész"
-- release-manager: CHANGELOG + tag
-- documenter: docs frissítés minden feature-rel (`docs/decisions/`, `docs/engineering-standards.md` ha UX/API érintett)
+## Szerepek (VERITAS 1.1 9. fejezet nevezéktana; funkciók, bármelyik LLM eljátszhatja)
+- Researcher: kutatás → `docs/research/YYYY-MM-DD-*.md` (max 5 oldal, comparison table)
+- Spec Author: szintézis → `docs/decisions/ADR-*.md` (max 1 oldal)
+- Implementer: max 3 file/kártya, RED→GREEN bizonyítás
+- Test Author: teljes suite zöld mielőtt "kész"
+- Runner: CHANGELOG + tag
+- documenter: docs frissítés minden feature-rel (`docs/decisions/`, `docs/engineering-standards.md` ha UX/API érintett) — projekt-kiegészítés, nem VERITAS-szerep
+> Érték- és kockázatdöntés: **Product Authority** (termék/prioritás) / **Human Authority** (jog, security, production, alkotmányos). Független ellenőrzés: **Reviewer** (read-only finding).
 
 ## Tudás forrása (prioritás)
 1. Ez a file + `AGENTS.md` + `METHODOLOGY.md`
@@ -82,7 +83,7 @@ Koordinátor: Hermes (ledger reset: /tmp/ledger-deep-YYYY-MM-DD.json)
  ├─ gemini #2: Twitter/X + Product Hunt + App Store  (párhuzamos) — ha kvóta → "no data" és tovább
  └─ agy: competitor scrape + szintézis  (SZEKVENCIÁLISAN — egyszerre 1, kvóta!)
 
-→ Evaluator (analyst, Hermes): deduplikál + klaszter (pain/JTBD/feature-gap) + freq×intensity
+→ Evaluator (Spec Author, Hermes): deduplikál + klaszter (pain/JTBD/feature-gap) + freq×intensity
   → ötlet-jelöltek → 1-5 pontozás (Kereslet 30% + Gap 25% + Hatás 20% + Megvalósíthatóság 15% + Bevétel 10%)
   → Rangsorolt backlog tábla + Top 5 részletezés (pitch, 3 idézet, kockázat, következő Research/ADR/Kanban lépés)
   → docs/research/YYYY-MM-DD-deep-dive.md (ledger Sources + evidence quotes, --min-coverage 0.5)
@@ -106,7 +107,7 @@ Canary piros = automatikus T3 (BLOCKED kártya). Részletek: `docs/methodology/E
 Minden tudás git-ben. Session = beszélgetés history, nem storage.
 
 ## Evolúciós rendszer (kötelező — röviden)
-- **Master:** `docs/methodology/EVOLUTIONARY-SYSTEM.md` — 7 fázis (research → US+gui_flow → RED → stop-gate → GREEN → CI gate → canary)
+- **Profil:** `docs/methodology/EVOLUTIONARY-SYSTEM.md` — 7 fázis (research → US+gui_flow → RED → stop-gate → GREEN → CI gate → canary)
 - **Függelék:** `docs/methodology/BROWSER-HELPER-MCP.md` — valós Browser Helper endpointok, nem kitalált `browser_get_*` nevek
 - **Stop-gate:** prototípus emberi OK nélkül nincs `src/`/`app/` módosítás (kivétel: tiszta backend/logikai fix — Fast-Track)
 - **BDD-gate:** `scripts/bdd-gate.sh` — nincs `us_NNN` spec → release blokkolva

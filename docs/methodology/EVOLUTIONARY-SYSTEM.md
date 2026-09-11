@@ -1,6 +1,6 @@
 # Evolúciós Fejlesztési Rendszer — Behavior-First, Teszt-Központú Módszertan
 
-> **Státusz:** draft (review-re) — 2026-08-26
+> **Státusz:** VERITAS 1.1 projektspecifikus viselkedés-folyamat profil (draft 2026-08-26 alapján; normatív alap: `VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md` 14. fejezet gate-sorrendje az irányadó)
 > **Szerző:** Hermes + Zoltán (swiss_p_map / mealmind / receipts-lens)
 > **Cél:** Az E2E tesztkörnyezet a fejlesztés **legfontosabb szereplője** legyen — 100% lefedettség, pont úgy, ahogy a felhasználó használná. A kutatástól a prototípuson át a kódig minden lépés egy futtatható viselkedés-kontraktushoz mér.
 
@@ -291,6 +291,8 @@ Prompt/runbookok: `docs/research/prompts/hermes-miner.md` + `gemini-miner.md` + 
 
 ## 11) Gate-ek — mikor blokkol, mikor mehet
 
+> VERITAS gate-sorrend (normatív: 14. fejezet): RED (7.) → célzott GREEN (8.) → teljes regresszió (9.) → traceability (10.) → független review (12.) → release (14.). Az alábbi projektspecifikus gate-ek e sorrendbe illeszkednek: E2E RED = RED; fejlesztés GREEN = célzott GREEN; push gate + nightly = teljes regresszió részei; BDD-gate = traceability fájlnév-fallback; prototípus stop-gate + canary = projekt-kiegészítés (lásd SPEC-GAP a fájl végén).
+
 | Gate | Hol | Mikor blokkol |
 |---|---|---|
 | Research ledger | `verify` | nincs `Sources:` blokk vagy `<50%` coverage és nincs `[unverified]` jelölés |
@@ -422,3 +424,12 @@ hermes cron create --name "swiss-p-map canary (prod 30m)" --schedule "30m" --no-
 ---
 
 *Vége — review után a `workflows/principles.md` Deep + Continuous szakaszai + `docs/stories/US-000-template.md` + `scripts/bdd-gate.sh` beépítésével lesz teljes a bevezetés mindhárom projektre.*
+
+---
+
+## SPEC-GAP (VERITAS 1.1-tel ütköző / kiegészítő pontok)
+
+> Normatív alap: `VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md` 14. fejezet (RED → célzott GREEN → teljes regresszió → traceability → független review → release). Konfliktus esetén a VERITAS az irányadó.
+- **Prototípus stop-gate (5. artefakt-sor):** VERITAS-ban nincs külön prototípus-kapu; projekt-kiegészítésként marad, emberi jóváhagyáshoz kötve (Human Authority).
+- **Canary mint evolúciós input:** VERITAS szerint a production jel runtime-signal (validity), nem automatikus új backlog-elem; a canary-piros → T3 ticketelés projekt-konvenció.
+- **BDD-gate fájlnév-alapon:** traceability fallback (fájlnév + commitüzenet csak migrációs fallback a VERITAS 13. fejezete szerint); a determinisztikus bizonyítási gráf felé kell közelíteni.

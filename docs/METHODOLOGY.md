@@ -10,3 +10,5 @@ kontraktusok, verziózás, kivétel-protokoll, enforcement mapping.
 
 Ez a fájl csak hivatkozás — a kanonikus verzió a lab-ban van, és onnan
 frissül. Ha a lab verziója változik, ezt a hivatkozást nem kell módosítani.
+
+> Megjegyzés: e repo helyi normatív alapja a gyökér `VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md`; a fenti lab-pointer tájékoztató jellegű.
