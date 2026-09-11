@@ -4,7 +4,11 @@
 **Verzió:** 1.1  
 **Státusz:** Összesített módszertani alapverzió  
 **Dátum:** 2026-08-28  
-**Változás:** A traceability kézi YAML-karbantartása helyett Runner által generált, determinisztikus bizonyítási gráf  
+**Változás:** A traceability kézi YAML-karbantartása helyett Runner által generált, determinisztikus bizonyítási gráf
+
+> ## VERITAS 1.1 pointer (normatív alap)
+> **VERITAS 1.1** (`VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md`, 2026-09-09) a normatív, egységes módszertani alap. **RVAD 1.1** (ez a dokumentum) a ReceiptLens projektspecifikus profilja: ugyanazt a követelmény→teszt→implementáció→evidence láncot írja le a repo stackjére (FastAPI + Next.js + Alembic) és kapuira lebontva. Konfliktus esetén a VERITAS 1.1 az irányadó; az eltérést ADR-ben kell rögzíteni. Szerepkörök és gate-ek rövid kivonata az `AGENTS.md` végén.
+  
 
 ## 0. A dokumentum célja
 
