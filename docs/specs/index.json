@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-09-11",
+  "generated_at": "2026-09-12",
   "methodology": "METHODOLOGY.md sections 3.3 and 4; VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md section 4.5",
   "brief_count": 48,
-  "spec_count": 48,
+  "spec_count": 50,
   "coverage_percent": 100,
   "specifications": [
     {
@@ -440,6 +440,20 @@
       "api_contracts": 1
     },
     {
+      "spec_id": "SPEC-033B",
+      "feature_id": "FEAT-033B",
+      "brief_id": null,
+      "extends": "FEAT-033",
+      "title": "Proaktív insight-kiterjesztés a szokatlan költésekre",
+      "status": "DRAFT",
+      "version": 1,
+      "risk": "medium",
+      "path": "docs/specs/SPEC-033B-proaktiv-insight-kiterjesztes.md",
+      "requirements": 9,
+      "acceptance_scenarios": 9,
+      "test_mappings": 9
+    },
+    {
       "spec_id": "SPEC-034",
       "feature_id": "FEAT-034",
       "brief_id": "BRIEF-034",
@@ -648,6 +662,20 @@
       "acceptance_scenarios": 8,
       "test_mappings": 8,
       "api_contracts": 5
+    },
+    {
+      "spec_id": "SPEC-049",
+      "feature_id": "FEAT-049",
+      "brief_id": null,
+      "research_id": "docs/research/2026-09-11-ai-chat-deep-dive.md",
+      "title": "AI olvasó-chat a saját nyugták felett (kérdezd a számláidat)",
+      "status": "READY_FOR_DEV",
+      "version": 1,
+      "risk": "medium",
+      "path": "docs/specs/SPEC-049-ai-olvoso-chat.md",
+      "requirements": 8,
+      "acceptance_scenarios": 8,
+      "test_mappings": 8
     }
   ]
 }
