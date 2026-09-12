@@ -107,9 +107,18 @@ Minden GAP a saját SPEC 14. fejezetében részletezve; itt az áttekintés:
 | SPEC | Forrás | Kód | E2E | Státusz |
 | :--- | :--- | :--- | :--- | :--- |
 | SPEC-049 (`docs/specs/SPEC-049-ai-olvoso-chat.md`) | `docs/research/2026-09-11-ai-chat-deep-dive.md` 5. fej. (RL RESEARCH-1, t_e8a9057c) | még nincs (tervezett `POST /api/v2/chat/ask`) | tervezett `test_e2e_049_ac_*` | `READY_FOR_DEV`, R2 |
+| SPEC-033B (`docs/specs/SPEC-033B-proaktiv-insight-kiterjesztes.md`) | `docs/research/2026-09-11-ai-chat-deep-dive.md` 2(c) fej. (RL RESEARCH-1, t_e8a9057c; t_71ad6116) | még nincs (ütemezett kiértékelő + kártya-kézbesítés FEAT-026-on) | tervezett `test_e2e_033B_ac_*` | `DRAFT`, R2 |
 
 SPEC-049 REQ-lefedettség: REQ-049-01..08 → AC-049-01..AC-049-08 → tervezett
 E2E `test_e2e_049_ac_01..08` (a megvalósító PR-ban szállítandó; eltérés
 esetén SPEC-GAP-bejegyzés kötelező). Kapcsolódások: FEAT-008 (forrás-sorok),
 FEAT-013 (aggregátumok), FEAT-025 (előzmény-megőrzés/törlés), FEAT-033
 (nincs-adat minta); FEAT-050 (író-chat, R3) kizárva REQ-049-06-ban.
+
+SPEC-033B REQ-lefedettség: REQ-033B-01..09 → AC-033B-01..AC-033B-09 →
+tervezett E2E `test_e2e_033B_ac_01..09` (a megvalósító PR-ban szállítandó;
+eltérés esetén SPEC-GAP-bejegyzés kötelező). Kiterjesztés, nem új FEAT:
+FEAT-033 (jelek, REQ-033-02 magyarázhatóság, REQ-033-05 visszajelzés) +
+FEAT-026 (kártya-kézbesítés, REQ-026-01..04) + FEAT-012 (keret-kontextus);
+mélylink-cél SPEC-049 (`POST /api/v2/chat/ask`, OPEN-049-04 kétoldali
+szerződés). REQ-számozás REQ-033B-01..09, nem ütközik SPEC-033-mal.
