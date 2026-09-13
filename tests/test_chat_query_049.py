@@ -48,7 +48,10 @@ JULY_FOOD = 12500.0 + 8300.0  # 20800.0
 AUGUST_TOTAL = 4200.0 + 6990.0  # 11190.0
 TESCO_TOTAL = 12500.0 + 4200.0  # 16700.0
 RECEIPT_COUNT = 5
-AVERAGE = sum(r["amount"] for r in SEED_A) / len(SEED_A)  # 9998.0
+AVERAGE = sum(r["amount"] for r in SEED_A) / len(SEED_A)  # 46990.0 / 5 = 9398.0
+# NOTE (GREEN-049 supervisor fix): the original comment claimed 9998.0, which
+# is an arithmetic error (12500+8300+15000+4200+6990 = 46990, not 49990).
+# Q08 fragment corrected 9998 -> 9398 to match the deterministic ledger.
 
 # 10-item HU/EN question bank (SPEC SS11 AC-049-01): (qid, question, fragments
 # that must appear verbatim in the deterministic answer).
@@ -60,9 +63,11 @@ QUESTION_BANK = [
     ("Q05", "Mennyit k\u00f6lt\u00f6ttem k\u00f6zleked\u00e9sre?", ["15000"]),
     ("Q06", "What is my total spending in August?", ["11190"]),
     ("Q07", "H\u00e1ny nyugt\u00e1m van \u00f6sszesen?", ["5"]),
-    ("Q08", "What was my average receipt amount?", ["9998"]),
+    ("Q08", "What was my average receipt amount?", ["9398"]),
     ("Q09", "Mennyit k\u00f6lt\u00f6ttem a Tesc\u00f3ban?", ["16700"]),
-    ("Q10", "Which merchant did I spend the most with?", ["MOL", "15000"]),
+    ("Q10", "Which merchant did I spend the most with?", ["Tesco", "16700"]),
+    # NOTE (GREEN-049 supervisor fix): original fragments ["MOL", "15000"] were
+    # wrong — Tesco totals 12500+4200=16700 > MOL 15000 (see TESCO_TOTAL above).
 ]
 
 WRITE_KEYWORDS = ("INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE")

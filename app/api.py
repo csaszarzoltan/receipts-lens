@@ -23,6 +23,7 @@ from app.api_v2 import batch_router
 from app.auth_api import router as auth_router
 from app.budgets import budget_store
 from app.categorizer import Categorizer
+from app.chat_api import chat_router
 from app.consumer_dashboard import build_consumer_dashboard
 from app.dashboard import render_forecast_dashboard
 from app.forecast import forecast_router
@@ -252,6 +253,7 @@ app.include_router(auth_router)
 app.include_router(tax_router)
 app.include_router(quota_router)
 app.include_router(sync_router)
+app.include_router(chat_router)
 
 
 # ---------------------------------------------------------------------------
