@@ -11,17 +11,18 @@ from datetime import UTC
 
 from fastapi import APIRouter, File, Form, UploadFile
 from fastapi.responses import Response
-from app.reconciliation_api import router as feature_38_router
-from app.missing_receipt_api import router as feature_39_router
-from app.warranty_api import router as feature_40_router
-from app.price_tracking_api import router as feature_41_router
-from app.refund_api import router as feature_42_router
+
 from app.cost_split_api import router as feature_43_router
-from app.savings_api import router as feature_44_router
-from app.offline_sync_api import router as feature_45_router
-from app.quality_task_api import router as feature_46_router
-from app.period_close_api import router as feature_47_router
+from app.missing_receipt_api import router as feature_39_router
 from app.mobile_receipt_api import router as feature_48_router
+from app.offline_sync_api import router as feature_45_router
+from app.period_close_api import router as feature_47_router
+from app.price_tracking_api import router as feature_41_router
+from app.quality_task_api import router as feature_46_router
+from app.reconciliation_api import router as feature_38_router
+from app.refund_api import router as feature_42_router
+from app.savings_api import router as feature_44_router
+from app.warranty_api import router as feature_40_router
 
 batch_router = APIRouter()
 
@@ -108,7 +109,7 @@ async def batch_job_status(job_id: str) -> dict:
 # registration order, so a late static route would be swallowed by {format}
 # and return a 500 "Unknown format" instead of the formats listing.
 
-@batch_router.get("/receipts/export/formats")
+@batch_router.get("/api/v1/receipts/export/formats")
 async def list_export_formats() -> dict:
     """List available export formats and their column mappings.
 

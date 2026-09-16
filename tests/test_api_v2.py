@@ -30,7 +30,13 @@ class TestBatchRouterInterface:
         assert isinstance(batch_router, APIRouter)
 
     def test_batch_router_prefix(self):
-        assert batch_router.prefix == "/api/v1"
+        # batch_router uses full /api/v1/... paths on its routes with an
+        # empty prefix, so included FEAT-038..048 sub-routers keep their own
+        # /api/v2/... prefixes (a "/api/v1" prefix here would corrupt them
+        # into /api/v1/api/v2/...). Routes work unprefixed by design.
+        assert batch_router.prefix == ""
+        paths = {r.path for r in batch_router.routes if hasattr(r, "path")}
+        assert "/api/v1/receipts/batch" in paths
 
 
 class TestBatchEndpointsInterface:
