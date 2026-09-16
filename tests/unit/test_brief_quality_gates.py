@@ -1,7 +1,7 @@
 import json
 import re
-from pathlib import Path
 from difflib import SequenceMatcher
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 BRIEFS_DIR = ROOT / '.product' / 'briefs'
@@ -40,7 +40,7 @@ def test_qg1_brief_structure_and_headers():
 def test_qg2_no_truncated_stories():
     for brief_path in BRIEFS_DIR.glob('BRIEF-*.md'):
         text = brief_path.read_text(encoding='utf-8')
-        stories = re.findall(r'^- \*\*US-[^:]+:\*\* (.+)$', text, re.M)
+        stories = re.findall(r'^- \*\*US-[^:]+:\*\* (.+)$', text, re.MULTILINE)
         assert len(stories) >= 4, f'Too few stories in {brief_path.name}'
         for s in stories:
             assert ' szeretn' in s and ', hogy ' in s, f'Malformed story syntax: {s}'
@@ -50,7 +50,7 @@ def test_qg2_no_truncated_stories():
 def test_qg3_no_forbidden_technical_terms():
     for brief_path in BRIEFS_DIR.glob('BRIEF-*.md'):
         text = brief_path.read_text(encoding='utf-8')
-        stories = re.findall(r'^- \*\*US-[^:]+:\*\* (.+)$', text, re.M)
+        stories = re.findall(r'^- \*\*US-[^:]+:\*\* (.+)$', text, re.MULTILINE)
         for s in stories:
             for term in FORBIDDEN_TERMS:
                 assert term.lower() not in s.lower(), f'Forbidden technical term "{term}" found in {brief_path.name}: {s}'
@@ -59,7 +59,7 @@ def test_qg4_no_duplicate_or_excessively_similar_stories():
     all_stories = []
     for brief_path in BRIEFS_DIR.glob('BRIEF-*.md'):
         text = brief_path.read_text(encoding='utf-8')
-        all_stories.extend(re.findall(r'^- \*\*US-[^:]+:\*\* (.+)$', text, re.M))
+        all_stories.extend(re.findall(r'^- \*\*US-[^:]+:\*\* (.+)$', text, re.MULTILINE))
     
     assert len(all_stories) == len(set(all_stories)), 'Exact duplicate stories found!'
     
@@ -84,7 +84,7 @@ def test_qg5_index_consistency():
     for b in index_data['briefs']:
         file_path = ROOT / b['path']
         text = file_path.read_text(encoding='utf-8')
-        stories = re.findall(r'^- \*\*US-[^:]+:\*\* (.+)$', text, re.M)
+        stories = re.findall(r'^- \*\*US-[^:]+:\*\* (.+)$', text, re.MULTILINE)
         assert len(stories) == b['story_count'], f'Story count mismatch in {b["brief_id"]}'
         total_stories += len(stories)
     

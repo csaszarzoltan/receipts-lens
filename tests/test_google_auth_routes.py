@@ -27,8 +27,7 @@ from app.product_service import Actor
 
 # Reuse the offline crypto helpers from the OIDC test suite so we can sign
 # valid ID tokens without hitting Google.
-from tests.test_google_oidc import CLIENT_ID, make_id_token, google_transport
-
+from tests.test_google_oidc import CLIENT_ID, google_transport, make_id_token
 
 client = TestClient(api.app)
 
@@ -47,7 +46,6 @@ def _google_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def _make_sync_exchange(transport):
     """Build a synchronous mock for exchange_google_code that uses the given transport."""
     import httpx
-    import asyncio
 
     def _sync_exchange(code: str, expected_nonce: str, **kw: Any) -> dict[str, Any]:
         from app.google_oidc import exchange_google_code
@@ -129,7 +127,7 @@ class TestGoogleStart:
         qs = parse_qs(urlparse(location).query)
         state = qs["state"][0]
         cookies = resp.headers.get_list("set-cookie")
-        oauth_cookie = [c for c in cookies if "receiptlens.oauth" in c][0]
+        oauth_cookie = next(c for c in cookies if "receiptlens.oauth" in c)
         # Cookie value is quoted and contains state:return_to
         raw = oauth_cookie.split(";", 1)[0].split("=", 1)[1].strip('"')
         raw = raw.replace("%3A", ":").replace("%2F", "/")
@@ -141,7 +139,7 @@ class TestGoogleStart:
         assert resp.status_code == 307
         # Cookie should contain the sanitized return_to
         cookies = resp.headers.get_list("set-cookie")
-        oauth_cookie = [c for c in cookies if "receiptlens.oauth" in c][0]
+        oauth_cookie = next(c for c in cookies if "receiptlens.oauth" in c)
         raw = oauth_cookie.split(";", 1)[0].split("=", 1)[1].strip('"')
         assert ":https://evil.com" not in raw
 
@@ -167,7 +165,7 @@ class TestGoogleCallback:
         state = parse_qs(urlparse(location).query)["state"][0]
 
         cookies = start_resp.headers.get_list("set-cookie")
-        cookie_val = [c for c in cookies if "receiptlens.oauth" in c][0].split(";")[0].split("=", 1)[1]
+        cookie_val = next(c for c in cookies if "receiptlens.oauth" in c).split(";")[0].split("=", 1)[1]
 
         nonce = _oauth_hmac(state)
         id_token = make_id_token(nonce=nonce)
@@ -245,7 +243,7 @@ class TestGoogleCallback:
         location = start_resp.headers["location"]
         state = parse_qs(urlparse(location).query)["state"][0]
         cookies = start_resp.headers.get_list("set-cookie")
-        cookie_val = [c for c in cookies if "receiptlens.oauth" in c][0].split(";")[0].split("=", 1)[1]
+        cookie_val = next(c for c in cookies if "receiptlens.oauth" in c).split(";")[0].split("=", 1)[1]
 
         nonce = _oauth_hmac(state)
         id_token = make_id_token(nonce=nonce)
@@ -275,7 +273,7 @@ class TestGoogleCallback:
         location = start_resp.headers["location"]
         state = parse_qs(urlparse(location).query)["state"][0]
         cookies = start_resp.headers.get_list("set-cookie")
-        cookie_val = [c for c in cookies if "receiptlens.oauth" in c][0].split(";")[0].split("=", 1)[1]
+        cookie_val = next(c for c in cookies if "receiptlens.oauth" in c).split(";")[0].split("=", 1)[1]
 
         from app.google_oidc import OIDCError
 

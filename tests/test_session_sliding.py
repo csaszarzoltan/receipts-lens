@@ -21,7 +21,6 @@ from app import api
 from app.product_api import service
 from app.product_service import SESSION_TTL_SECONDS, Actor, ProductService
 
-
 client = TestClient(api.app)
 
 
@@ -146,22 +145,26 @@ class TestGoogleCallbackSliding:
         )
 
     def test_callback_session_is_sliding(self) -> None:
-        from app.auth_api import _oauth_hmac
-        from tests.test_google_oidc import make_id_token, google_transport
         from urllib.parse import parse_qs, urlparse
+
+        from app.auth_api import _oauth_hmac
+        from tests.test_google_oidc import google_transport, make_id_token
 
         # Start
         start = client.get("/auth/google/start", follow_redirects=False)
         state = parse_qs(urlparse(start.headers["location"]).query)["state"][0]
         cookies = start.headers.get_list("set-cookie")
-        cookie_state = [c for c in cookies if "receiptlens.oauth" in c][0].split(";")[0].split("=", 1)[1]
+        cookie_state = next(c for c in cookies if "receiptlens.oauth" in c).split(";")[0].split("=", 1)[1]
 
         nonce = _oauth_hmac(state)
         id_token = make_id_token(nonce=nonce, email="slide-cb@example.com")
         transport = google_transport(id_token)
 
         # Use thread-based sync exchange mock (same as test_google_auth_routes)
-        import concurrent.futures, asyncio, httpx
+        import asyncio
+        import concurrent.futures
+
+        import httpx
 
         def _sync_exchange(code, expected_nonce, **kw):
             from app.google_oidc import exchange_google_code

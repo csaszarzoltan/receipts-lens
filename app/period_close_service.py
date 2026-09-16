@@ -1,8 +1,21 @@
 """Tenant-isolated, idempotent service for FEAT-047."""
 from __future__ import annotations
-from datetime import UTC,datetime
-import hashlib,json,threading,uuid
-from app.period_close_models import AccountingPeriod,CreateRequest,CommandRequest,Status,NotFoundError,StaleRevisionError,IdempotencyConflictError
+
+import hashlib
+import threading
+import uuid
+from datetime import UTC, datetime
+
+from app.period_close_models import (
+    AccountingPeriod,
+    CommandRequest,
+    CreateRequest,
+    IdempotencyConflictError,
+    NotFoundError,
+    StaleRevisionError,
+    Status,
+)
+
 
 class AccountingPeriodService:
     def __init__(self): self._items={}; self._keys={}; self._lock=threading.RLock()

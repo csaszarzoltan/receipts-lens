@@ -128,7 +128,7 @@ class ProductService:
                 if "display_name" not in cols:
                     self._db.execute("ALTER TABLE sessions ADD COLUMN display_name TEXT")
                     self._db.commit()
-            except Exception:
+            except Exception:  # noqa: BLE001, S110 — best-effort migration; failure is non-fatal
                 pass
 
     @staticmethod
@@ -843,12 +843,12 @@ class ProductService:
                 (datetime.fromtimestamp(new_exp, UTC).isoformat(), session_token),
             )
             self._db.commit()
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 — best-effort expiry refresh; read must not fail
             pass
         dn = None
         try:
-            dn = row["display_name"] if "display_name" in row.keys() else None
-        except Exception:
+            dn = row["display_name"] if "display_name" in row.keys() else None  # noqa: SIM118 — sqlite3.Row has no "in"; .keys() required
+        except Exception:  # noqa: BLE001, S110 — legacy rows lack display_name; None is correct
             pass
         return {"email": row["email"], "tenant_id": row["tenant_id"], "role": row["role"], "display_name": dn}
 

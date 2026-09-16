@@ -1,8 +1,21 @@
 """Tenant-isolated, idempotent service for FEAT-040."""
 from __future__ import annotations
-from datetime import UTC,datetime
-import hashlib,json,threading,uuid
-from app.warranty_models import WarrantyCase,CreateRequest,CommandRequest,Status,NotFoundError,StaleRevisionError,IdempotencyConflictError
+
+import hashlib
+import threading
+import uuid
+from datetime import UTC, datetime
+
+from app.warranty_models import (
+    CommandRequest,
+    CreateRequest,
+    IdempotencyConflictError,
+    NotFoundError,
+    StaleRevisionError,
+    Status,
+    WarrantyCase,
+)
+
 
 class WarrantyCaseService:
     def __init__(self): self._items={}; self._keys={}; self._lock=threading.RLock()

@@ -24,7 +24,7 @@ from app import api
 from app.auth_api import _oauth_hmac, _safe_return_to
 from app.google_oidc import OIDCError
 from app.product_api import service
-from tests.test_google_oidc import CLIENT_ID, make_id_token, google_transport
+from tests.test_google_oidc import CLIENT_ID, google_transport, make_id_token
 
 client = TestClient(api.app, raise_server_exceptions=False)
 
@@ -132,7 +132,7 @@ class TestUS002AC2Errors:
     def test_oidc_exchange_failure_redirects_exchange_failed(self):
         start = client.get("/auth/google/start", follow_redirects=False)
         state = parse_qs(urlparse(start.headers["location"]).query)["state"][0]
-        cookie_val = [c for c in start.headers.get_list("set-cookie") if "receiptlens.oauth" in c][0].split(";")[0].split("=", 1)[1]
+        cookie_val = next(c for c in start.headers.get_list("set-cookie") if "receiptlens.oauth" in c).split(";")[0].split("=", 1)[1]
 
         def _bad(*a: Any, **kw: Any) -> dict[str, Any]:
             raise OIDCError("boom")
@@ -154,7 +154,7 @@ class TestUS002AC3SessionPersistence:
         # RED helper: uses real RSA JWKS path (same as G1 suite)
         start = client.get("/auth/google/start", follow_redirects=False)
         state = parse_qs(urlparse(start.headers["location"]).query)["state"][0]
-        cookie_val = [c for c in start.headers.get_list("set-cookie") if "receiptlens.oauth" in c][0].split(";")[0].split("=", 1)[1]
+        cookie_val = next(c for c in start.headers.get_list("set-cookie") if "receiptlens.oauth" in c).split(";")[0].split("=", 1)[1]
         nonce = _oauth_hmac(state)
         id_token = make_id_token(nonce=nonce)
         transport = google_transport(id_token)

@@ -1,10 +1,14 @@
 """FastAPI adapter for FEAT-043."""
 from __future__ import annotations
+
 import uuid
-from fastapi import APIRouter,Header,HTTPException,Response
+
+from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
-from app.cost_split_models import CreateRequest,CommandRequest,DomainError
+
+from app.cost_split_models import CommandRequest, CreateRequest, DomainError
 from app.cost_split_service import service
+
 router=APIRouter(prefix="/api/v2/cost-splits",tags=["FEAT-043"])
 
 def context(authorization:str|None=Header(None,alias="Authorization"),x_tenant_id:str|None=Header(None,alias="X-Tenant-ID"),x_role:str|None=Header(None,alias="X-Role")):

@@ -38,11 +38,11 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
-from app.google_oidc import OIDCError, exchange_google_code, is_configured as google_is_configured
+from app.google_oidc import OIDCError, exchange_google_code
+from app.google_oidc import is_configured as google_is_configured
 from app.product_api import service
 from app.product_service import (
     HOUSEHOLD_ROLES,
-    SESSION_TTL_SECONDS,
     Actor,
     is_production,
 )

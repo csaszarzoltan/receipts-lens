@@ -77,7 +77,7 @@ def callback(provider: str, request: Request, code: str, state: str):
     if cred is not None:
         try:
             external_id = cred.encrypt({"code": code[:64], "provider": provider})
-        except Exception:
+        except Exception:  # noqa: BLE001 — encrypt failure keeps plain dev fallback (assigned above)
             external_id = code[:64]
     with service._db:
         service._db.execute(

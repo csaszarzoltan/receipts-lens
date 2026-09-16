@@ -58,7 +58,7 @@ class SyncService:
                             ),
                         )
                         pushed += 1
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — provider errors recorded per batch, not raised
                 failed += len(batch)
                 errors += [{"receipt_id": x["receipt_id"], "error": str(e)[:200]} for x in batch]
         return SyncResult(pushed, failed, errors, provider)

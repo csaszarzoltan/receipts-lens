@@ -1,10 +1,14 @@
 """FastAPI adapter for FEAT-042."""
 from __future__ import annotations
+
 import uuid
-from fastapi import APIRouter,Header,HTTPException,Response
+
+from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
-from app.refund_models import CreateRequest,CommandRequest,DomainError
+
+from app.refund_models import CommandRequest, CreateRequest, DomainError
 from app.refund_service import service
+
 router=APIRouter(prefix="/api/v2/refunds",tags=["FEAT-042"])
 
 def context(authorization:str|None=Header(None,alias="Authorization"),x_tenant_id:str|None=Header(None,alias="X-Tenant-ID"),x_role:str|None=Header(None,alias="X-Role")):

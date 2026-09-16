@@ -1,9 +1,12 @@
 """Typed domain contracts for FEAT-046."""
 from __future__ import annotations
+
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
+
 
 class Status(StrEnum):
     OPEN = "OPEN"

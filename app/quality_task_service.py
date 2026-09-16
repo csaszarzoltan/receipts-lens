@@ -1,8 +1,21 @@
 """Tenant-isolated, idempotent service for FEAT-046."""
 from __future__ import annotations
-from datetime import UTC,datetime
-import hashlib,json,threading,uuid
-from app.quality_task_models import QualityTask,CreateRequest,CommandRequest,Status,NotFoundError,StaleRevisionError,IdempotencyConflictError
+
+import hashlib
+import threading
+import uuid
+from datetime import UTC, datetime
+
+from app.quality_task_models import (
+    CommandRequest,
+    CreateRequest,
+    IdempotencyConflictError,
+    NotFoundError,
+    QualityTask,
+    StaleRevisionError,
+    Status,
+)
+
 
 class QualityTaskService:
     def __init__(self): self._items={}; self._keys={}; self._lock=threading.RLock()

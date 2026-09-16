@@ -1,10 +1,14 @@
 """FastAPI adapter for FEAT-041."""
 from __future__ import annotations
+
 import uuid
-from fastapi import APIRouter,Header,HTTPException,Response
+
+from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
-from app.price_tracking_models import CreateRequest,CommandRequest,DomainError
+
+from app.price_tracking_models import CommandRequest, CreateRequest, DomainError
 from app.price_tracking_service import service
+
 router=APIRouter(prefix="/api/v2/price-tracking",tags=["FEAT-041"])
 
 def context(authorization:str|None=Header(None,alias="Authorization"),x_tenant_id:str|None=Header(None,alias="X-Tenant-ID"),x_role:str|None=Header(None,alias="X-Role")):

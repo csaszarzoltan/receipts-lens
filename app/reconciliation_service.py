@@ -1,8 +1,21 @@
 """Tenant-isolated, idempotent service for FEAT-038."""
 from __future__ import annotations
-from datetime import UTC,datetime
-import hashlib,json,threading,uuid
-from app.reconciliation_models import TransactionMatch,CreateRequest,CommandRequest,Status,NotFoundError,StaleRevisionError,IdempotencyConflictError
+
+import hashlib
+import threading
+import uuid
+from datetime import UTC, datetime
+
+from app.reconciliation_models import (
+    CommandRequest,
+    CreateRequest,
+    IdempotencyConflictError,
+    NotFoundError,
+    StaleRevisionError,
+    Status,
+    TransactionMatch,
+)
+
 
 class TransactionMatchService:
     def __init__(self): self._items={}; self._keys={}; self._lock=threading.RLock()
@@ -37,6 +50,8 @@ service=TransactionMatchService()
 
 # Backward-compatible provider comparison retained for existing integrations.
 from decimal import Decimal
+
+
 class ReconciliationService:
     def __init__(self, service, provider): self.db, self.provider = service._db, provider
     def verify(self, actor, item, source):
