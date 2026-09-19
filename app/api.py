@@ -28,6 +28,7 @@ from app.consumer_dashboard import build_consumer_dashboard
 from app.dashboard import render_forecast_dashboard
 from app.forecast import forecast_router
 from app.homepage import render_homepage
+from app.insight_api import insight_router
 from app.ocr import ConfidenceReceipt, check_duplicates, parse_receipt_with_confidence
 from app.product_api import Actor, service
 from app.product_api import router as product_router
@@ -254,6 +255,7 @@ app.include_router(tax_router)
 app.include_router(quota_router)
 app.include_router(sync_router)
 app.include_router(chat_router)
+app.include_router(insight_router)
 
 
 # ---------------------------------------------------------------------------
