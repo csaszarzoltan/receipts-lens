@@ -178,6 +178,13 @@ class _TenantStore:
         self._feedback: dict[str, list[dict[str, Any]]] = {}
         self._unsubscribed: set[str] = set()
 
+    def reset(self) -> None:
+        """Teszt-izolacio: teljes tarolo-torles (kartya/feedback/leiratkozas)."""
+        with self._lock:
+            self._cards.clear()
+            self._feedback.clear()
+            self._unsubscribed.clear()
+
     def is_unsubscribed(self, tenant_id: str) -> bool:
         with self._lock:
             return tenant_id in self._unsubscribed
@@ -297,8 +304,10 @@ def evaluate_insights(
     # Dedup (REQ-033B-09): az azonos jelhez tartozo kartya a taroloban nem
     # duplikalodik (insight_id = jel-azonosito); a valasz a futas utani
     # Ervenyes kartya-keszlet (idempotens, ismetelt futas nem halmoz).
-    store.upsert_cards(tenant_id, fresh)
-    return {"cards": store.list_cards(tenant_id)}
+    fresh_cards = store.upsert_cards(tenant_id, fresh)
+    # REQ-033B-09: ismetelt futas nem duplikal — a valasz csak az UJ
+    # kartya(ka)t hozza; a mar kezbesitett keszlet a GET /cards csatornan.
+    return {"cards": fresh_cards}
 
 
 @insight_router.get("/api/v1/insights/cards")
