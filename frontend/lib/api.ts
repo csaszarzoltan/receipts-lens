@@ -1084,3 +1084,89 @@ export async function logoutSession(): Promise<void> {
 
 /** Alias — spec calls it `logout()` (POST /api/auth/session/logout Bearer-rel). */
 export const logout = logoutSession;
+
+// ---------------------------------------------------------------------------
+// Chat (FEAT-049 AI olvasó-chat — deterministic NL→aggregation)
+// ---------------------------------------------------------------------------
+
+/** One receipt backing a chat answer. */
+export interface ChatSource {
+  receipt_id: string;
+  amount: number;
+}
+
+/** POST /api/v1/chat/query response contract. */
+export interface ChatQueryResponse {
+  answer: string;
+  sources: ChatSource[];
+  query_debug: string;
+}
+
+/**
+ * POST /api/v1/chat/query — ask a question over your own receipts
+ * (read-only, deterministic). Tenant identity comes from tenantRequest()
+ * headers (Bearer > X-Tenant-ID); `top_k` is forwarded when the backend
+ * supports it and ignored otherwise.
+ */
+export async function askChat(question: string, top_k?: number): Promise<ChatQueryResponse> {
+  return tenantRequest<ChatQueryResponse>("/api/v1/chat/query", {
+    method: "POST",
+    body: JSON.stringify({
+      question,
+      ...(top_k !== undefined ? { top_k } : {}),
+    }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Insights (FEAT-033B proaktív insight-kézbesítés — deterministic cards)
+// ---------------------------------------------------------------------------
+
+/** Optional budget context attached to frame-type insight cards. */
+export interface InsightBudgetContext {
+  category: string;
+  budget: number | null;
+  spent: number | null;
+  pct_used: number | null;
+  frame: string | null;
+}
+
+/** GET /api/v1/insights/cards + POST /api/v1/insights/evaluate card shape. */
+export interface InsightCard {
+  insight_id: string;
+  title: string;
+  explanation: string;
+  confidence: number;
+  deep_link: string;
+  budget_context?: InsightBudgetContext | null;
+  frame_context?: InsightBudgetContext | null;
+}
+
+/**
+ * POST /api/v1/insights/evaluate — run scheduled evaluation, returns only
+ * the FRESH cards (already-delivered set stays on GET /cards). Tenant comes
+ * from tenantRequest() headers; `tenant_id` body override is optional.
+ */
+export async function evaluateInsights(
+  tenant_id?: string,
+): Promise<{ cards: InsightCard[] }> {
+  return tenantRequest<{ cards: InsightCard[] }>("/api/v1/insights/evaluate", {
+    method: "POST",
+    body: JSON.stringify(tenant_id ? { tenant_id } : {}),
+  });
+}
+
+/** GET /api/v1/insights/cards — this tenant's delivered insight cards. */
+export async function getInsightCards(): Promise<{ cards: InsightCard[] }> {
+  return tenantRequest<{ cards: InsightCard[] }>("/api/v1/insights/cards");
+}
+
+/** POST /api/v1/insights/preferences — (un)subscribe from insight alerts. */
+export async function setInsightPreferences(
+  unsubscribed: boolean,
+): Promise<{ ok: boolean; unsubscribed: boolean }> {
+  return tenantRequest<{ ok: boolean; unsubscribed: boolean }>(
+    "/api/v1/insights/preferences",
+    { method: "POST", body: JSON.stringify({ unsubscribed }) },
+  );
+}

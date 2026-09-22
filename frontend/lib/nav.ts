@@ -23,6 +23,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/forecast", labelKey: "forecast", icon: "📈" },
   { href: "/budget", labelKey: "budget", icon: "🎯" },
   { href: "/reports", labelKey: "reports", icon: "📄" },
+  { href: "/chat", labelKey: "chat", icon: "💬" },
+  { href: "/insights", labelKey: "insights", icon: "💡" },
   { href: "/tax", labelKey: "taxTitle", icon: "🧾" },
   { href: "/settings", labelKey: "settings", icon: "⚙️" },
 ];
