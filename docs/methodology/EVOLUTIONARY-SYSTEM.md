@@ -423,6 +423,69 @@ hermes cron create --name "swiss-p-map canary (prod 30m)" --schedule "30m" --no-
 
 ---
 
+---
+
+## 17) Kanban figyelési protokoll — figyelem és szólok = mechanizmus, nem ígéret
+
+> Probléma (2026-08-27): agent kitesz egy taskot kanban-ra, azt mondja figyeli és szól ha kész,
+> de nem szól. Okok: (1) nem futtat notify-subscribe-ot, (2) a session meghal hygiene közben,
+> (3) a task blocked-ban végzi, nem done-ban — arra senki nem figyel.
+
+### Szabály
+
+Ha egy agent azt ígéri figyeli a taskot ÉS visszaszól a usernek, az alábbiak közül
+LEGALÁBB EGY kötelező — szóbeli ígéret önmagában TILOS:
+
+**A) notify-subscribe (azonnali push — gateway hozza vissza az eredményt):**
+
+```bash
+# Gateway sessionben (Telegram/Discord) — a task terminális eseménye visszajön a chatbe:
+hermes kanban notify-subscribe <task_id> --platform telegram --chat-id <chat_id>
+# Opciók: --thread-id <id> (thread), --delivery-mode notify+wake (felébreszti az agentet is)
+# Lista: hermes kanban notify-list <task_id>
+# Törlés: hermes kanban notify-unsubscribe <task_id>
+```
+
+Működik: done + blocked + review terminális eseményekre. NEM működik: ha a gateway
+újraindul (/restart) — a feliratkozás SQLite-ban marad, de az aktív wake elveszhet.
+
+**B) Figyelő cron (túléli a session-halált — ajánlott hosszú taskokra):**
+
+```bash
+hermes cron create --name "watch <task_id> (<board>)" --schedule "15m" \
+  --prompt "Nézd meg: hermes kanban --board <board> show <task_id>. Ha done: küldd el ide az összefoglalót (summary + commit SHA + tesztek). Ha blocked/needs_input: küldd el a blokk okát + mit kell eldönteni. Ha még fut: NE küldj semmit (csend). Ha done/blocked jelentve: töröld magad (hermes cron remove <job_id>)." \
+  --deliver origin
+```
+
+Rövid task (<30p): A) elég. Hosszú task (>30p vagy több lánc): B) kötelező.
+Kritikus task: A) + B) együtt.
+
+**C) Kézi poll (csak ha A) és B) technikailag lehetetlen):**
+
+Az agent minden érdemi turn elején futtat `hermes kanban --board <board> show <task_id>`-t.
+Ezt a task body-ban RÖGZÍTENI kell: Watch: manual-poll, <board>/<task_id>.
+Hátrány: session-halál esetén elvész — csak rövid, interaktív sessionben elfogadható.
+
+### Ellenőrző lista task-kihelyezéskor
+
+1. Task létrehozva (`kanban_create` + board + assignee + parents)?
+2. Figyelési mechanizmus kiválasztva (A / B / A+B / C + indok)?
+3. Mechanizmus LÉTREHOZVA (notify-subscribe kimenet VAGY cron job_id VAGY body-ban Watch sor)?
+4. Usernek MEGMONDVA melyik mechanizmus + mikor várható jelzés?
+5. Ha blocked lesz: ki kapja meg a blokk okát (ugyanaz a mechanizmus viszi)?
+
+Ha a 3. pont hiányzik — az ígéret nem hangozhat el. Helyette: Task kint van
+(<board>/<task_id>), de figyelést nem tudtam beállítani — nézz rá kézzel: hermes kanban show.
+
+### Anti-minták
+
+- Szóbeli figyelem ígéret mechanizmus nélkül — TILOS.
+- Csak done-ra várni — a blocked ugyanúgy terminális, arra is szólni kell.
+- Végtelen cron — a figyelő cron done/blocked után TÖRLI MAGÁT.
+- Minden taskra cron — csak arra, ahol az agent visszajelzést ígért.
+
+---
+
 *Vége — review után a `workflows/principles.md` Deep + Continuous szakaszai + `docs/stories/US-000-template.md` + `scripts/bdd-gate.sh` beépítésével lesz teljes a bevezetés mindhárom projektre.*
 
 ---

@@ -22,5 +22,7 @@ Te a ReceiptLens agentje vagy. Workdir: ~/receipts-lens — NE kódolj mielőtt 
 
 5. BUG PROTOKOLL: T1 nincs ticket, T2 5 sor tanulság, T3 kanban ticket + ADR. Canary piros = T3.
 
-6. INDÍTÁS: 2-3 mondat összefoglaló (stack + hol tart + következő lépés), aztán várd a feladatot.
+6. KANBAN WATCH (ha taskot teszel ki ES visszajelzest igersz): szobeli igeret TILOS - kotelezo mechanizmus: A) notify-subscribe (rovid task) VAGY B) figyelo cron 15m (hosszu task, done/blocked utan torli magat) VAGY A+B (kritikus). Reszletek: EVOLUTIONARY-SYSTEM.md 17. fejezet.
+
+8. INDÍTÁS: 2-3 mondat összefoglaló (stack + hol tart + következő lépés), aztán várd a feladatot.
 ```
