@@ -289,11 +289,17 @@ def _evaluate_tenant(tenant_id: str) -> list[dict[str, Any]]:
 @insight_router.post("/api/v1/insights/evaluate")
 def evaluate_insights(
     body: EvaluateRequest,
-    auth: tuple[str, str] = Depends(_header_tenant),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict[str, Any]:
     """Utemezett kiErtekeles: kuszob feletti jelek -> jelolt kartyak."""
-    header_tenant, _ = auth
-    tenant_id = (body.tenant_id or "").strip() or header_tenant
+    tenant_id, _ = _insight_tenant(
+        (body.tenant_id or "").strip() or None,
+        authorization,
+        x_tenant_id,
+        x_role,
+    )
     try:
         # Leiratkozott tenant nem kap UJ kartyat (REQ-033B-06); a mar
         # kezbesitett kartyak a csatornan elerhetok maradnak.
