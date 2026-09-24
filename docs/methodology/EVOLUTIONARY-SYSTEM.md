@@ -486,6 +486,78 @@ Ha a 3. pont hiányzik — az ígéret nem hangozhat el. Helyette: Task kint van
 
 ---
 
+---
+
+## 18) Kritikus review-fázis — pontozásos minőségkapu (reviewer profil)
+
+> Ok (2026-09-24): a `review` státusz natívan létezik a kanban-motorban
+> (`VALID_STATUSES`, `request_review` / `request_changes`, `review_dispatch`),
+> de 0-szor használtuk 4 boardon — minden lánc `running → done` ugrott.
+> A reviewer profil + rubrika + küszöb ezt kapcsolja be.
+
+### Szereplők
+
+| Szerep | Profil | Feladat |
+|---|---|---|
+| Implementer | `developer` (stb.) | Megcsinálja, majd `request-review`-t hív `kanban_complete` HELYETT |
+| **Kritikus** | **`reviewer`** (új) | Pontoz rubrika alapján, küszöb alatt visszaküld |
+| Orchestrator | `tech-lead` | Láncot rak össze, 3× bukás után emberi döntés |
+
+### Folyamat
+
+```
+running → review → [reviewer: score ≥ 4.0] → done
+                → [reviewer: score < 4.0] → request-changes → running (újra, max 3×)
+                                                       → 3× után → blocked (needs_input)
+```
+
+### Rubrika (súlyozott, küszöb 4.0)
+
+| Dimenzió | Súly |
+|---|---|
+| Helyesség (AC teljesül, bizonyítva) | 30% |
+| Teszt-fedettség (új viselkedés → új teszt + zöld) | 20% |
+| Spec-megfelelés (US/gui_flow/ADR szerint) | 20% |
+| Kódminőség (tiszta, type hint, nincs facade/stub) | 15% |
+| Bizonyíték (push + commit SHA + CI) | 15% |
+
+### Worker kontrakt (feature kártyákra kötelező)
+
+```bash
+# Implementer a munka végén — NEM kanban_complete:
+hermes kanban request-review <task_id> --summary "<mit + hogyan verifikálva>" --reviewer reviewer
+
+# Reviewer verdict:
+#   PASS  → kanban_complete (summary-ban: REVIEW PASS <score>/5)
+#   FAIL  → hermes kanban request-changes <task_id> "<score>/5: <file:line + mit javíts>"
+```
+
+A dispatcher a `review` taskot automatikusan külön runként futtatja
+(`kanban.review_dispatch`, default ON) — a reviewer nem az implementer sessionjében fut.
+
+### Mikor kötelező, mikor nem
+
+| Kártya | Review? |
+|---|---|
+| T1 micro-fix (<30p, 1-3 file) | ❌ nem — direkt `kanban_complete` |
+| T2 pattern-bug | ⚪ opcionális (ha API/UX-t érint: igen) |
+| T3 rendszer / R2+ feature (új viselkedés, API, UI) | ✅ kötelező `request-review` |
+| Release előtti kártya | ✅ kötelező |
+
+### Vizuális követés
+
+`hermes kanban list` státusz-ikonok: `◻ todo · ▶ ready · ● running · ◉ review · ⊘ blocked · ✓ done`.
+A `◉ review` sor = a kritikusnál van a labda — ha sokáig áll, a reviewer beragadt.
+
+### Anti-minták
+
+- `kanban_complete` review-köteles kártyán — a reviewer sosem látja. (Ezt eddig mindenki csinálta.)
+- Reviewer kódot módosít — TILOS, csak visszaküld (read-only).
+- Pontszám nélküli verdict („nézd át újra") — a reasonben score + file:line + akció kötelező.
+- Végtelen pingpong — 3× után `needs_input`, emberi döntés.
+
+---
+
 *Vége — review után a `workflows/principles.md` Deep + Continuous szakaszai + `docs/stories/US-000-template.md` + `scripts/bdd-gate.sh` beépítésével lesz teljes a bevezetés mindhárom projektre.*
 
 ---

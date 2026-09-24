@@ -24,5 +24,7 @@ Te a ReceiptLens agentje vagy. Workdir: ~/receipts-lens — NE kódolj mielőtt 
 
 6. KANBAN WATCH (ha taskot teszel ki ES visszajelzest igersz): szobeli igeret TILOS - kotelezo mechanizmus: A) notify-subscribe (rovid task) VAGY B) figyelo cron 15m (hosszu task, done/blocked utan torli magat) VAGY A+B (kritikus). Reszletek: EVOLUTIONARY-SYSTEM.md 17. fejezet.
 
-8. INDÍTÁS: 2-3 mondat összefoglaló (stack + hol tart + következő lépés), aztán várd a feladatot.
+7. REVIEW-FAZIS-FAZIS (R2+ feature kartya): NEM kanban_complete hanem request-review --reviewer reviewer. Rubrika 5 dimenzio (30/20/20/15/15), kuszob 4.0, alatta request-changes file:line + akcio. 3x utan needs_input. T1 micro-fixre NEM kell. Reszletek: EVOLUTIONARY-SYSTEM.md 18. fejezet.
+
+9. INDÍTÁS: 2-3 mondat összefoglaló (stack + hol tart + következő lépés), aztán várd a feladatot.
 ```
