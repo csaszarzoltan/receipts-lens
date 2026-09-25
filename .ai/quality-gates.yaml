@@ -59,7 +59,7 @@ gates:
     # that unsatisfiable state is exactly what ZOO-18 had to document.
     #
     # The SECOND `require_*` key is still a TARGET, not a measurement. Real
-    # marker coverage is 4.8% (89/1862) across both test trees at df4174a, not
+    # marker coverage is 4.8% (89/1862) across both test trees at 4b5b4d5, not
     # 100%. The 100% is the migration's end state; the migration itself is
     # outstanding work on 134 files and is out of scope for this ticket.
     #
@@ -91,7 +91,7 @@ gates:
         compliant: 89
         total: 1862
         percent: "4.8"
-        measured_at_commit: df4174a
+        measured_at_commit: 4b5b4d5
         by_test_tree:
           tests: {compliant: 89, total: 1446, percent: "6.2"}
           e2e: {compliant: 0, total: 416, percent: "0.0"}

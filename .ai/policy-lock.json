@@ -4,8 +4,8 @@
   "sha256": {
     ".ai/constitutional-policy.yaml": "28e0e7d3ee330b8a358f63b294b9818f126ed2c1a8777ae50b70411c72ce23da",
     ".ai/permissions.yaml": "1e9c94724139657103637919beb38812a48ec1903b685dc8b0e033ea44b7b661",
-    ".ai/project-profile.yaml": "b2aad5ac4979fdfc5b446a5198182f620b5c967d84fb1cd30ec5c4c1a8460ca7",
-    ".ai/quality-gates.yaml": "0cabf31fd06efe542c1e7d95edec1447d81038575c61b9891dbdda6c72129556",
+    ".ai/project-profile.yaml": "29e9aed353cc161396746fa5b361cc3a109ed1ec85ed81ce8be5654d16a466ba",
+    ".ai/quality-gates.yaml": "8414c58f4724adcf4bbc619055002f24b1b958e37d0fb305e97976437a59df9a",
     ".ai/risk-policy.yaml": "bb1163257afcb4ca6a1ac58fe80adbfe268593d53bde83c8717c28c7da1099b6"
   }
 }

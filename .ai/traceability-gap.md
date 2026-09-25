@@ -135,11 +135,11 @@ spec corpus" — is the obvious implementation and is wrong:
 
 - `requirements(...)` and `scenario(...)` name something OUTSIDE the test
   suite. They resolve against the real spec corpus (1155 ids indexed across
-  `.agent-pipeline/02_specs/`, `docs/specs/`, `specs/` at df4174a). 58 do not
+  `.agent-pipeline/02_specs/`, `docs/specs/`, `specs/` at 4b5b4d5). 58 do not
   resolve.
 - `test_id(...)` names the test ITSELF. Resolving it against specs would be a
   category error manufacturing 80 false failures. Its property is uniqueness:
-  0 duplicates at df4174a (an observed "2 duplicates" turned out to be fixture
+  0 duplicates at 4b5b4d5 (an observed "2 duplicates" turned out to be fixture
   strings inside `test_veritas_gate.py` building a temp repo, not real
   decorators).
 

@@ -98,7 +98,7 @@ traceability_policy:
   # today — see enforcement_floor_percent.
   target_percent: 100
   # The ratchet enforced today. Measured coverage is 4.8% across both test
-  # trees (89/1862) at df4174a.
+  # trees (89/1862) at 4b5b4d5.
   #
   # Why a ratchet and not fail-below-target: the goal is 100% and reality is
   # 4.8%, so a hard target fails EVERY run of every agent in this repo until
