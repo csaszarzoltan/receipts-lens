@@ -101,17 +101,55 @@ Three compounding reasons, each sufficient on its own to hide the drift:
 
 - **No traceability runner exists.** Gate 10 remains unsatisfiable until one is
   built. ZOO-18 explicitly excludes implementing it (separate feature ticket).
+  **UPDATE (ZOO-21, [ZOO-21](/ZOO/issues/ZOO-21)):** the runner now exists
+  (`scripts/traceability_runner.py`) and the gate reads its artifact
+  (`verify_traceability()` in `scripts/veritas_gate.py`). The first bullet of
+  §1 is closed: gate 10 is satisfiable. The OLD unsatisfiable state is kept
+  above for the record — it is the history of how this gap was found, not the
+  current state.
 - **The 82 non-compliant files are unchanged.** ZOO-18 forbids touching them.
-  They remain the migration's outstanding work.
+  They remain the migration's outstanding work. (Current count is 134
+  non-compliant files across both test trees, because the runner also scans
+  `.agent-pipeline/03_e2e_suites/`; the 82-file figure is the tests/-only
+  ZOO-18 number and is kept for reproducibility.)
 - **The migration has no completion criterion.** `traceability_policy` has no
   `target_percent` or `deadline`; the profile now records the measured 2.4% so
   the gap is visible, but nothing will fail while the number is low.
+  **UPDATE (ZOO-21):** the policy now declares `target_percent: 100` and the
+  gate prints measured-vs-target on every run, plus enforces a ratchet
+  (`coverage_enforcement: ratchet`, `enforcement_floor_percent: 4`) so no
+  marker can be removed. The 100% itself is unenforced until the migration
+  completes — `flip to fail_below_target when the migration is done`.
 - **`control_evidence` for two controls is `unverified`.**
   `targeted_and_full_regression` and `context_fitness_enforcement` were not
   audited in this pass — this ticket audited traceability only. They remain
   `achieved_controls` on prior evidence; the profile now marks them
   `unverified` so a reader knows they were not re-proven here. A follow-up
   audit should confirm or move them.
+
+## 8. What the runner checks, and why the markers are not checked uniformly (ZOO-21)
+
+The three markers are three different kinds of reference, and the runner
+checks them accordingly. The uniform check — "resolve everything against the
+spec corpus" — is the obvious implementation and is wrong:
+
+- `requirements(...)` and `scenario(...)` name something OUTSIDE the test
+  suite. They resolve against the real spec corpus (1155 ids indexed across
+  `.agent-pipeline/02_specs/`, `docs/specs/`, `specs/` at df4174a). 58 do not
+  resolve.
+- `test_id(...)` names the test ITSELF. Resolving it against specs would be a
+  category error manufacturing 80 false failures. Its property is uniqueness:
+  0 duplicates at df4174a (an observed "2 duplicates" turned out to be fixture
+  strings inside `test_veritas_gate.py` building a temp repo, not real
+  decorators).
+
+The 58 unresolved references (previously 40, before ZOO-21's own 9 tests added
+18 more self-referential ids) are synthetic ids (`FEAT-RL-V02-REQ-001..009`,
+`FEAT-RL-V02-REQ-020..038`, `AC-RL-V02-0*`) in three test files that predate any
+spec defining them: `test_veritas_gate.py`, `test_profile_honesty.py`, and now
+`test_traceability_gate.py`. They are reported on every gate run and enforced
+only under `--strict-traceability`, because failing the whole repo over test
+files' own internal ids would be the wrong enforcement of a right measurement.
 
 ## 6. Reproducing this
 
