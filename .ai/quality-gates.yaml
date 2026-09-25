@@ -52,9 +52,32 @@ gates:
     require_build_pass: true
 
   10_traceability_gate:
+    # !! READ BEFORE CHANGING — ZOO-18 audit note !!
+    # The `require_*` keys below are the INTENDED END STATE of gate 10, not a
+    # description of current compliance. This gate is currently UNSATISFIABLE:
+    #   - require_runner_generated_traceability: no code in tests/, scripts/ or
+    #     .github/ writes a traceability artifact. Nothing emits one to verify.
+    #   - require_100_percent_requirement_coverage: measured 31/1388 = 2.2% of
+    #     test functions carry all three VERITAS markers at e4e9a82.
+    # The gate that would watch this one cannot see it: verify_test_metadata()
+    # is delta-scoped and returns True early when the diff touches no test file
+    # (scripts/veritas_gate.py L447-449), so the 82 non-compliant files are
+    # invisible to it. Treat the `true` values below as the target, never as
+    # evidence of compliance. Measured status: .ai/traceability-gap.md
     require_runner_generated_traceability: true
     require_100_percent_requirement_coverage: true
     reject_missing_test_id: true
+    # Machine-readable current state, so a reader cannot mistake the target
+    # flags above for measured compliance.
+    enforcement_status: not_enforced
+    measured:
+      runner_generated_traceability: absent
+      requirement_coverage:
+        compliant: 31
+        total: 1388
+        percent: "2.2"
+      enforcement_scope: delta_only
+    gap_reference: ".ai/traceability-gap.md"
 
   11_execution_equivalence_gate:
     allow_cache_only_with_identical_inputs: true

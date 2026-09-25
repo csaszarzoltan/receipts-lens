@@ -5,18 +5,54 @@ project:
   adoption:
     methodology_level: L2
     runner_level: R1
+    # A control belongs in achieved_controls ONLY when a deterministic,
+    # re-runnable runner artifact proves it. A documented intent, a CI key, or
+    # a test that could pass vacuously is NOT evidence. Method, measurements
+    # and the per-control verdict: .ai/traceability-gap.md (ZOO-18 audit).
     achieved_controls:
       - structured_specifications
-      - generated_traceability
       - role_separated_diffs
       - targeted_and_full_regression
       - context_fitness_enforcement
       - deterministic_runner_gates
+    # Controls that are NOT achieved. Each entry names the missing evidence,
+    # not merely the absence of a preference.
     declared_gaps:
+      # not implemented — nincs runner, amely traceability artifact-ot emitál.
+      # No code in tests/, scripts/ or .github/ writes a traceability artifact,
+      # so gate 10's require_runner_generated_traceability is unsatisfiable.
+      - generated_traceability
       - signed_policy
       - content_addressed_store
       - deterministic_replay
       - microvm_isolation
+    # Honest per-control verification status from the ZOO-18 audit.
+    # "unverified" means: no runner artifact was found proving or disproving
+    # it in this audit. It is NOT an accusation and NOT an achieved claim.
+    # Re-audit is tracked separately from the traceability gap.
+    control_evidence:
+      structured_specifications: verified_present
+      role_separated_diffs: verified_present
+      deterministic_runner_gates: verified_present
+      targeted_and_full_regression: unverified
+      context_fitness_enforcement: unverified
+      generated_traceability: not_implemented
+    # Facts measured at e4e9a82 by scripts/count_traceability_coverage.py.
+    # Kept adjacent to the claim so the two cannot drift apart silently.
+    # Re-measure after any test change; do not hand-edit these numbers:
+    #   python scripts/count_traceability_coverage.py --ref <commit> --json
+    # tests/test_profile_honesty.py re-derives these and fails on any drift.
+    # scope: committed_tree — NOT the working tree, so concurrent in-flight
+    # work cannot silently move a figure pinned here.
+    traceability_measurement:
+      measured_at_commit: e4e9a82
+      test_files_total: 85
+      test_functions_total: 1388
+      functions_with_all_three_markers: 31
+      compliant_percent: "2.2"
+      files_with_at_least_one_noncompliant_test: 82
+      scope: committed_tree
+      scope_of_enforcement: delta_only
   specification_status: reverse_engineered_proposed
   languages:
     python: "3.11+"
