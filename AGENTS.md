@@ -40,6 +40,18 @@
 ## LLM-függetlenség
 A módszertan bármelyik LLM-mel megy. A szerepek funkciók, nem eszközök. Kötelező minimum: dokumentálj (`docs/`) + tesztelj. Eszközválasztás szabad.
 
+## Pre-commit hook telepítés (kötelező egyszer klón után)
+A valódi lokális gate a **trackelt** `.githooks/pre-commit` (VERITAS staged diff + metadata gate).
+Git csak `core.hooksPath` (ha be van állítva) vagy `.git/hooks/` alatt keres — a `.githooks/`
+önmagában **inert**. Ezért **klón után egyszer futtasd:**
+```bash
+git config core.hooksPath .githooks   # a .githooks/pre-commit-et kapcsolja be
+```
+Ellenőrzés: `git config --get core.hooksPath` → `.githooks`. Ez a beállítás lokális
+(`.git/config`), ezért **nem kerül be a repóba** — minden új klónnál/agentgépen újra kell
+állítani. A hook megkerülhető `--no-verify`-jal; a valódi kényszer a **CI**
+(`.github/workflows/veritas.yml`).
+
 ## VERITAS 1.1 — szerep-határok + gate-használat (rövid)
 Normatív alap: `VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md`. Projektspecifikus profil: `METHODOLOGY.md` (RVAD 1.1).
 - Szerep-határok: Product Authority (értékdöntés) / Researcher (evidence, jóváhagyás nélkül) / Spec Author (spec, kód nélkül) / Test Author (teszt + RED, termékkód nélkül) / Implementer (minimális kód, spec/teszt-módosítás nélkül) / Reviewer (read-only) / Runner (determinisztikus gate-döntés) / Human Authority (termék, jog, security, production).
