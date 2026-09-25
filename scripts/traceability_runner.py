@@ -170,6 +170,7 @@ def build_report(ref: str = "HEAD", include_worktree: bool = False) -> dict:
     compliant = 0
     unresolved: list[dict] = []
     by_tree: dict[str, dict[str, int]] = {}
+    by_file: dict[str, int] = {}
     files_missing: set[str] = set()
     id_owners: dict[str, list[str]] = {}
 
@@ -178,6 +179,7 @@ def build_report(ref: str = "HEAD", include_worktree: bool = False) -> dict:
         bucket = by_tree.setdefault(
             tree, {"test_functions": 0, "with_all_three_markers": 0}
         )
+        file_compliant = 0
         lines = sources[rel].lstrip("﻿").splitlines()
         for index, line in enumerate(lines):
             if not _TEST_DEF.match(line):
@@ -203,9 +205,12 @@ def build_report(ref: str = "HEAD", include_worktree: bool = False) -> dict:
 
             if not missing_markers(block):
                 compliant += 1
+                file_compliant += 1
                 bucket["with_all_three_markers"] += 1
             else:
                 files_missing.add(rel)
+        if file_compliant:
+            by_file[rel] = file_compliant
 
     for bucket in by_tree.values():
         total_in = bucket["test_functions"]
@@ -231,6 +236,11 @@ def build_report(ref: str = "HEAD", include_worktree: bool = False) -> dict:
         "compliant_percent": percent,
         "files_with_noncompliant_tests": len(files_missing),
         "by_test_tree": by_tree,
+        # Per-file compliant counts. The gate compares these against the
+        # recorded commit to detect a LOST marker. Whole-suite totals cannot
+        # do that job: a newly added compliant test raises the total and
+        # cancels out a deletion elsewhere.
+        "by_file_compliant": by_file,
         "spec_ids_indexed": len(spec_index),
         "spec_references": {
             # requirements + scenario only; test_id is not a spec reference.
@@ -288,7 +298,11 @@ def write_artifact(report: dict, path: Path = ARTIFACT) -> Path:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--json", action="store_true", help="print the report as JSON")
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="print the report to stdout as JSON (still writes the artifact)",
+    )
     parser.add_argument(
         "--ref", default="HEAD", help="commit to measure (default: HEAD)"
     )
@@ -343,6 +357,7 @@ def main() -> int:
                 "files_with_noncompliant_tests",
                 "spec_references",
                 "test_id_identity",
+                "by_file_compliant",
             )
             if existing.get(key) != fresh.get(key)
         ]
@@ -356,8 +371,14 @@ def main() -> int:
         return 0
 
     written = write_artifact(report, args.output)
-    print(render(report))
-    print(f"  artifact:                         {written.relative_to(REPO_ROOT)}")
+    if args.json:
+        # stdout is the machine-readable channel; the human report goes to
+        # stderr so `--json | jq` is never polluted by prose.
+        print(json.dumps(report, indent=2, sort_keys=True))
+        print(f"artifact: {written.relative_to(REPO_ROOT)}", file=sys.stderr)
+    else:
+        print(render(report))
+        print(f"  artifact:                         {written.relative_to(REPO_ROOT)}")
     return 0
 
 

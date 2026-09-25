@@ -88,6 +88,35 @@ traceability_policy:
   filename_fallback_allowed_for_legacy_tests: true
   commit_message_only_allowed: false
   generate_at_final_safety_gate: true
+  # ZOO-21: the 100% expectation now has a real criterion, so gate 10 stops
+  # being a declaration and becomes a measurement. verify_traceability() in
+  # scripts/veritas_gate.py reads the runner-generated artifact
+  # (.agent-pipeline/audit/traceability.json) and compares it against these.
+  #
+  # target_percent is the GOAL. It is declared, measured against, and printed
+  # on every run, so the gap stays visible. It is NOT the threshold enforced
+  # today — see enforcement_floor_percent.
+  target_percent: 100
+  # The ratchet enforced today. Measured coverage is 4.3% across both test
+  # trees (80/1853) at e79f3a7.
+  #
+  # Why a ratchet and not fail-below-target: the goal is 100% and reality is
+  # 4.3%, so a hard target fails EVERY run of every agent in this repo until
+  # the 82-file migration finishes. A permanently-red gate stops being read —
+  # it would train everyone to ignore gate 10, reproducing exactly the blindness
+  # ZOO-18 documented. The ratchet instead fails the moment a marker is
+  # removed or the migration regresses, which is a real enforcement with a real
+  # failure mode, and becomes the hard target by flipping
+  # coverage_enforcement to fail_below_target when the migration completes.
+  enforcement_floor_percent: 4
+  # ratchet          — FAIL only if a marker is lost or coverage drops below the floor
+  # fail_below_target — FAIL until measured coverage reaches target_percent
+  coverage_enforcement: ratchet
+  # Unresolved spec references are reported every run and enforced only under
+  # --strict-traceability. The 40 current refs are synthetic self-referential
+  # ids in 2 test files, not broken links to real specs; see
+  # .ai/traceability-gap.md.
+  spec_reference_enforcement: report_only_during_migration
 pull_request:
   auto_create: false
   auto_merge: false
