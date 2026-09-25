@@ -1,0 +1,241 @@
+{
+  "by_test_tree": {
+    ".agent-pipeline": {
+      "compliant_percent": 0.0,
+      "test_functions": 416,
+      "with_all_three_markers": 0
+    },
+    "tests": {
+      "compliant_percent": 5.6,
+      "test_functions": 1437,
+      "with_all_three_markers": 80
+    }
+  },
+  "commit": "e79f3a737ee561e6472b1aa7fe80edb6c0fdc019",
+  "compliant_percent": 4.3,
+  "enforcement_scope": "delta_only",
+  "files_with_noncompliant_tests": 134,
+  "functions_with_all_three_markers": 80,
+  "generated_at": "2026-09-25T18:39:06.215721+00:00",
+  "generated_by": "scripts/traceability_runner.py",
+  "ref": "HEAD",
+  "schema_version": "1.0",
+  "scope": "committed_tree",
+  "spec_ids_indexed": 1155,
+  "spec_references": {
+    "unresolved": [
+      {
+        "marker": "requirements",
+        "test": "tests/test_profile_honesty.py::test_generated_traceability_not_claimed_as_achieved",
+        "value": "FEAT-RL-V02-REQ-020"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_profile_honesty.py::test_generated_traceability_not_claimed_as_achieved",
+        "value": "AC-RL-V02-20"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_profile_honesty.py::test_generated_traceability_declared_as_gap",
+        "value": "FEAT-RL-V02-REQ-021"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_profile_honesty.py::test_generated_traceability_declared_as_gap",
+        "value": "AC-RL-V02-21"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_profile_honesty.py::test_no_achieved_control_lacks_an_evidence_verdict",
+        "value": "FEAT-RL-V02-REQ-022"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_profile_honesty.py::test_no_achieved_control_lacks_an_evidence_verdict",
+        "value": "AC-RL-V02-22"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_profile_honesty.py::test_coverage_flag_carries_measured_counterpart",
+        "value": "FEAT-RL-V02-REQ-023"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_profile_honesty.py::test_coverage_flag_carries_measured_counterpart",
+        "value": "AC-RL-V02-23"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_profile_honesty.py::test_gate10_target_flags_are_retained_as_targets",
+        "value": "FEAT-RL-V02-REQ-024"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_profile_honesty.py::test_gate10_target_flags_are_retained_as_targets",
+        "value": "AC-RL-V02-24"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_profile_honesty.py::test_pinned_measurement_matches_reality",
+        "value": "FEAT-RL-V02-REQ-025"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_profile_honesty.py::test_pinned_measurement_matches_reality",
+        "value": "AC-RL-V02-25"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_profile_honesty.py::test_honest_coverage_is_not_misrepresented_as_full",
+        "value": "FEAT-RL-V02-REQ-026"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_profile_honesty.py::test_honest_coverage_is_not_misrepresented_as_full",
+        "value": "AC-RL-V02-26"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_profile_honesty.py::test_gap_documentation_exists_and_explains_the_blind_spot",
+        "value": "FEAT-RL-V02-REQ-027"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_profile_honesty.py::test_gap_documentation_exists_and_explains_the_blind_spot",
+        "value": "AC-RL-V02-27"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_profile_honesty.py::test_coverage_script_is_committed_and_runnable",
+        "value": "FEAT-RL-V02-REQ-028"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_profile_honesty.py::test_coverage_script_is_committed_and_runnable",
+        "value": "AC-RL-V02-28"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_mixed_app_and_test_diff_blocked",
+        "value": "FEAT-RL-V02-REQ-001"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_mixed_app_and_test_diff_blocked",
+        "value": "AC-RL-V02-01"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_missing_test_metadata_blocked",
+        "value": "FEAT-RL-V02-REQ-002"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_missing_test_metadata_blocked",
+        "value": "AC-RL-V02-02"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_r3_auth_path_without_approval_blocked",
+        "value": "FEAT-RL-V02-REQ-003"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_r3_auth_path_without_approval_blocked",
+        "value": "AC-RL-V02-03"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_r3_payment_path_without_approval_blocked",
+        "value": "FEAT-RL-V02-REQ-004"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_r3_payment_path_without_approval_blocked",
+        "value": "AC-RL-V02-04"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_policy_hash_tamper_blocked",
+        "value": "FEAT-RL-V02-REQ-005"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_policy_hash_tamper_blocked",
+        "value": "AC-RL-V02-05"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_git_context_failure_exits_2",
+        "value": "FEAT-RL-V02-REQ-006"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_git_context_failure_exits_2",
+        "value": "AC-RL-V02-06"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_history_scan_clean_passes",
+        "value": "FEAT-RL-V02-REQ-007"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_history_scan_clean_passes",
+        "value": "AC-RL-V02-07"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_history_scan_finds_committed_secret",
+        "value": "FEAT-RL-V02-REQ-008"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_history_scan_finds_committed_secret",
+        "value": "AC-RL-V02-08"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_bare_markers_blocked",
+        "value": "FEAT-RL-V02-REQ-009"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_bare_markers_blocked",
+        "value": "AC-RL-V02-09"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_empty_marker_value_blocked",
+        "value": "FEAT-RL-V02-REQ-009"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_empty_marker_value_blocked",
+        "value": "AC-RL-V02-09"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_valued_markers_still_pass",
+        "value": "FEAT-RL-V02-REQ-009"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_valued_markers_still_pass",
+        "value": "AC-RL-V02-09"
+      }
+    ],
+    "unresolved_count": 40
+  },
+  "test_files_total": 141,
+  "test_functions_total": 1853,
+  "test_id_identity": {
+    "distinct_ids": 80,
+    "duplicate_count": 0,
+    "duplicates": {}
+  },
+  "test_trees_scanned": [
+    "tests",
+    ".agent-pipeline/03_e2e_suites"
+  ]
+}
