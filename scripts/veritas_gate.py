@@ -97,6 +97,32 @@ _MARKER_PATTERNS = {
 _GIT_CONTEXT_FAILED = False
 
 
+# Role inference for --role auto.
+#
+# The pre-commit hook and the CI PR job both pass ``--role auto``, which
+# historically always meant "assume implementer". The implementer deny matrix
+# in .ai/permissions.yaml covers tests/** and specs/**, so a test-only or
+# spec-only commit was blocked — leaving the Test Author with --no-verify as
+# the only way to work, which is exactly the escape the gate must prevent.
+#
+# Inference is deliberately narrow: it fires only when EVERY file falls under
+# the same role's own allow-prefix below. Anything else — infra edits, mixed
+# packets, or a path two roles both own — keeps the historical implementer
+# default, which is the fail-closed side of the choice. The table is a hint
+# about WHO is committing; .ai/permissions.yaml remains the authority and
+# its deny matrix still runs over every file, so a stale prefix can only make
+# the gate stricter, never looser.
+ROLE_DOMAINS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("test_author", ("tests/", "frontend/e2e/", ".agent-pipeline/03_e2e_suites/")),
+    ("spec_author", ("specs/", ".agent-pipeline/02_specs/", "docs/specs/")),
+    ("reviewer", (".ai-execution/reviews/", ".agent-pipeline/04_defects/")),
+)
+
+# The historical --role auto behaviour, and the fail-closed fallback when the
+# diff does not unambiguously belong to exactly one non-implementer role.
+DEFAULT_ROLE = "implementer"
+
+
 def _mark_git_context_failed() -> None:
     """Record that the gate failed for lack of trustworthy git context."""
     global _GIT_CONTEXT_FAILED
@@ -320,7 +346,43 @@ def check_role_permissions(role: str, files: list[str]) -> bool:
     return True
 
 
-def verify_diff(role: str = "implementer", staged_only: bool = False) -> bool:
+def infer_role_from_files(files: list[str], staged_only: bool = False) -> str:
+    """Infer the committing role from the changed files, or return the default.
+
+    Used for ``--role auto``. Fails closed: any file outside every known
+    role domain, or a diff spanning two role domains, keeps the historical
+    ``implementer`` default rather than guessing.
+    """
+    candidates = [
+        (role, prefixes)
+        for role, prefixes in ROLE_DOMAINS
+        if all(any(f.startswith(p) for p in prefixes) for f in files)
+    ]
+    if len(candidates) != 1:
+        # 0 = no role owns this diff; >1 = the diff straddles roles, or a
+        # role whose allow-list overlaps another's. Either way, do not infer.
+        return DEFAULT_ROLE
+    role = candidates[0][0]
+    scope = "staged" if staged_only else "diff"
+    print(f"[INFO] Inferred role '{role}' from {len(files)} {scope} file(s).")
+    return role
+
+
+def resolve_role(role: str, staged_only: bool = False) -> str:
+    """Resolve ``--role auto`` against the actual diff, or pass it through."""
+    if role != "auto":
+        return role
+    try:
+        files = get_git_diff_files(staged_only=staged_only)
+    except RuntimeError as exc:
+        # No trustworthy diff to infer from: keep the default, and let
+        # verify_diff raise the fail-closed git-context failure itself.
+        print(f"[INFO] Role auto-detection unavailable ({exc}); assuming '{DEFAULT_ROLE}'.")
+        return DEFAULT_ROLE
+    return infer_role_from_files(files, staged_only=staged_only)
+
+
+def verify_diff(role: str = DEFAULT_ROLE, staged_only: bool = False) -> bool:
     """Check git diff for role separation, sensitive paths, and secrets."""
     print(f">> [VERITAS GATE] Verifying git diff (role mode: {role})...")
     try:
@@ -668,10 +730,11 @@ def main():
     )
     parser.add_argument(
         "--role",
-        default="implementer",
+        default=DEFAULT_ROLE,
         help=(
-            "Assumed role (permissions.yaml deny matrix enforced; "
-            "'auto' is a legacy alias for the default 'implementer')"
+            "Assumed role (permissions.yaml deny matrix enforced). 'auto' "
+            "infers test_author / spec_author / reviewer when every changed "
+            f"file falls in that role's domain, else '{DEFAULT_ROLE}'."
         ),
     )
     parser.add_argument(
@@ -686,10 +749,11 @@ def main():
 
     args = parser.parse_args()
 
-    # 'auto' is a legacy alias kept for CI / pre-commit hook compat:
-    # it resolves to the default role 'implementer'.
-    if args.role == "auto":
-        args.role = "implementer"
+    # 'auto' is kept for CI / pre-commit hook compat: it resolves against the
+    # real diff so a test-only or spec-only packet is judged as that role
+    # instead of being denied outright by the implementer matrix. Anything
+    # ambiguous stays on DEFAULT_ROLE.
+    args.role = resolve_role(args.role, staged_only=args.staged)
 
     if not any(
         [
