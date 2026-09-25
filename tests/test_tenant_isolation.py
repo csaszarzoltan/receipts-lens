@@ -13,10 +13,15 @@ contract directly against the SQL the adapter actually issues:
   per ``(tenant_id, idempotency_key)``.
 - ``get_receipt`` is filtered by ``tenant_id`` in the ``WHERE`` clause, so one
   tenant can never read another tenant's receipt.
+- A soft-deleted receipt (``deleted_at`` set) is not served, so an erasure
+  request cannot be undone by a plain read.
 - The same idempotency key used by two different tenants does not collide.
 
-Each test is written so that removing the ``tenant_id=?`` predicate from
-``get_receipt`` makes it fail -- that is the regression the gate must catch.
+The cross-tenant and soft-delete tests (``test_receipt_is_scoped_to_...``,
+``test_cross_tenant_read_...``, ``test_job_carrying_...``,
+``test_soft_deleted_receipt_is_not_served``) each fail if the corresponding
+``get_receipt`` predicate is removed -- that is the regression the gate must
+catch. The remaining tests pin idempotency and job-claiming behaviour.
 """
 from __future__ import annotations
 
@@ -33,9 +38,9 @@ def _submit(plane: SqliteDataPlane, tenant: str, key: str, marker: str):
     return plane.submit_receipt(tenant, {"total": marker}, key, f"blob://{marker}")
 
 
-@pytest.mark.test_id("TEST-TI-001")
-@pytest.mark.requirements("REQ-TI-01")
-@pytest.mark.scenario("AC-TI-01")
+@pytest.mark.test_id("TEST-025S-001")
+@pytest.mark.requirements("REQ-025-06")
+@pytest.mark.scenario("AC-025-06")
 def test_receipt_is_scoped_to_submitting_tenant(tmp_path):
     """A submission is stored under, and only retrievable by, its own tenant."""
     plane = _plane(tmp_path)
@@ -49,9 +54,9 @@ def test_receipt_is_scoped_to_submitting_tenant(tmp_path):
         plane.close()
 
 
-@pytest.mark.test_id("TEST-TI-002")
-@pytest.mark.requirements("REQ-TI-01")
-@pytest.mark.scenario("AC-TI-01")
+@pytest.mark.test_id("TEST-025S-002")
+@pytest.mark.requirements("REQ-025-06")
+@pytest.mark.scenario("AC-025-06")
 def test_cross_tenant_read_returns_nothing_for_every_receipt(tmp_path):
     """No tenant may enumerate another tenant's receipts, one by one."""
     plane = _plane(tmp_path)
@@ -67,9 +72,9 @@ def test_cross_tenant_read_returns_nothing_for_every_receipt(tmp_path):
         plane.close()
 
 
-@pytest.mark.test_id("TEST-TI-003")
-@pytest.mark.requirements("REQ-TI-01")
-@pytest.mark.scenario("AC-TI-01")
+@pytest.mark.test_id("TEST-025S-003")
+@pytest.mark.requirements("REQ-025-06")
+@pytest.mark.scenario("AC-025-06")
 def test_unknown_receipt_id_is_not_disclosed(tmp_path):
     """A missing receipt reads as ``None`` rather than raising or leaking."""
     plane = _plane(tmp_path)
@@ -80,9 +85,9 @@ def test_unknown_receipt_id_is_not_disclosed(tmp_path):
         plane.close()
 
 
-@pytest.mark.test_id("TEST-TI-004")
-@pytest.mark.requirements("REQ-TI-01")
-@pytest.mark.scenario("AC-TI-01")
+@pytest.mark.test_id("TEST-025S-004")
+@pytest.mark.requirements("REQ-025-06")
+@pytest.mark.scenario("AC-025-06")
 def test_idempotency_key_is_scoped_per_tenant(tmp_path):
     """The same key in two tenants creates two independent receipts."""
     plane = _plane(tmp_path)
@@ -98,9 +103,9 @@ def test_idempotency_key_is_scoped_per_tenant(tmp_path):
         plane.close()
 
 
-@pytest.mark.test_id("TEST-TI-005")
-@pytest.mark.requirements("REQ-TI-01")
-@pytest.mark.scenario("AC-TI-01")
+@pytest.mark.test_id("TEST-025S-005")
+@pytest.mark.requirements("REQ-025-06")
+@pytest.mark.scenario("AC-025-06")
 def test_repeat_submission_with_same_key_is_idempotent(tmp_path):
     """Replaying a key within one tenant returns the original receipt."""
     plane = _plane(tmp_path)
@@ -114,9 +119,9 @@ def test_repeat_submission_with_same_key_is_idempotent(tmp_path):
         plane.close()
 
 
-@pytest.mark.test_id("TEST-TI-006")
-@pytest.mark.requirements("REQ-TI-01")
-@pytest.mark.scenario("AC-TI-01")
+@pytest.mark.test_id("TEST-025S-006")
+@pytest.mark.requirements("REQ-025-06")
+@pytest.mark.scenario("AC-025-06")
 def test_submission_requires_tenant_identity(tmp_path):
     """An empty tenant id is rejected rather than silently unscoped."""
     plane = _plane(tmp_path)
@@ -127,9 +132,9 @@ def test_submission_requires_tenant_identity(tmp_path):
         plane.close()
 
 
-@pytest.mark.test_id("TEST-TI-007")
-@pytest.mark.requirements("REQ-TI-01")
-@pytest.mark.scenario("AC-TI-01")
+@pytest.mark.test_id("TEST-025S-007")
+@pytest.mark.requirements("REQ-025-06")
+@pytest.mark.scenario("AC-025-06")
 def test_job_carrying_another_tenants_receipt_is_not_readable(tmp_path):
     """The queued job inherits the submitting tenant, so cross-tenant work is impossible."""
     plane = _plane(tmp_path)
@@ -145,9 +150,9 @@ def test_job_carrying_another_tenants_receipt_is_not_readable(tmp_path):
         plane.close()
 
 
-@pytest.mark.test_id("TEST-TI-008")
-@pytest.mark.requirements("REQ-TI-01")
-@pytest.mark.scenario("AC-TI-01")
+@pytest.mark.test_id("TEST-025S-008")
+@pytest.mark.requirements("REQ-025-06")
+@pytest.mark.scenario("AC-025-06")
 def test_stale_writer_cannot_mutate_a_claimed_job(tmp_path):
     """Optimistic locking rejects a second writer using a stale version."""
     plane = _plane(tmp_path)
@@ -158,5 +163,31 @@ def test_stale_writer_cannot_mutate_a_claimed_job(tmp_path):
 
         with pytest.raises(ConflictError):
             plane.transition_job(claimed.job_id, JobState.COMPLETED, claimed.version - 1)
+    finally:
+        plane.close()
+
+
+@pytest.mark.test_id("TEST-025S-009")
+@pytest.mark.requirements("REQ-025-06")
+@pytest.mark.scenario("AC-025-06")
+def test_soft_deleted_receipt_is_not_served(tmp_path):
+    """An erased receipt must stay unreadable, including to its own tenant.
+
+    Erasure is a soft delete: the row survives with ``deleted_at`` set. If the
+    ``deleted_at IS NULL`` predicate is dropped from ``get_receipt``, personal
+    data the tenant asked to erase is served again on the next read.
+    """
+    plane = _plane(tmp_path)
+    try:
+        receipt = _submit(plane, "tenant-a", "k-1", "19.99")
+        assert plane.get_receipt("tenant-a", receipt.receipt_id) == {"total": "19.99"}
+
+        with plane._db:  # erasure path; the adapter exposes no public delete
+            plane._db.execute(
+                "UPDATE receipts SET deleted_at=? WHERE receipt_id=?",
+                (plane._now().isoformat(), receipt.receipt_id),
+            )
+
+        assert plane.get_receipt("tenant-a", receipt.receipt_id) is None
     finally:
         plane.close()

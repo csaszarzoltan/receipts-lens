@@ -53,9 +53,9 @@ ALL_WRONG = [
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.test_id("TEST-QS-001")
-@pytest.mark.requirements("REQ-QS-01")
-@pytest.mark.scenario("AC-QS-01")
+@pytest.mark.test_id("TEST-029-001")
+@pytest.mark.requirements("REQ-029-02")
+@pytest.mark.scenario("AC-029-02")
 def test_perfect_corpus_scores_perfectly():
     """A fully correct corpus scores 1.0 everywhere, including calibration."""
     report = BenchmarkRunner().run("v1", PERFECT)
@@ -68,9 +68,9 @@ def test_perfect_corpus_scores_perfectly():
     assert report.calibration_ece == 0.0
 
 
-@pytest.mark.test_id("TEST-QS-002")
-@pytest.mark.requirements("REQ-QS-01")
-@pytest.mark.scenario("AC-QS-02")
+@pytest.mark.test_id("TEST-029-002")
+@pytest.mark.requirements("REQ-029-02")
+@pytest.mark.scenario("AC-029-02")
 def test_wrong_predictions_score_zero():
     """Predictions that never match truth cannot report recall or precision."""
     report = BenchmarkRunner().run("v1", ALL_WRONG)
@@ -80,9 +80,9 @@ def test_wrong_predictions_score_zero():
     assert report.f1 == 0.0
 
 
-@pytest.mark.test_id("TEST-QS-003")
-@pytest.mark.requirements("REQ-QS-01")
-@pytest.mark.scenario("AC-QS-02")
+@pytest.mark.test_id("TEST-029-003")
+@pytest.mark.requirements("REQ-029-02")
+@pytest.mark.scenario("AC-029-02")
 def test_missing_prediction_lowers_recall_below_precision():
     """A field omitted from the prediction is a false negative, not a false positive."""
     report = BenchmarkRunner().run("v1", HALF_RIGHT)
@@ -95,9 +95,9 @@ def test_missing_prediction_lowers_recall_below_precision():
     assert report.f1 == pytest.approx(2 / 3)
 
 
-@pytest.mark.test_id("TEST-QS-004")
-@pytest.mark.requirements("REQ-QS-01")
-@pytest.mark.scenario("AC-QS-02")
+@pytest.mark.test_id("TEST-029-004")
+@pytest.mark.requirements("REQ-029-02")
+@pytest.mark.scenario("AC-029-02")
 def test_precision_and_recall_are_not_swapped():
     """A corpus with false positives must show precision < recall.
 
@@ -118,9 +118,9 @@ def test_precision_and_recall_are_not_swapped():
     assert report.precision > report.recall
 
 
-@pytest.mark.test_id("TEST-QS-005")
-@pytest.mark.requirements("REQ-QS-02")
-@pytest.mark.scenario("AC-QS-03")
+@pytest.mark.test_id("TEST-029-005")
+@pytest.mark.requirements("REQ-029-03")
+@pytest.mark.scenario("AC-029-03")
 def test_calibration_ece_penalises_overconfidence():
     """Confidently wrong answers have a worse ECE than the same answers hedged."""
     overconfident = [_case("c1", {"vendor": "Alpha"}, {"vendor": "Zzz"}, {"vendor": 1.0})]
@@ -130,9 +130,9 @@ def test_calibration_ece_penalises_overconfidence():
     assert BenchmarkRunner().run("v1", hedged).calibration_ece == 0.0
 
 
-@pytest.mark.test_id("TEST-QS-006")
-@pytest.mark.requirements("REQ-QS-02")
-@pytest.mark.scenario("AC-QS-03")
+@pytest.mark.test_id("TEST-029-006")
+@pytest.mark.requirements("REQ-029-03")
+@pytest.mark.scenario("AC-029-03")
 def test_run_requires_a_version_and_at_least_one_case():
     """An empty corpus is a programming error, not a zero-scoring report."""
     runner = BenchmarkRunner()
@@ -148,9 +148,9 @@ def test_run_requires_a_version_and_at_least_one_case():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.test_id("TEST-QS-007")
-@pytest.mark.requirements("REQ-QS-03")
-@pytest.mark.scenario("AC-QS-04")
+@pytest.mark.test_id("TEST-029-007")
+@pytest.mark.requirements("REQ-029-01")
+@pytest.mark.scenario("AC-029-01")
 def test_low_confidence_field_is_routed_to_review():
     """A field below its threshold must be flagged for human review."""
     policy = ReviewPolicy({"total": 0.9}, default=0.7)
@@ -158,9 +158,9 @@ def test_low_confidence_field_is_routed_to_review():
     assert policy.requires_review({"total": 9.99}, {"total": 0.5}) is True
 
 
-@pytest.mark.test_id("TEST-QS-008")
-@pytest.mark.requirements("REQ-QS-03")
-@pytest.mark.scenario("AC-QS-04")
+@pytest.mark.test_id("TEST-029-008")
+@pytest.mark.requirements("REQ-029-01")
+@pytest.mark.scenario("AC-029-01")
 def test_confident_field_is_not_routed_to_review():
     """A field at or above its threshold passes through unreviewed."""
     policy = ReviewPolicy({"total": 0.9}, default=0.7)
@@ -168,9 +168,9 @@ def test_confident_field_is_not_routed_to_review():
     assert policy.requires_review({"total": 9.99}, {"total": 0.95}) is False
 
 
-@pytest.mark.test_id("TEST-QS-009")
-@pytest.mark.requirements("REQ-QS-03")
-@pytest.mark.scenario("AC-QS-05")
+@pytest.mark.test_id("TEST-029-009")
+@pytest.mark.requirements("REQ-029-01")
+@pytest.mark.scenario("AC-029-01")
 def test_missing_prediction_is_always_routed_to_review():
     """An unparsed field needs review regardless of reported confidence."""
     policy = ReviewPolicy({"total": 0.9}, default=0.7)
@@ -178,9 +178,9 @@ def test_missing_prediction_is_always_routed_to_review():
     assert policy.requires_review({"vendor": None}, {"vendor": 1.0}) is True
 
 
-@pytest.mark.test_id("TEST-QS-010")
-@pytest.mark.requirements("REQ-QS-03")
-@pytest.mark.scenario("AC-QS-05")
+@pytest.mark.test_id("TEST-029-010")
+@pytest.mark.requirements("REQ-029-01")
+@pytest.mark.scenario("AC-029-01")
 def test_unlisted_field_falls_back_to_the_default_threshold():
     """With no explicit thresholds, every field is judged by the default alone.
 
@@ -194,9 +194,9 @@ def test_unlisted_field_falls_back_to_the_default_threshold():
     assert lenient.requires_review({"vendor": "A"}, {"vendor": 0.5}) is False
 
 
-@pytest.mark.test_id("TEST-QS-013")
-@pytest.mark.requirements("REQ-QS-03")
-@pytest.mark.scenario("AC-QS-05")
+@pytest.mark.test_id("TEST-029-011")
+@pytest.mark.requirements("REQ-029-01")
+@pytest.mark.scenario("AC-029-01")
 def test_configured_field_absent_from_prediction_is_reviewed():
     """A field the policy demands is still reviewed when the OCR omitted it.
 
@@ -213,9 +213,9 @@ def test_configured_field_absent_from_prediction_is_reviewed():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.test_id("TEST-QS-011")
-@pytest.mark.requirements("REQ-QS-04")
-@pytest.mark.scenario("AC-QS-06")
+@pytest.mark.test_id("TEST-029-012")
+@pytest.mark.requirements("REQ-029-06")
+@pytest.mark.scenario("AC-029-06")
 def test_correction_preserves_the_original_prediction():
     """A correction is auditable: the pre-correction value is retained."""
     case = _case("c1", {"vendor": "Alpha"}, {"vendor": "Alfa"}, {"vendor": 0.4})
@@ -228,9 +228,9 @@ def test_correction_preserves_the_original_prediction():
     assert correction.created_at
 
 
-@pytest.mark.test_id("TEST-QS-012")
-@pytest.mark.requirements("REQ-QS-04")
-@pytest.mark.scenario("AC-QS-06")
+@pytest.mark.test_id("TEST-029-013")
+@pytest.mark.requirements("REQ-029-06")
+@pytest.mark.scenario("AC-029-06")
 def test_correction_requires_an_actor_and_a_change():
     """An unattributed or empty correction is rejected."""
     case = _case("c1", {"vendor": "Alpha"}, {"vendor": "Alfa"}, {"vendor": 0.4})

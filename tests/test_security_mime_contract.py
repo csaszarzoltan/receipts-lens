@@ -72,9 +72,9 @@ def _attachment(content: bytes, filename: str, content_type: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.test_id("TEST-MIME-001")
-@pytest.mark.requirements("REQ-MIME-01")
-@pytest.mark.scenario("AC-MIME-01")
+@pytest.mark.test_id("TEST-034S-001")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_detect_type_recognises_each_declared_signature():
     """Every signature the service advertises is detected from real bytes."""
     assert detect_type(PNG) == "image/png"
@@ -83,9 +83,9 @@ def test_detect_type_recognises_each_declared_signature():
     assert detect_type(PDF) == "application/pdf"
 
 
-@pytest.mark.test_id("TEST-MIME-002")
-@pytest.mark.requirements("REQ-MIME-01")
-@pytest.mark.scenario("AC-MIME-01")
+@pytest.mark.test_id("TEST-034S-002")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_detect_type_recognises_webp_via_riff_container():
     """WEBP needs the RIFF container plus the WEBP tag at bytes 8-12."""
     assert detect_type(WEBP) == "image/webp"
@@ -93,9 +93,9 @@ def test_detect_type_recognises_webp_via_riff_container():
     assert detect_type(b"RIFF" + b"\x00" * 32) != "image/webp"
 
 
-@pytest.mark.test_id("TEST-MIME-003")
-@pytest.mark.requirements("REQ-MIME-01")
-@pytest.mark.scenario("AC-MIME-02")
+@pytest.mark.test_id("TEST-034S-003")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_detect_type_rejects_non_image_content():
     """HTML, plain text and empty input are not any known image type."""
     assert detect_type(b"<html><body>x</body></html>") is None
@@ -103,9 +103,9 @@ def test_detect_type_rejects_non_image_content():
     assert detect_type(b"") is None
 
 
-@pytest.mark.test_id("TEST-MIME-004")
-@pytest.mark.requirements("REQ-MIME-01")
-@pytest.mark.scenario("AC-MIME-02")
+@pytest.mark.test_id("TEST-034S-004")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_detected_type_never_escapes_the_allowed_set():
     """Detection can only ever return an advertised type (or None)."""
     allowed = set(SIGNATURES) | {"image/webp"}
@@ -120,9 +120,9 @@ def test_detected_type_never_escapes_the_allowed_set():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.test_id("TEST-MIME-005")
-@pytest.mark.requirements("REQ-MIME-02")
-@pytest.mark.scenario("AC-MIME-03")
+@pytest.mark.test_id("TEST-034S-005")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_matching_declared_type_is_accepted(tmp_path, _inbox_tenant):
     """A PNG declared as image/png passes the MIME gate and is processed."""
     service = _service(tmp_path)
@@ -136,9 +136,9 @@ def test_matching_declared_type_is_accepted(tmp_path, _inbox_tenant):
     assert attachment["detected_type"] == "image/png"
 
 
-@pytest.mark.test_id("TEST-MIME-006")
-@pytest.mark.requirements("REQ-MIME-02")
-@pytest.mark.scenario("AC-MIME-03")
+@pytest.mark.test_id("TEST-034S-006")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_mime_spoof_is_quarantined(tmp_path, _inbox_tenant):
     """HTML bytes declared as image/png are quarantined, never processed.
 
@@ -157,9 +157,9 @@ def test_mime_spoof_is_quarantined(tmp_path, _inbox_tenant):
     assert attachment["receipt_id"] is None
 
 
-@pytest.mark.test_id("TEST-MIME-007")
-@pytest.mark.requirements("REQ-MIME-02")
-@pytest.mark.scenario("AC-MIME-04")
+@pytest.mark.test_id("TEST-034S-007")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_declared_type_cannot_upgrade_unsupported_content(tmp_path, _inbox_tenant):
     """Correctly-declared but unrecognised bytes are still quarantined."""
     service = _service(tmp_path)
@@ -172,9 +172,9 @@ def test_declared_type_cannot_upgrade_unsupported_content(tmp_path, _inbox_tenan
     assert attachment["error_code"] == "mime_mismatch"
 
 
-@pytest.mark.test_id("TEST-MIME-008")
-@pytest.mark.requirements("REQ-MIME-02")
-@pytest.mark.scenario("AC-MIME-04")
+@pytest.mark.test_id("TEST-034S-008")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_octet_stream_declaration_of_real_image_is_quarantined(tmp_path, _inbox_tenant):
     """A real image declared as application/octet-stream is a mismatch."""
     service = _service(tmp_path)
@@ -185,9 +185,9 @@ def test_octet_stream_declaration_of_real_image_is_quarantined(tmp_path, _inbox_
     assert email["attachments"][0]["error_code"] == "mime_mismatch"
 
 
-@pytest.mark.test_id("TEST-MIME-009")
-@pytest.mark.requirements("REQ-MIME-03")
-@pytest.mark.scenario("AC-MIME-05")
+@pytest.mark.test_id("TEST-034S-009")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_missing_content_fails_rather_than_defaulting(tmp_path, _inbox_tenant):
     """An attachment with no bytes fails instead of being processed as empty."""
     service = _service(tmp_path)
@@ -200,9 +200,9 @@ def test_missing_content_fails_rather_than_defaulting(tmp_path, _inbox_tenant):
     assert attachment["error_code"] == "content_missing"
 
 
-@pytest.mark.test_id("TEST-MIME-010")
-@pytest.mark.requirements("REQ-MIME-03")
-@pytest.mark.scenario("AC-MIME-05")
+@pytest.mark.test_id("TEST-034S-010")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_oversize_attachment_is_quarantined(tmp_path, _inbox_tenant):
     """Content beyond MAX_ATTACHMENT_BYTES is quarantined before processing."""
     service = _service(tmp_path)
@@ -216,9 +216,9 @@ def test_oversize_attachment_is_quarantined(tmp_path, _inbox_tenant):
     assert attachment["error_code"] == "attachment_too_large"
 
 
-@pytest.mark.test_id("TEST-MIME-011")
-@pytest.mark.requirements("REQ-MIME-03")
-@pytest.mark.scenario("AC-MIME-06")
+@pytest.mark.test_id("TEST-034S-011")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_quarantined_attachment_cannot_be_retried(tmp_path, _inbox_tenant):
     """A quarantined (spoofed) attachment is terminal: retry is refused."""
     service = _service(tmp_path)
@@ -236,12 +236,71 @@ def test_quarantined_attachment_cannot_be_retried(tmp_path, _inbox_tenant):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.test_id("TEST-MIME-012")
-@pytest.mark.requirements("REQ-MIME-04")
-@pytest.mark.scenario("AC-MIME-07")
+@pytest.mark.test_id("TEST-034S-012")
+@pytest.mark.requirements("REQ-034-04")
+@pytest.mark.scenario("AC-034-04")
 def test_filename_traversal_is_neutralised():
     """Path components in an attachment name are stripped, not honoured."""
     assert safe_filename("../../etc/passwd") == "passwd"
     assert safe_filename("C:\\Windows\\System32\\evil.png") == "evil.png"
     assert "/" not in safe_filename("a/b/c.png")
     assert safe_filename("...") == "attachment"
+
+
+# ---------------------------------------------------------------------------
+# tenant scoping -- the inbound pipeline stores under a tenant too
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.test_id("TEST-034S-013")
+@pytest.mark.requirements("REQ-034-05")
+@pytest.mark.scenario("AC-034-05")
+def test_email_is_not_readable_by_another_tenant(tmp_path):
+    """An inbound email, its subject and its attachments stay with its tenant.
+
+    ``InboxService.get`` filters on ``tenant_id``; without that predicate one
+    tenant could read another's inbound mail, which carries the attachment
+    bytes and the sender/subject of the other tenant's correspondence.
+    """
+    service = _service(tmp_path)
+    email = service.receive("tenant-a", "a@example.com", "Salary March", [
+        _attachment(PNG, "receipt.png", "image/png"),
+    ])
+
+    assert service.get("tenant-a", email["email_id"])["subject"] == "Salary March"
+
+    with pytest.raises(KeyError):
+        service.get("tenant-b", email["email_id"])
+
+
+@pytest.mark.test_id("TEST-034S-014")
+@pytest.mark.requirements("REQ-034-05")
+@pytest.mark.scenario("AC-034-05")
+def test_inbound_listing_does_not_cross_tenants(tmp_path):
+    """``list`` is tenant-scoped, so it never enumerates another tenant's mail."""
+    service = _service(tmp_path)
+    service.receive("tenant-a", "a@example.com", "A", [
+        _attachment(PNG, "a.png", "image/png"),
+    ])
+    service.receive("tenant-b", "b@example.com", "B", [
+        _attachment(JPEG, "b.jpg", "image/jpeg"),
+    ])
+
+    assert [e["subject"] for e in service.list("tenant-a")] == ["A"]
+    assert [e["subject"] for e in service.list("tenant-b")] == ["B"]
+
+
+@pytest.mark.test_id("TEST-034S-015")
+@pytest.mark.requirements("REQ-034-05")
+@pytest.mark.scenario("AC-034-05")
+def test_retry_cannot_target_another_tenants_attachment(tmp_path):
+    """Re-processing is tenant-scoped: another tenant cannot drive a retry."""
+    service = _service(tmp_path)
+    email = service.receive("tenant-a", "a@example.com", "Docs", [
+        {"filename": "r.png", "content_type": "image/png",
+         "content_base64": base64.b64encode(PNG).decode()},
+    ])
+    attachment_id = email["attachments"][0]["attachment_id"]
+
+    with pytest.raises(KeyError):
+        service.retry("tenant-b", email["email_id"], attachment_id)
