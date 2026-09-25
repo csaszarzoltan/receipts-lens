@@ -1,11 +1,11 @@
 {
-  "schema_version": "1.0",
   "policy_set": "VERITAS-1.1-RECEIPTS-LENS",
+  "schema_version": "1.0",
   "sha256": {
     ".ai/constitutional-policy.yaml": "28e0e7d3ee330b8a358f63b294b9818f126ed2c1a8777ae50b70411c72ce23da",
-    ".ai/project-profile.yaml": "8b3e24dae695d28cb079a3aa3fa5f5bf769eb4cb17347eecc95f2970ec6a56ed",
     ".ai/permissions.yaml": "1e9c94724139657103637919beb38812a48ec1903b685dc8b0e033ea44b7b661",
-    ".ai/quality-gates.yaml": "a5a7cb2230e771d711f3c878a8b681633c320fff2d6957f4e563e1b25ba9b8a2",
+    ".ai/project-profile.yaml": "b2aad5ac4979fdfc5b446a5198182f620b5c967d84fb1cd30ec5c4c1a8460ca7",
+    ".ai/quality-gates.yaml": "0cabf31fd06efe542c1e7d95edec1447d81038575c61b9891dbdda6c72129556",
     ".ai/risk-policy.yaml": "bb1163257afcb4ca6a1ac58fe80adbfe268593d53bde83c8717c28c7da1099b6"
   }
 }

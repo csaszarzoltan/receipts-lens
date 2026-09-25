@@ -136,15 +136,41 @@ def test_coverage_flag_carries_measured_counterpart() -> None:
     REGRESSION: the flag read `true` against a real coverage of 2.4%. A
     boolean cannot distinguish "target" from "current state", so a measured
     block must sit beside it.
+
+    ZOO-21 UPDATE: the runner now exists, so `measured` no longer says
+    `runner_generated_traceability: absent`. The CONTRACT is unchanged in both
+    directions:
+
+      * the runner status must match reality on disk — claiming `absent` while
+        a runner exists is the ZOO-18 lie returning, and
+      * `enforcement_status` stays `not_enforced` until the 100% target is
+        actually enforced — a runner existing does NOT make the gate enforced.
+
+    Asserting a literal `"absent"` here would assert that the bug still exists.
+    Asserting nothing would let the block drift freely.
     """
     gate = _load(GATES_PATH)["gates"]["10_traceability_gate"]
     assert gate["enforcement_status"] == "not_enforced", (
-        "gate 10 is not enforced repo-wide; the config must say so explicitly"
+        "gate 10's 100% target is not enforced repo-wide; the config must say "
+        "so explicitly. A runner existing does not change that."
     )
     assert "measured" in gate, "gate 10 states a 100% target with no measured counterpart"
     measured = gate["measured"]
-    assert measured["runner_generated_traceability"] == "absent"
-    assert measured["enforcement_scope"] == "delta_only"
+
+    runner = ROOT / "scripts" / "traceability_runner.py"
+    artifact = ROOT / measured.get(
+        "artifact_path", ".agent-pipeline/audit/traceability.json"
+    )
+    assert runner.is_file(), "measured block claims a runner; the runner is missing"
+    assert artifact.is_file(), f"measured block claims an artifact; {artifact} is missing"
+    assert measured["runner_generated_traceability"] == "present", (
+        "a runner and artifact exist on disk, so the measured block must say "
+        "'present' — claiming 'absent' is the ZOO-18 false claim returning"
+    )
+    assert "delta_only" in measured["enforcement_scope"], (
+        "the marker gate is still delta-scoped; the recorded-vs-live ratchet "
+        "is what catches losses, and the config must keep recording that scope"
+    )
 
 
 @pytest.mark.test_id("TEST-RL-V02-024")

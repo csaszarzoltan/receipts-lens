@@ -59,7 +59,7 @@ gates:
     # that unsatisfiable state is exactly what ZOO-18 had to document.
     #
     # The SECOND `require_*` key is still a TARGET, not a measurement. Real
-    # marker coverage is 4.3% (80/1853) across both test trees at 5b5c8d8, not
+    # marker coverage is 4.8% (89/1862) across both test trees at df4174a, not
     # 100%. The 100% is the migration's end state; the migration itself is
     # outstanding work on 134 files and is out of scope for this ticket.
     #
@@ -88,17 +88,17 @@ gates:
       # .agent-pipeline/03_e2e_suites/. The ZOO-18 figure counted tests/ only,
       # so the 416 e2e functions were invisible to it.
       requirement_coverage:
-        compliant: 80
-        total: 1853
-        percent: "4.3"
-        measured_at_commit: 5b5c8d8
+        compliant: 89
+        total: 1862
+        percent: "4.8"
+        measured_at_commit: df4174a
         by_test_tree:
-          tests: {compliant: 80, total: 1437, percent: "5.6"}
+          tests: {compliant: 89, total: 1446, percent: "6.2"}
           e2e: {compliant: 0, total: 416, percent: "0.0"}
       # Synthetic self-referential ids (FEAT-RL-V02-REQ-*, AC-RL-V02-*) in 2
       # test files, not broken links to real specs. Reported every run;
       # enforced only under --strict-traceability.
-      unresolved_spec_references: 40
+      unresolved_spec_references: 58
       duplicate_test_ids: 0
       # The marker gate is STILL delta-scoped; that is why the runner's
       # recorded-vs-live count comparison is the check that catches losses.

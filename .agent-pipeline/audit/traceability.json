@@ -1,4 +1,14 @@
 {
+  "by_file_compliant": {
+    "tests/test_chat_query_049.py": 10,
+    "tests/test_insight_delivery_033b.py": 13,
+    "tests/test_profile_honesty.py": 9,
+    "tests/test_quality_service.py": 13,
+    "tests/test_security_mime_contract.py": 15,
+    "tests/test_tenant_isolation.py": 9,
+    "tests/test_traceability_gate.py": 9,
+    "tests/test_veritas_gate.py": 11
+  },
   "by_test_tree": {
     ".agent-pipeline": {
       "compliant_percent": 0.0,
@@ -6,17 +16,17 @@
       "with_all_three_markers": 0
     },
     "tests": {
-      "compliant_percent": 5.6,
-      "test_functions": 1437,
-      "with_all_three_markers": 80
+      "compliant_percent": 6.2,
+      "test_functions": 1446,
+      "with_all_three_markers": 89
     }
   },
-  "commit": "e79f3a737ee561e6472b1aa7fe80edb6c0fdc019",
-  "compliant_percent": 4.3,
+  "commit": "df4174a2054e00e66f17513e41f72a0d7203dd6a",
+  "compliant_percent": 4.8,
   "enforcement_scope": "delta_only",
   "files_with_noncompliant_tests": 134,
-  "functions_with_all_three_markers": 80,
-  "generated_at": "2026-09-25T18:39:06.215721+00:00",
+  "functions_with_all_three_markers": 89,
+  "generated_at": "2026-09-25T18:50:45.938339+00:00",
   "generated_by": "scripts/traceability_runner.py",
   "ref": "HEAD",
   "schema_version": "1.0",
@@ -113,6 +123,96 @@
         "marker": "scenario",
         "test": "tests/test_profile_honesty.py::test_coverage_script_is_committed_and_runnable",
         "value": "AC-RL-V02-28"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_traceability_gate.py::test_runner_is_committed_and_writes_an_artifact",
+        "value": "FEAT-RL-V02-REQ-030"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_traceability_gate.py::test_runner_is_committed_and_writes_an_artifact",
+        "value": "AC-RL-V02-30"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_traceability_gate.py::test_runner_scans_both_trees_the_gate_enforces",
+        "value": "FEAT-RL-V02-REQ-031"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_traceability_gate.py::test_runner_scans_both_trees_the_gate_enforces",
+        "value": "AC-RL-V02-31"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_traceability_gate.py::test_gate_10_verifies_the_artifact",
+        "value": "FEAT-RL-V02-REQ-032"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_traceability_gate.py::test_gate_10_verifies_the_artifact",
+        "value": "AC-RL-V02-32"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_traceability_gate.py::test_gate_rejects_a_hand_edited_artifact",
+        "value": "FEAT-RL-V02-REQ-033"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_traceability_gate.py::test_gate_rejects_a_hand_edited_artifact",
+        "value": "AC-RL-V02-33"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_traceability_gate.py::test_gate_fails_when_a_marker_is_removed",
+        "value": "FEAT-RL-V02-REQ-034"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_traceability_gate.py::test_gate_fails_when_a_marker_is_removed",
+        "value": "AC-RL-V02-34"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_traceability_gate.py::test_policy_declares_a_real_threshold",
+        "value": "FEAT-RL-V02-REQ-035"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_traceability_gate.py::test_policy_declares_a_real_threshold",
+        "value": "AC-RL-V02-35"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_traceability_gate.py::test_gate_records_what_it_actually_enforces",
+        "value": "FEAT-RL-V02-REQ-036"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_traceability_gate.py::test_gate_records_what_it_actually_enforces",
+        "value": "AC-RL-V02-36"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_traceability_gate.py::test_measured_coverage_is_not_claimed_as_full",
+        "value": "FEAT-RL-V02-REQ-037"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_traceability_gate.py::test_measured_coverage_is_not_claimed_as_full",
+        "value": "AC-RL-V02-37"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_traceability_gate.py::test_gate_runs_on_check_all",
+        "value": "FEAT-RL-V02-REQ-038"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_traceability_gate.py::test_gate_runs_on_check_all",
+        "value": "AC-RL-V02-38"
       },
       {
         "marker": "requirements",
@@ -225,12 +325,12 @@
         "value": "AC-RL-V02-09"
       }
     ],
-    "unresolved_count": 40
+    "unresolved_count": 58
   },
-  "test_files_total": 141,
-  "test_functions_total": 1853,
+  "test_files_total": 142,
+  "test_functions_total": 1862,
   "test_id_identity": {
-    "distinct_ids": 80,
+    "distinct_ids": 89,
     "duplicate_count": 0,
     "duplicates": {}
   },
