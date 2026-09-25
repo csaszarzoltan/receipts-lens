@@ -78,6 +78,19 @@ SECRET_PATTERNS = [
     re.compile(r"AIza[0-9A-Za-z\-_]{20,}"),
 ]
 
+# VERITAS test metadata markers. A marker counts as present only when it is
+# called with a non-empty string literal value — a bare ``@pytest.mark.test_id``
+# or an empty ``@pytest.mark.scenario("")`` carries no traceability and must not
+# satisfy the metadata gate. A trailing ``,`` or ``)`` after the first argument
+# keeps legal multi-argument markers (e.g. ``test_id("A", "B")``) valid.
+REQUIRED_TEST_MARKERS = ("test_id", "requirements", "scenario")
+_MARKER_PATTERNS = {
+    name: re.compile(
+        rf"pytest\.mark\.{re.escape(name)}\(\s*[\"'][^\"']+[\"']\s*[,)]"
+    )
+    for name in REQUIRED_TEST_MARKERS
+}
+
 
 # Git-context failures are gate failures with exit 2 (never a
 # silent empty-diff PASS). Set from any fail-closed git branch.
@@ -451,8 +464,11 @@ def verify_test_metadata(staged_only: bool = False) -> bool:
                 decorators.append(lines[cursor].strip())
                 cursor -= 1
             block = "\n".join(decorators)
-            required = ["pytest.mark.test_id", "pytest.mark.requirements", "pytest.mark.scenario"]
-            absent = [name.rsplit(".", 1)[-1] for name in required if name not in block]
+            absent = [
+                name
+                for name in REQUIRED_TEST_MARKERS
+                if not _MARKER_PATTERNS[name].search(block)
+            ]
             if absent:
                 missing.append(f"{test_file}::{match.group(1)} missing {','.join(absent)}")
 

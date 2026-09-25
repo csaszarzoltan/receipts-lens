@@ -15,6 +15,16 @@ dev = ["pytest>=8.2","ruff>=0.4"]
 testpaths = ["tests"]
 addopts = "-q"
 norecursedirs = [".*", "build", "dist", "CVS", "_darcs", "{arch}", "*.egg", "venv", "_disabled"]
+markers = [
+    "test_id: VERITAS traceability test id (e.g. TEST-RL-V02-009)",
+    "requirements: VERITAS requirement id covered by the test (e.g. FEAT-RL-V02-REQ-009)",
+    "scenario: VERITAS acceptance scenario id covered by the test (e.g. AC-RL-V02-09)",
+    "e2e: end-to-end suite marker (.agent-pipeline/03_e2e_suites)",
+    "bug001: BUG-001 confidence-scoring contract",
+    "us022: US-022 OCR confidence contract",
+    "us023: US-023 consumer dashboard contract",
+    "us024: US-024 auth contract",
+]
 
 [tool.ruff]
 line-length = 100

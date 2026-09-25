@@ -8,6 +8,8 @@ Contract:
 4. Policy hash tamper = FAIL.
 5. Git-context failure (non-repo) = FAIL with exit 2 (fail-closed).
 6. History scan: clean = PASS, committed secret = FAIL.
+7. Metadata markers must carry a non-empty value, and the pytest markers
+   themselves must be registered in pyproject.toml.
 """
 from __future__ import annotations
 
@@ -248,3 +250,91 @@ def test_history_scan_finds_committed_secret(tmp_path: Path) -> None:
     proc = _run_gate(repo, "--history-scan")
     assert proc.returncode != 0, "committed secret must be BLOCKED"
     assert "FAIL" in (proc.stdout + proc.stderr).upper()
+
+
+@pytest.mark.test_id("TEST-RL-V02-009")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-009")
+@pytest.mark.scenario("AC-RL-V02-09")
+def test_bare_markers_blocked(tmp_path: Path) -> None:
+    """Decorators present but valueless (@pytest.mark.test_id) = FAIL.
+
+    A bare marker carries no traceability, so it must not satisfy gate 10.
+    """
+    repo = _make_repo(tmp_path)
+    _stage_files(
+        repo,
+        {
+            "tests/test_bare_v02.py": (
+                "import pytest\n"
+                "\n"
+                "\n"
+                "@pytest.mark.test_id\n"
+                "@pytest.mark.requirements\n"
+                "@pytest.mark.scenario\n"
+                "def test_bare_metadata():\n"
+                "    pass\n"
+            )
+        },
+    )
+    proc = _run_gate(repo, "--verify-metadata")
+    assert proc.returncode != 0, "bare markers without values must be BLOCKED"
+    out = proc.stdout + proc.stderr
+    assert "FAIL" in out.upper(), "expected FAIL output"
+    assert "test_bare_v02" in out, "expected the offending file named"
+
+
+@pytest.mark.test_id("TEST-RL-V02-010")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-009")
+@pytest.mark.scenario("AC-RL-V02-09")
+def test_empty_marker_value_blocked(tmp_path: Path) -> None:
+    """Empty marker value (@pytest.mark.scenario("")) = FAIL."""
+    repo = _make_repo(tmp_path)
+    _stage_files(
+        repo,
+        {
+            "tests/test_emptyval_v02.py": (
+                "import pytest\n"
+                "\n"
+                "\n"
+                '@pytest.mark.test_id("TEST-RL-V02-010")\n'
+                '@pytest.mark.requirements("FEAT-RL-V02-REQ-009")\n'
+                '@pytest.mark.scenario("")\n'
+                "def test_empty_scenario():\n"
+                "    pass\n"
+            )
+        },
+    )
+    proc = _run_gate(repo, "--verify-metadata")
+    assert proc.returncode != 0, "empty marker value must be BLOCKED"
+    out = proc.stdout + proc.stderr
+    assert "FAIL" in out.upper(), "expected FAIL output"
+    assert "test_emptyval_v02" in out, "expected the offending file named"
+
+
+@pytest.mark.test_id("TEST-RL-V02-011")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-009")
+@pytest.mark.scenario("AC-RL-V02-09")
+def test_valued_markers_still_pass(tmp_path: Path) -> None:
+    """A properly valued 3-marker test still PASSes (no false positive)."""
+    repo = _make_repo(tmp_path)
+    _stage_files(
+        repo,
+        {
+            "tests/test_valued_v02.py": (
+                "import pytest\n"
+                "\n"
+                "\n"
+                '@pytest.mark.test_id("TEST-RL-V02-011")\n'
+                '@pytest.mark.requirements("FEAT-RL-V02-REQ-009")\n'
+                '@pytest.mark.scenario("AC-RL-V02-09")\n'
+                "def test_valued_metadata():\n"
+                "    pass\n"
+            )
+        },
+    )
+    proc = _run_gate(repo, "--verify-metadata")
+    assert proc.returncode == 0, (
+        f"valued markers must PASS, got {proc.returncode}\n"
+        f"stdout: {proc.stdout}\nstderr: {proc.stderr}"
+    )
+    assert "PASS" in proc.stdout, "expected PASS output"
