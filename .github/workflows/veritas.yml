@@ -25,10 +25,23 @@ jobs:
       - name: Verify policy integrity
         run: python scripts/veritas_gate.py --check-policies
       - name: Verify PR diff and metadata
-        if: github.event_name == 'pull_request'
+        # ZOO-30/AC6: runs on pull_request AND push. On PR the base is
+        # origin/base_ref; on push the pushed range (github.event.before)
+        # so the diff gate examines what was pushed instead of passing
+        # vacuously on a clean tree. First-push zero-SHA falls back to the
+        # empty tree so the whole commit is examined.
         run: |
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          VERITAS_DIFF_BASE="origin/${{ github.base_ref }}" python scripts/veritas_gate.py --verify-diff --verify-metadata --role auto
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            export VERITAS_DIFF_BASE="origin/${{ github.base_ref }}"
+          else
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+            fi
+            export VERITAS_DIFF_BASE="$BEFORE"
+          fi
+          VERITAS_DIFF_BASE="$VERITAS_DIFF_BASE" python scripts/veritas_gate.py --verify-diff --verify-metadata --role auto
       - name: VERITAS gate — check-all + metadata (push gate)
         # Branch protection required check privat free tieren nem
         # elerheto, ezert ez a gate push-ra IS fut — nem csak PR-ban.

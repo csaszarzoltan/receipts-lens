@@ -65,6 +65,19 @@ R3_SENSITIVE_PATTERNS = [
     r"^\.ai/constitutional-policy\.yaml",
 ]
 
+# Files carrying constitutional tamper protection: any staged touch without
+# human approval FAILs verify_diff (R4 Rule #1). ZOO-33 extends the original
+# constitutional-policy.yaml rule to the deny matrix itself
+# (.ai/permissions.yaml) and the hash lock that pins it
+# (.ai/policy-lock.json): either was rewritable by any self-declared role,
+# and the lock could be re-hashed to green --check-policies, so verify_diff
+# is the enforcement layer for both.
+PROTECTED_POLICY_FILES = (
+    ".ai/constitutional-policy.yaml",
+    ".ai/permissions.yaml",
+    ".ai/policy-lock.json",
+)
+
 SECRET_PATTERNS = [
     re.compile(
         r"(?i)(password|secret|api_key|token|private_key)\s*[:=]\s*"
@@ -180,15 +193,45 @@ def ensure_git_repository() -> None:
         raise RuntimeError("repository context is not a Git work tree")
 
 
+def _base_diff_range() -> list[str] | None:
+    """Diff target for ``VERITAS_DIFF_BASE``, or None when unset.
+
+    ZOO-30/F2+AC6: a base resolving to a commit uses the symmetric three-dot
+    range; a bare tree object (the empty-tree SHA the workflow exports for
+    first pushes, where ``...`` is rejected) uses the two-dot form. An
+    unresolvable base raises through ``_run_git`` — fail-closed, never a
+    silent empty diff.
+    """
+    base = os.environ.get("VERITAS_DIFF_BASE", "").strip()
+    if not base:
+        return None
+    _run_git(["rev-parse", "--verify", base])
+    if _run_git(["cat-file", "-t", base]).stdout.strip() == "commit":
+        return [f"{base}...HEAD"]
+    return [base, "HEAD"]
+
+
 def configured_diff_args(staged_only: bool = False) -> list[str]:
     """Select a deterministic local or CI comparison range."""
     if staged_only:
         return ["diff", "--cached"]
-    base = os.environ.get("VERITAS_DIFF_BASE", "").strip()
-    if base:
-        _run_git(["rev-parse", "--verify", base])
-        return ["diff", f"{base}...HEAD"]
+    target = _base_diff_range()
+    if target is not None:
+        return ["diff", *target]
     return ["diff", "HEAD"]
+
+
+def read_staged_text(path: str) -> str | None:
+    """Return the staged (index) blob for ``path``, or None when absent.
+
+    ZOO-30/F1: staged-mode checks must judge what will be committed, not the
+    working tree. A missing blob (staged deletion) yields None; callers skip
+    it — a deletion carries no new content to judge.
+    """
+    try:
+        return _run_git(["show", f":{path}"]).stdout
+    except RuntimeError:
+        return None
 
 
 def get_git_diff_files(staged_only: bool = False) -> list[str]:
@@ -203,6 +246,25 @@ def get_git_diff_files(staged_only: bool = False) -> list[str]:
                 if line.strip()
             }
         )
+
+    # ZOO-30/F2: honour VERITAS_DIFF_BASE so CI (clean checkout) sees the
+    # merged diff instead of vacuously passing on an empty status. Untracked
+    # worktree files are invisible to `git diff <base>...HEAD`, so merge them
+    # in from status to keep the local dirty-tree coverage (ZOO-24).
+    base_target = _base_diff_range()
+    if base_target is not None:
+        result = _run_git(["diff", "--name-only", *base_target])
+        files = {
+            line.strip().replace("\\", "/")
+            for line in result.stdout.splitlines()
+            if line.strip()
+        }
+        status = _run_git(["status", "--porcelain=v1", "--untracked-files=all"])
+        for line in status.stdout.splitlines():
+            if len(line) >= 4 and line[:2] == "??":
+                path = line[3:].strip().strip('"')
+                files.add(path.replace("\\", "/"))
+        return sorted(files)
 
     result = _run_git(["status", "--porcelain=v1", "--untracked-files=all"])
     files: set[str] = set()
@@ -407,15 +469,17 @@ def verify_diff(role: str = DEFAULT_ROLE, staged_only: bool = False) -> bool:
     if not check_role_permissions(role, files):
         return False
 
-    # Rule 1: Constitutional policy immutability
-    if ".ai/constitutional-policy.yaml" in files and not human_approval_present():
+    # Rule 1: Constitutional policy immutability (PROTECTED_POLICY_FILES).
+    protected_touched = [f for f in PROTECTED_POLICY_FILES if f in files]
+    if protected_touched and not human_approval_present():
         print(
-            "[FAIL] Constitutional Policy (.ai/constitutional-policy.yaml) "
+            "[FAIL] Constitutional Policy "
+            f"({', '.join(protected_touched)}) "
             "cannot be modified autonomously (R4 Rule #1)."
         )
         log_audit_event(
             "VERIFY_DIFF",
-            {"violation": "constitutional_tamper", "files": files},
+            {"violation": "constitutional_tamper", "files": protected_touched},
             "FAIL",
         )
         return False
@@ -468,7 +532,15 @@ def verify_diff(role: str = DEFAULT_ROLE, staged_only: bool = False) -> bool:
         diff_args = configured_diff_args(staged_only)
         diff_text = _run_git(diff_args).stdout
         # Git diff omits untracked file contents, so scan every changed file directly too.
+        # ZOO-30/F1b: in staged mode the index blob is the source of truth —
+        # a secret scrubbed from the worktree but still staged must block.
+        # Outside staged mode (untracked files have no blob) read the worktree.
         for changed_file in files:
+            if staged_only:
+                blob = read_staged_text(changed_file)
+                if blob is not None and len(blob.encode("utf-8")) <= 5 * 1024 * 1024:
+                    diff_text += "\n" + blob
+                continue
             candidate = REPO_ROOT / changed_file
             if candidate.is_file() and candidate.stat().st_size <= 5 * 1024 * 1024:
                 diff_text += "\n" + candidate.read_text(encoding="utf-8", errors="replace")
@@ -512,10 +584,19 @@ def verify_test_metadata(staged_only: bool = False) -> bool:
 
     missing: list[str] = []
     for test_file in test_files:
-        path = REPO_ROOT / test_file
-        if not path.exists():
-            continue
-        lines = path.read_text(encoding="utf-8-sig", errors="strict").splitlines()
+        # ZOO-30/F1a: in staged mode judge the indexed blob, not the worktree.
+        # A staged deletion has no blob — skip it, there is nothing to judge.
+        if staged_only:
+            blob = read_staged_text(test_file)
+            if blob is None:
+                continue
+            text = blob
+        else:
+            path = REPO_ROOT / test_file
+            if not path.exists():
+                continue
+            text = path.read_text(encoding="utf-8-sig", errors="strict")
+        lines = text.splitlines()
         for index, line in enumerate(lines):
             match = re.match(r"\s*(?:async\s+)?def\s+(test_[A-Za-z0-9_]+)", line)
             if not match:
