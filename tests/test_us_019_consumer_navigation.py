@@ -20,32 +20,38 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = REPO_ROOT / "frontend"
 
 # Business terms that must never appear in the consumer navigation labels.
 BUSINESS_TERMS = ("approval", "export", "accounting", "cost.center", "tenant", "api.key", "webhook")
 
-# Wire role -> expected household label (plan §3.2).
+# Wire role -> i18n key in lib/roles.ts ROLE_LABELS (plan §3.2).
+# Labels resolve at render time via roleLabel(), so the contract pins the keys.
 EXPECTED_ROLE_LABELS = {
-    "admin": "Háztartás tulajdonosa",
-    "reviewer": "Felnőtt tag",
-    "integrator": "Könyvelő / tanácsadó (Business mód)",
+    "admin": "roleAdmin",
+    "reviewer": "roleReviewer",
+    "integrator": "roleIntegrator",
 }
 
-# Consumer navigation: href -> expected label (plan §3.3).
+# Consumer navigation: href -> labelKey in lib/nav.ts (plan §3.3).
 EXPECTED_CONSUMER_NAV = {
-    "/dashboard": "Áttekintés",
-    "/receipts": "Vásárlások",
-    "/upload": "Nyugta hozzáadása",
-    "/review": "Ellenőrzés",
-    "/duplicates": "Ismétlődések",
-    "/inbox": "Családi postafiók",
-    "/subscriptions": "Előfizetések",
-    "/forecast": "Előrejelzés",
-    "/budget": "Háztartási keret",
-    "/reports": "Összesítés",
-    "/settings": "Beállítások",
+    "/dashboard": "dashboard",
+    "/receipts": "receipts",
+    "/upload": "upload",
+    "/review": "review",
+    "/duplicates": "duplicates",
+    "/inbox": "inbox",
+    "/subscriptions": "subscriptions",
+    "/forecast": "forecast",
+    "/budget": "budget",
+    "/reports": "reports",
+    "/chat": "chat",
+    "/insights": "insights",
+    "/tax": "taxTitle",
+    "/settings": "settings",
 }
 
 # Business features that must be hidden behind the Business entry point.
@@ -59,12 +65,15 @@ def _read(rel: str) -> str:
 
 
 def _extract_items(src: str, const_name: str) -> list[tuple[str, str]]:
-    """Parse `{ href: "...", label: "...", icon: "..." }` entries of a const array."""
+    """Parse `{ href: "...", labelKey: "...", icon: "..." }` entries of a const array."""
     block = re.search(rf"export const {const_name}[^=]*= \[\n(.*?)\n\];", src, re.DOTALL)
     assert block, f"export const {const_name} not found"
-    return re.findall(r'href:\s*"([^"]+)",\s*label:\s*"([^"]+)"', block.group(1))
+    return re.findall(r'href:\s*"([^"]+)",\s*labelKey:\s*"([^"]+)"', block.group(1))
 
 
+@pytest.mark.test_id("TEST-NAV-001")
+@pytest.mark.requirements("REQ-US-019-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_us_019_consumer_nav_labels_match_plan() -> None:
     src = _read("lib/nav.ts")
     items = dict(_extract_items(src, "NAV_ITEMS"))
@@ -76,6 +85,9 @@ def test_us_019_consumer_nav_labels_match_plan() -> None:
     )
 
 
+@pytest.mark.test_id("TEST-NAV-002")
+@pytest.mark.requirements("REQ-US-019-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_us_019_consumer_nav_has_no_business_terms() -> None:
     src = _read("lib/nav.ts")
     items = dict(_extract_items(src, "NAV_ITEMS"))
@@ -87,6 +99,9 @@ def test_us_019_consumer_nav_has_no_business_terms() -> None:
             )
 
 
+@pytest.mark.test_id("TEST-NAV-003")
+@pytest.mark.requirements("REQ-US-019-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_us_019_business_features_hidden_in_separate_section() -> None:
     src = _read("lib/nav.ts")
     business = dict(_extract_items(src, "BUSINESS_NAV_ITEMS"))
@@ -100,6 +115,9 @@ def test_us_019_business_features_hidden_in_separate_section() -> None:
     assert not overlap, f"business features leaked into consumer nav: {sorted(overlap)}"
 
 
+@pytest.mark.test_id("TEST-NAV-004")
+@pytest.mark.requirements("REQ-US-019-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_us_019_role_labels_are_household_names() -> None:
     src = _read("lib/roles.ts")
     for role, label in EXPECTED_ROLE_LABELS.items():
@@ -108,6 +126,9 @@ def test_us_019_role_labels_are_household_names() -> None:
         )
 
 
+@pytest.mark.test_id("TEST-NAV-005")
+@pytest.mark.requirements("REQ-US-019-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_us_019_sidebars_render_business_section_entry_point() -> None:
     sidebar = _read("components/Sidebar.tsx")
     mobile = _read("components/MobileNav.tsx")

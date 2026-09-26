@@ -84,6 +84,9 @@ def headers() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-OCR-001")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC1: gyenge kép -> total SOHA nem a hamis 1.0 érték. Regression pin: korábban a last-numeric-line fallback str")
 def test_bug001_blurry_image_total_never_fabricated_one() -> None:
     """AC1: gyenge kép -> total SOHA nem a hamis 1.0 érték.
 
@@ -94,6 +97,9 @@ def test_bug001_blurry_image_total_never_fabricated_one() -> None:
     assert parsed.total != 1.0, f"BUG-001: total=1.0 fabricálva (raw={parsed.raw_text!r})"
 
 
+@pytest.mark.test_id("TEST-OCR-002")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC1/AC2: ha nincs tiszta total,  uncertain  jelzés kell — nem érték.")
 def test_bug001_blurry_image_flagged_uncertain() -> None:
     """AC1/AC2: ha nincs tiszta total, 'uncertain' jelzés kell — nem érték."""
     parsed = api.parse_receipt_with_confidence(blurry_receipt())
@@ -105,12 +111,18 @@ def test_bug001_blurry_image_flagged_uncertain() -> None:
         )
 
 
+@pytest.mark.test_id("TEST-OCR-003")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC1: zajos kép ->  low  konfidencia-szint.")
 def test_bug001_noisy_garbage_low_confidence() -> None:
     """AC1: zajos kép -> 'low' konfidencia-szint."""
     parsed = api.parse_receipt_with_confidence(noisy_garbage())
     assert parsed.confidence_level == "low"
 
 
+@pytest.mark.test_id("TEST-OCR-004")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("Kontroll: tiszta kép továbbra is valós totalt ad (nincs túlkorrekció).")
 def test_bug001_clean_control_still_parses() -> None:
     """Kontroll: tiszta kép továbbra is valós totalt ad (nincs túlkorrekció)."""
     parsed = api.parse_receipt_with_confidence(clean_receipt())
@@ -122,6 +134,9 @@ def test_bug001_clean_control_still_parses() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-OCR-005")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC2: /v1/parse-receipt válasz hordozza a per-receipt szintet.")
 def test_confidence_level_field_in_parse_receipt_response(client: TestClient) -> None:
     """AC2: /v1/parse-receipt válasz hordozza a per-receipt szintet."""
     resp = client.post(
@@ -134,12 +149,18 @@ def test_confidence_level_field_in_parse_receipt_response(client: TestClient) ->
     assert body["confidence_level"] in VALID_LEVELS
 
 
+@pytest.mark.test_id("TEST-OCR-006")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("A szint a {high, medium, low} halmaz eleme.")
 def test_confidence_level_valid_values() -> None:
     """A szint a {high, medium, low} halmaz eleme."""
     parsed = api.parse_receipt_with_confidence(clean_receipt())
     assert parsed.confidence_level in VALID_LEVELS
 
 
+@pytest.mark.test_id("TEST-OCR-007")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("A szint konzisztens a per-field konfidencia-átlaggal. Threshold contract: >=0.85 high, >=0.60 medium, alatta l")
 def test_confidence_level_consistent_with_per_field_scores() -> None:
     """A szint konzisztens a per-field konfidencia-átlaggal.
 
@@ -161,6 +182,9 @@ def test_confidence_level_consistent_with_per_field_scores() -> None:
         assert avg < 0.60
 
 
+@pytest.mark.test_id("TEST-OCR-008")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC2 (frontend contract): AiExtraction hordozza a confidence_level-t.")
 def test_ai_extraction_payload_contract_in_types() -> None:
     """AC2 (frontend contract): AiExtraction hordozza a confidence_level-t."""
     src = TYPES.read_text(encoding="utf-8")
@@ -176,17 +200,23 @@ def test_ai_extraction_payload_contract_in_types() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-OCR-009")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC3: gyenge találatnál a review UI megerősítést kér (bizonytalan összeg).")
 def test_review_ui_asks_confirmation_on_weak_match() -> None:
     """AC3: gyenge találatnál a review UI megerősítést kér (bizonytalan összeg)."""
     src = REVIEW_PAGE.read_text(encoding="utf-8")
     assert re.search(r"uncertain|bizonytalan", src, re.IGNORECASE), (
         "review UI-ból hiányzik a bizonytalan-összeg figyelmeztetés"
     )
-    assert re.search(r"Confirm amount|megerősít|Erősítse meg", src, re.IGNORECASE), (
+    assert "confirmAmount" in src, (
         "review UI-ból hiányzik a megerősítés-gomb"
     )
 
 
+@pytest.mark.test_id("TEST-OCR-010")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC3 (kontraktus-összefüggés): a gate a confidence_level-től függ. A review page isWeakMatch a confidence_level")
 def test_review_ui_weak_gate_is_driven_by_confidence_level() -> None:
     """AC3 (kontraktus-összefüggés): a gate a confidence_level-től függ.
 
@@ -205,6 +235,9 @@ def test_review_ui_weak_gate_is_driven_by_confidence_level() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-OCR-011")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC4: valós multipart upload a product flow-n — BUG-001 sosem total=1.0.")
 def test_integration_upload_blurry_total_not_one_via_product_flow(
     client: TestClient, headers: dict[str, str]
 ) -> None:
@@ -221,6 +254,9 @@ def test_integration_upload_blurry_total_not_one_via_product_flow(
     )
 
 
+@pytest.mark.test_id("TEST-OCR-012")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("RED: a /product/receipts/upload válasz receipt-objektuma hordozza a szintet. A /v1/parse-receipt válasz már ho")
 def test_red_upload_response_carries_confidence_level(
     client: TestClient, headers: dict[str, str]
 ) -> None:
@@ -251,6 +287,9 @@ def test_red_upload_response_carries_confidence_level(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-OCR-013")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("RED: a mentett receipt hordozza a confidence_level-t. Jelenleg a service._receipt_payload kihagyja a confidenc")
 def test_red_upload_persists_confidence_level(
     client: TestClient, headers: dict[str, str]
 ) -> None:
@@ -273,6 +312,9 @@ def test_red_upload_persists_confidence_level(
     )
 
 
+@pytest.mark.test_id("TEST-OCR-014")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("RED: gyenge kép mentett receipt-je  low  szintet hordoz.")
 def test_red_upload_blurry_persists_low_confidence(
     client: TestClient, headers: dict[str, str]
 ) -> None:
@@ -290,6 +332,9 @@ def test_red_upload_blurry_persists_low_confidence(
     )
 
 
+@pytest.mark.test_id("TEST-OCR-015")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("RED: /product/review-items (a review UI adatforrása) hordozza a szintet. A megerősítés-gate a review page.tsx-")
 def test_red_review_items_carry_confidence_level(
     client: TestClient, headers: dict[str, str]
 ) -> None:
@@ -314,6 +359,9 @@ def test_red_review_items_carry_confidence_level(
     )
 
 
+@pytest.mark.test_id("TEST-OCR-016")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("RED: az AiExtraction payload (ai_result/tesseract_result) is átadja. A frontend lib/types.ts szerint az AiExtr")
 def test_red_ai_extraction_carries_confidence_level(
     client: TestClient, headers: dict[str, str]
 ) -> None:
@@ -337,6 +385,9 @@ def test_red_ai_extraction_carries_confidence_level(
     )
 
 
+@pytest.mark.test_id("TEST-OCR-017")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("RED (szerkezeti): a store-payload mapper átadja a szintet. A _receipt_payload statikus metódus dict-et épít a ")
 def test_red_service_payload_maps_confidence_level() -> None:
     """RED (szerkezeti): a store-payload mapper átadja a szintet.
 
@@ -351,6 +402,9 @@ def test_red_service_payload_maps_confidence_level() -> None:
     assert "confidence" in src  # a per-field dict már átmegy; ez maradjon is
 
 
+@pytest.mark.test_id("TEST-OCR-018")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("RED (szerkezeti): _ai_extraction átadja a szintet.")
 def test_red_ai_extraction_maps_confidence_level() -> None:
     """RED (szerkezeti): _ai_extraction átadja a szintet."""
     src = PRODUCT_API.read_text(encoding="utf-8")
@@ -364,6 +418,9 @@ def test_red_ai_extraction_maps_confidence_level() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-OCR-019")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("BUG-009 (2× Tesseract, 300s+ terhelten) marad nyitott — nincs tesztje. Ez a guard dokumentálja, hogy a hiány S")
 def test_bug009_out_of_scope_guard() -> None:
     """BUG-009 (2× Tesseract, 300s+ terhelten) marad nyitott — nincs tesztje.
 
@@ -378,6 +435,9 @@ def test_bug009_out_of_scope_guard() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-OCR-020")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("A konfidencia-flow ConfidenceReceipt-et ad vissza (contract-típus).")
 def test_parsed_receipt_is_confidence_receipt() -> None:
     """A konfidencia-flow ConfidenceReceipt-et ad vissza (contract-típus)."""
     parsed = api.parse_receipt_with_confidence(clean_receipt())

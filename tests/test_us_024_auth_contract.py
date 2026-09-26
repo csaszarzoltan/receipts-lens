@@ -74,6 +74,9 @@ def _magic_login(email: str, household_id: str | None = None) -> dict:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-AUTH-001")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_magic_link_request_returns_token_with_expiry() -> None:
     response = client.post(
         "/auth/magic-link-request", json={"email": "tulaj@pelda.hu"}
@@ -87,6 +90,9 @@ def test_magic_link_request_returns_token_with_expiry() -> None:
     assert body["token"] in body["magic_link"]
 
 
+@pytest.mark.test_id("TEST-AUTH-002")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_magic_link_verify_establishes_session_and_household() -> None:
     session = _magic_login("tulaj@pelda.hu")
     assert session["role"] == "owner"
@@ -96,6 +102,9 @@ def test_magic_link_verify_establishes_session_and_household() -> None:
     assert "expires_at" in session
 
 
+@pytest.mark.test_id("TEST-AUTH-003")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_magic_link_is_single_use() -> None:
     requested = client.post(
         "/auth/magic-link-request", json={"email": "single@pelda.hu"}
@@ -106,6 +115,9 @@ def test_magic_link_is_single_use() -> None:
     assert second.status_code == 401
 
 
+@pytest.mark.test_id("TEST-AUTH-004")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_magic_link_unknown_token_rejected() -> None:
     response = client.post(
         "/auth/magic-link-verify", json={"token": "bogus-token-12345678"}
@@ -113,6 +125,9 @@ def test_magic_link_unknown_token_rejected() -> None:
     assert response.status_code == 401
 
 
+@pytest.mark.test_id("TEST-AUTH-005")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_magic_link_expired_token_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     # A token created with a negative TTL is already expired.
     created = service.create_magic_link("lejart@pelda.hu", ttl_seconds=-1)
@@ -122,6 +137,9 @@ def test_magic_link_expired_token_rejected(monkeypatch: pytest.MonkeyPatch) -> N
     assert response.status_code == 401
 
 
+@pytest.mark.test_id("TEST-AUTH-006")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_session_me_resolves_identity() -> None:
     session = _magic_login("session@pelda.hu")
     response = client.post(
@@ -134,6 +152,9 @@ def test_session_me_resolves_identity() -> None:
     assert identity["tenant_id"] == session["household_id"]
 
 
+@pytest.mark.test_id("TEST-AUTH-007")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_session_me_rejects_garbage_token() -> None:
     response = client.post(
         "/auth/session/me", json={"session_token": "not-a-real-session-token"}
@@ -146,6 +167,9 @@ def test_session_me_rejects_garbage_token() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-AUTH-008")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_owner_can_invite_member() -> None:
     session = _magic_login("inviter@pelda.hu")
     household = session["household_id"]
@@ -162,6 +186,9 @@ def test_owner_can_invite_member() -> None:
     assert "token" in body  # dev-mode link delivery
 
 
+@pytest.mark.test_id("TEST-AUTH-009")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_invite_list_shows_pending_invites() -> None:
     session = _magic_login("invitelist@pelda.hu")
     household = session["household_id"]
@@ -177,6 +204,9 @@ def test_invite_list_shows_pending_invites() -> None:
     assert "tag1@pelda.hu" in emails
 
 
+@pytest.mark.test_id("TEST-AUTH-010")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_invite_accept_creates_membership_and_session() -> None:
     session = _magic_login("acceptowner@pelda.hu")
     household = session["household_id"]
@@ -202,6 +232,9 @@ def test_invite_accept_creates_membership_and_session() -> None:
     assert any(m["email"] == "gyerek@pelda.hu" and m["role"] == "child" for m in all_members)
 
 
+@pytest.mark.test_id("TEST-AUTH-011")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_invite_token_is_single_use() -> None:
     session = _magic_login("singleinvite@pelda.hu")
     household = session["household_id"]
@@ -218,6 +251,9 @@ def test_invite_token_is_single_use() -> None:
     assert client.post(url, json={"token": invite["token"]}).status_code == 404
 
 
+@pytest.mark.test_id("TEST-AUTH-012")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_non_owner_cannot_invite() -> None:
     session = _magic_login("nonowner@pelda.hu")
     household = session["household_id"]
@@ -240,6 +276,9 @@ def test_non_owner_cannot_invite() -> None:
     assert response.status_code == 403
 
 
+@pytest.mark.test_id("TEST-AUTH-013")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_invite_rejects_unknown_role() -> None:
     session = _magic_login("badrole@pelda.hu")
     household = session["household_id"]
@@ -257,6 +296,9 @@ def test_invite_rejects_unknown_role() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-AUTH-014")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_view_only_cannot_edit_receipt() -> None:
     session = _magic_login("viewonly@pelda.hu")
     household = session["household_id"]
@@ -285,6 +327,9 @@ def test_view_only_cannot_edit_receipt() -> None:
     assert response.status_code == 403
 
 
+@pytest.mark.test_id("TEST-AUTH-015")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_child_cannot_edit_receipt_via_patch() -> None:
     owner = Actor("csalad-child", "owner")
     created = service.create_receipt(owner, _parsed(0.4), "bolt.png")
@@ -297,6 +342,9 @@ def test_child_cannot_edit_receipt_via_patch() -> None:
     assert child.status_code == 403
 
 
+@pytest.mark.test_id("TEST-AUTH-016")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_owner_can_edit_receipt_via_patch() -> None:
     owner = Actor("csalad-owner", "owner")
     created = service.create_receipt(owner, _parsed(0.4), "bolt.png")
@@ -309,6 +357,9 @@ def test_owner_can_edit_receipt_via_patch() -> None:
     assert response.status_code == 200
 
 
+@pytest.mark.test_id("TEST-AUTH-017")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_view_only_member_cannot_invite_or_edit() -> None:
     session = _magic_login("vowner@pelda.hu")
     household = session["household_id"]
@@ -336,6 +387,9 @@ def test_view_only_member_cannot_invite_or_edit() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-AUTH-018")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_legacy_header_auth_still_works_for_product_endpoints() -> None:
     response = client.get("/product/members", headers=HEADERS)
     assert response.status_code == 200
@@ -343,6 +397,9 @@ def test_legacy_header_auth_still_works_for_product_endpoints() -> None:
     assert response.status_code == 200
 
 
+@pytest.mark.test_id("TEST-AUTH-019")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("CRITICAL-2: the demo header auth must not grant owner-equivalent power. ``X-Role: admin`` maps to the RESTRICT")
 def test_legacy_header_admin_cannot_invite_without_session_membership() -> None:
     """CRITICAL-2: the demo header auth must not grant owner-equivalent power.
 
@@ -385,6 +442,9 @@ def _invite_for(email: str, role: str = "child") -> tuple[str, dict, dict]:
     return household, invite, headers
 
 
+@pytest.mark.test_id("TEST-AUTH-020")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("CRITICAL-1: no owner session may be minted for a caller-supplied household. The request body no longer accepts")
 def test_magic_link_request_rejects_household_binding() -> None:
     """CRITICAL-1: no owner session may be minted for a caller-supplied household.
 
@@ -421,6 +481,9 @@ def test_magic_link_request_rejects_household_binding() -> None:
     assert members.json()["items"] == []
 
 
+@pytest.mark.test_id("TEST-AUTH-021")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("HIGH-5: the invite email link must embed household+invite ids so the accept page (which requires ?household= a")
 def test_invite_link_carries_household_and_invite_ids() -> None:
     """HIGH-5: the invite email link must embed household+invite ids so the
     accept page (which requires ?household= and ?invite=) works end-to-end."""
@@ -431,6 +494,9 @@ def test_invite_link_carries_household_and_invite_ids() -> None:
     assert f"token={invite['token']}" in link
 
 
+@pytest.mark.test_id("TEST-AUTH-022")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("MED-6: path validation must happen BEFORE the token is consumed.")
 def test_invite_accept_with_wrong_household_does_not_consume_token() -> None:
     """MED-6: path validation must happen BEFORE the token is consumed."""
     household, invite, _ = _invite_for("med6@pelda.hu")
@@ -449,6 +515,9 @@ def test_invite_accept_with_wrong_household_does_not_consume_token() -> None:
     assert ok.json()["household_id"] == household
 
 
+@pytest.mark.test_id("TEST-AUTH-023")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("HIGH-4: owner/adult may edit the receipt workspace; child gets 403.")
 def test_adult_can_edit_workspace_child_cannot() -> None:
     """HIGH-4: owner/adult may edit the receipt workspace; child gets 403."""
     household, invite, _ = _invite_for("adultws@pelda.hu", role="adult")
@@ -489,6 +558,9 @@ def test_adult_can_edit_workspace_child_cannot() -> None:
     assert blocked.status_code == 403
 
 
+@pytest.mark.test_id("TEST-AUTH-024")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("HIGH-3: every mutating /product endpoint rejects child/view_only with 403.")
 def test_child_view_only_blocked_from_all_mutating_product_endpoints() -> None:
     """HIGH-3: every mutating /product endpoint rejects child/view_only with 403."""
     # Prepare a household with a receipt and a child session.
@@ -636,6 +708,9 @@ def test_child_view_only_blocked_from_all_mutating_product_endpoints() -> None:
     assert permissions.status_code == 403, "permissions PUT must be write-gated"
 
 
+@pytest.mark.test_id("TEST-AUTH-025")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("LOW-8: the stale second role check must not reject household roles.")
 def test_add_member_accepts_household_roles_when_owner() -> None:
     """LOW-8: the stale second role check must not reject household roles."""
     service.add_member(Actor("low8", "owner"), "gyerek@low8.hu", "child")
@@ -648,6 +723,9 @@ def test_add_member_accepts_household_roles_when_owner() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-AUTH-026")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_frontend_has_auth_api_client_functions() -> None:
     text = API_CLIENT.read_text(encoding="utf-8")
     for function in (
@@ -661,31 +739,46 @@ def test_frontend_has_auth_api_client_functions() -> None:
         assert function in text, f"api.ts must export {function}"
 
 
+@pytest.mark.test_id("TEST-AUTH-027")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_frontend_auth_module_supports_session_identity() -> None:
     text = AUTH_MODULE.read_text(encoding="utf-8")
     assert "session" in text.lower() or "bearer" in text.lower()
 
 
+@pytest.mark.test_id("TEST-AUTH-028")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_frontend_types_declare_auth_payloads() -> None:
     text = TYPES.read_text(encoding="utf-8")
     for symbol in ("MagicLinkResponse", "SessionIdentity", "HouseholdInvite"):
         assert symbol in text, f"types.ts must declare {symbol}"
 
 
+@pytest.mark.test_id("TEST-AUTH-029")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_login_page_offers_magic_link_entry() -> None:
     text = LOGIN_PAGE.read_text(encoding="utf-8")
     assert "magic" in text.lower(), "login page must link to the magic-link flow"
 
 
+@pytest.mark.test_id("TEST-AUTH-030")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_magic_link_and_invite_pages_exist() -> None:
     assert MAGIC_PAGE.exists(), "frontend/app/auth/magic-link/page.tsx missing"
     assert INVITE_PAGE.exists(), "frontend/app/auth/invite/page.tsx missing"
 
 
+@pytest.mark.test_id("TEST-AUTH-031")
+@pytest.mark.requirements("REQ-US-024-01")
+@pytest.mark.scenario("The wire role set must match the §3.2 household vocabulary.")
 def test_invite_roles_match_household_vocabulary() -> None:
     """The wire role set must match the §3.2 household vocabulary."""
     assert HOUSEHOLD_ROLES == {"owner", "adult", "child", "view_only"}
-    # role labels live in lib/roles.ts
+    # role labels live in lib/roles.ts as i18n keys (render resolves them)
     text = (FRONTEND / "lib" / "roles.ts").read_text(encoding="utf-8")
-    for label in ("Háztartás tulajdonosa", "Gyermek", "Csak megtekintés"):
-        assert label in text
+    for key in ("roleOwner", "roleChild", "roleViewOnly"):
+        assert key in text

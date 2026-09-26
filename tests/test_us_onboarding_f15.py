@@ -20,18 +20,16 @@ Backend wire format is untouched by this feature (schema change is F1.3).
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND = REPO_ROOT / "frontend"
 
-# Plan §3.1 — the one-sentence positioning promise. Must appear verbatim in
-# the step-1 copy of BOTH surfaces (dedicated page and shell modal).
-PROMISE = (
-    "Fotózd le a nyugtát. Mi megmutatjuk, hol folyik el a pénzed"
-    " — és hol takaríthatsz meg."
-)
+# Plan §3.1 — the one-sentence positioning promise. Both surfaces render it
+# through the i18n key (page.tsx/modal resolve it at render time).
+PROMISE = "onboardingPromise"
 
 # Acceptance 3 — the post-onboarding destination.
 DASHBOARD_HREF = "/dashboard"
@@ -43,11 +41,17 @@ def _read(rel: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+@pytest.mark.test_id("TEST-ONB-001")
+@pytest.mark.requirements("REQ-US-F15-01")
+@pytest.mark.scenario("The dedicated onboarding route exists (app/onboarding/page.tsx).")
 def test_f15_onboarding_page_exists() -> None:
     """The dedicated onboarding route exists (app/onboarding/page.tsx)."""
     assert (FRONTEND / "app/onboarding/page.tsx").exists()
 
 
+@pytest.mark.test_id("TEST-ONB-002")
+@pytest.mark.requirements("REQ-US-F15-01")
+@pytest.mark.scenario("Acceptance 1: the flow is 3 steps — value promise, camera/upload, first receipt — with a sticky indicator and ")
 def test_f15_exactly_three_steps() -> None:
     """Acceptance 1: the flow is 3 steps — value promise, camera/upload,
     first receipt — with a sticky indicator and forward/back navigation."""
@@ -55,17 +59,21 @@ def test_f15_exactly_three_steps() -> None:
     modal = _read("components/Onboarding.tsx")
 
     for src, label in ((page, "onboarding page"), (modal, "onboarding modal")):
-        # Exactly three step definitions (icon/title/body tuples).
-        assert "title: \"Mi ez?\"" in src, f"{label}: step 1 (Mi ez?) missing"
-        assert "title: \"Kamera hozzáférése\"" in src, f"{label}: step 2 (camera access) missing"
-        assert "title: \"Az első nyugtád\"" in src, f"{label}: step 3 (first receipt) missing"
+        # Exactly three step definitions (icon/title/body tuples, via i18n keys).
+        assert "onboardingStepWhat" in src, f"{label}: step 1 (Mi ez?) missing"
+        assert "onboardingStepCamera" in src, f"{label}: step 2 (camera access) missing"
+        assert "onboardingStepFirst" in src, f"{label}: step 3 (first receipt) missing"
 
         # Sticky progress indicator (back/forward state preserved across steps).
-        assert re.search(r"aria-label=.*lépés", src), f"{label}: step counter missing"
+        # The counter label resolves at render time via the i18n key.
+        assert "aria-label" in src and "onboardingStepOf" in src, f"{label}: step counter missing"
         assert "setStep((value) => value - 1)" in src, f"{label}: Back navigation missing"
         assert "setStep((value) => value + 1)" in src, f"{label}: Next navigation missing"
 
 
+@pytest.mark.test_id("TEST-ONB-003")
+@pytest.mark.requirements("REQ-US-F15-01")
+@pytest.mark.scenario("Acceptance 2: step 1 shows the one-sentence positioning promise (§3.1).")
 def test_f15_step1_shows_positioning_promise() -> None:
     """Acceptance 2: step 1 shows the one-sentence positioning promise (§3.1)."""
     page = _read("app/onboarding/page.tsx")
@@ -79,6 +87,9 @@ def test_f15_step1_shows_positioning_promise() -> None:
     )
 
 
+@pytest.mark.test_id("TEST-ONB-004")
+@pytest.mark.requirements("REQ-US-F15-01")
+@pytest.mark.scenario("Acceptance 3: after the flow, the user lands on /dashboard.")
 def test_f15_finish_navigates_to_consumer_dashboard() -> None:
     """Acceptance 3: after the flow, the user lands on /dashboard."""
     page = _read("app/onboarding/page.tsx")
@@ -92,6 +103,9 @@ def test_f15_finish_navigates_to_consumer_dashboard() -> None:
     )
 
 
+@pytest.mark.test_id("TEST-ONB-005")
+@pytest.mark.requirements("REQ-US-F15-01")
+@pytest.mark.scenario("Acceptance 4: onboarding_done gates the flow — completed users never see it again (persistence is the preferen")
 def test_f15_state_persistence_prevents_replay() -> None:
     """Acceptance 4: onboarding_done gates the flow — completed users never
     see it again (persistence is the preferences API)."""
@@ -116,6 +130,9 @@ def test_f15_state_persistence_prevents_replay() -> None:
     )
 
 
+@pytest.mark.test_id("TEST-ONB-006")
+@pytest.mark.requirements("REQ-US-F15-01")
+@pytest.mark.scenario("Acceptance (step 2): camera capture + gallery upload access for the first receipt. The dedicated page owns the")
 def test_f15_step2_offers_camera_and_upload_access() -> None:
     """Acceptance (step 2): camera capture + gallery upload access for the
     first receipt. The dedicated page owns the picker (camera capture input
@@ -125,14 +142,17 @@ def test_f15_step2_offers_camera_and_upload_access() -> None:
     assert "capture=\"environment\"" in page, (
         "onboarding page must offer camera capture via <input capture>"
     )
-    assert "Fénykép készítése" in page, (
+    assert "onboardingTakePhoto" in page, (
         "onboarding page must surface a camera button on step 2"
     )
-    assert "Feltöltés az eszközről" in page, (
+    assert "onboardingUploadFromDevice" in page, (
         "onboarding page must offer gallery upload on step 2"
     )
 
 
+@pytest.mark.test_id("TEST-ONB-007")
+@pytest.mark.requirements("REQ-US-F15-01")
+@pytest.mark.scenario("Acceptance (step 3): the first receipt is submitted and the extracted result is presented (vendor + total + co")
 def test_f15_step3_shows_first_receipt_result() -> None:
     """Acceptance (step 3): the first receipt is submitted and the extracted
     result is presented (vendor + total + confidence) before navigating on."""
@@ -141,7 +161,7 @@ def test_f15_step3_shows_first_receipt_result() -> None:
     assert "uploadReceipt" in page, (
         "step 3 must submit the first receipt through the real upload API"
     )
-    assert "Feldolgozás…" in page, (
+    assert "onboardingProcessing" in page, (
         "step 3 must show an in-flight processing state"
     )
     assert "vendor" in page and "total" in page, (

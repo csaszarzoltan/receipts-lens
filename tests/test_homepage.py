@@ -5,9 +5,14 @@ from fastapi.testclient import TestClient
 
 from app.api import app
 
+import pytest
+
 client = TestClient(app)
 
 
+@pytest.mark.test_id("TEST-HOME-001")
+@pytest.mark.requirements("REQ-HOMEPAGE-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_root_returns_self_contained_html_homepage() -> None:
     response = client.get("/")
     assert response.status_code == 200
@@ -15,24 +20,30 @@ def test_root_returns_self_contained_html_homepage() -> None:
     html = response.text
     assert "ReceiptLens" in html
     assert app.version in html
-    assert "Szolgáltatás állapota" in html
+    assert "Service status" in html
     assert 'href="/docs"' in html
     assert 'href="/redoc"' in html
-    assert "Nyugta feldolgozása" in html
-    assert "Kötegelt feldolgozás" in html
-    assert "Költségkeretek és analitika" in html
+    assert "Receipt processing" in html
+    assert "Batch processing" in html
+    assert "Budgets &amp; analytics" in html
     assert "curl.exe" in html
     assert "/v1/parse-receipt" in html
     assert "<script" not in html.lower()
     assert "https://" not in html.lower()
 
 
+@pytest.mark.test_id("TEST-HOME-002")
+@pytest.mark.requirements("REQ-HOMEPAGE-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_homepage_links_resolve() -> None:
     assert client.get("/docs").status_code == 200
     assert client.get("/redoc").status_code == 200
     assert client.get("/health").json() == {"status": "ok"}
 
 
+@pytest.mark.test_id("TEST-HOME-003")
+@pytest.mark.requirements("REQ-HOMEPAGE-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_homepage_escapes_dynamic_application_metadata() -> None:
     from app.homepage import render_homepage
 
