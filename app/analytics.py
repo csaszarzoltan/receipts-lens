@@ -112,13 +112,14 @@ class SpendingAnalytics:
         date_from: str,
         date_to: str,
         category: str | None = None,
+        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         """Aggregate spending grouped by category.
 
         Returns a dict with ``total_spent``, ``currency``, ``groups`` (list
         of ``SpendingGroup`` dicts), and optionally ``trend``.
         """
-        receipts = receipt_store.list(date_from=date_from, date_to=date_to)
+        receipts = receipt_store.list(date_from=date_from, date_to=date_to, tenant_id=tenant_id)
 
         # Group receipts by item-level category
         group_totals: dict[str, float] = defaultdict(float)
@@ -133,7 +134,7 @@ class SpendingAnalytics:
         groups = self._build_groups(category, group_totals, group_counts, group_max, group_min)
 
         total_spent = round(sum(g.total for g in groups), 2)
-        trend = self._build_trend(date_from, date_to)
+        trend = self._build_trend(date_from, date_to, tenant_id=tenant_id)
 
         return {
             "total_spent": total_spent,
@@ -148,9 +149,10 @@ class SpendingAnalytics:
         self,
         date_from: str,
         date_to: str,
+        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         """Aggregate spending grouped by merchant."""
-        receipts = receipt_store.list(date_from=date_from, date_to=date_to)
+        receipts = receipt_store.list(date_from=date_from, date_to=date_to, tenant_id=tenant_id)
 
         group_totals: dict[str, float] = defaultdict(float)
         group_counts: dict[str, int] = defaultdict(int)
@@ -180,7 +182,7 @@ class SpendingAnalytics:
         ]
 
         total_spent = round(sum(g.total for g in groups), 2)
-        trend = self._build_trend(date_from, date_to)
+        trend = self._build_trend(date_from, date_to, tenant_id=tenant_id)
 
         return {
             "total_spent": total_spent,
@@ -195,9 +197,10 @@ class SpendingAnalytics:
         self,
         date_from: str,
         date_to: str,
+        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         """Aggregate spending grouped by day."""
-        receipts = receipt_store.list(date_from=date_from, date_to=date_to)
+        receipts = receipt_store.list(date_from=date_from, date_to=date_to, tenant_id=tenant_id)
 
         group_totals: dict[str, float] = defaultdict(float)
         group_counts: dict[str, int] = defaultdict(int)
@@ -221,7 +224,7 @@ class SpendingAnalytics:
         ]
 
         total_spent = round(sum(g.total for g in groups), 2)
-        trend = self._build_trend(date_from, date_to)
+        trend = self._build_trend(date_from, date_to, tenant_id=tenant_id)
 
         return {
             "total_spent": total_spent,
@@ -236,9 +239,10 @@ class SpendingAnalytics:
         self,
         date_from: str,
         date_to: str,
+        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         """Aggregate spending grouped by month."""
-        receipts = receipt_store.list(date_from=date_from, date_to=date_to)
+        receipts = receipt_store.list(date_from=date_from, date_to=date_to, tenant_id=tenant_id)
 
         group_totals: dict[str, float] = defaultdict(float)
         group_counts: dict[str, int] = defaultdict(int)
@@ -266,7 +270,7 @@ class SpendingAnalytics:
         ]
 
         total_spent = round(sum(g.total for g in groups), 2)
-        trend = self._build_trend(date_from, date_to)
+        trend = self._build_trend(date_from, date_to, tenant_id=tenant_id)
 
         return {
             "total_spent": total_spent,
@@ -283,6 +287,7 @@ class SpendingAnalytics:
         date_to: str,
         group_by: str = "category",
         category: str | None = None,
+        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         """General-purpose aggregation endpoint.
 
@@ -290,21 +295,21 @@ class SpendingAnalytics:
         ``by_month`` based on **group_by**.
         """
         if group_by == "category":
-            return self.by_category(date_from, date_to, category=category)
+            return self.by_category(date_from, date_to, category=category, tenant_id=tenant_id)
         elif group_by == "merchant":
-            return self.by_merchant(date_from, date_to)
+            return self.by_merchant(date_from, date_to, tenant_id=tenant_id)
         elif group_by == "day":
-            return self.by_day(date_from, date_to)
+            return self.by_day(date_from, date_to, tenant_id=tenant_id)
         elif group_by == "month":
-            return self.by_month(date_from, date_to)
+            return self.by_month(date_from, date_to, tenant_id=tenant_id)
         else:
             raise ValueError(f"Invalid group_by: {group_by!r}")
 
     def _build_trend(
-        self, date_from: str, date_to: str
+        self, date_from: str, date_to: str, tenant_id: str | None = None
     ) -> list[dict[str, Any]]:
         """Build monthly trend data for a date range."""
-        receipts = receipt_store.list(date_from=date_from, date_to=date_to)
+        receipts = receipt_store.list(date_from=date_from, date_to=date_to, tenant_id=tenant_id)
 
         monthly: dict[str, dict[str, float]] = defaultdict(
             lambda: {"total": 0.0, "count": 0}

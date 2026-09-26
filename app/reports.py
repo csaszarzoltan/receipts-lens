@@ -12,17 +12,24 @@ class ReceiptStore:
 
     Thread-safe (via ``self._lock``). A module-level ``receipt_store`` instance
     is the recommended entrypoint for production wiring.
+
+    Tenant tagging: ``store()`` accepts an optional ``tenant_id``; ``list()``
+    filters on it when given.  Receipts stored WITHOUT a tenant tag (legacy /
+    seed data) are visible only to unfiltered (back-compat) reads — a
+    tenant-scoped read never sees another tenant's data.
     """
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._data: dict[str, ConfidenceReceipt] = {}
+        self._tenants: dict[str, str | None] = {}
 
-    def store(self, receipt: ConfidenceReceipt) -> str:
+    def store(self, receipt: ConfidenceReceipt, tenant_id: str | None = None) -> str:
         """Insert a receipt, return a UUID string receipt_id."""
         receipt_id = str(uuid.uuid4())
         with self._lock:
             self._data[receipt_id] = receipt
+            self._tenants[receipt_id] = tenant_id
         return receipt_id
 
     def get(self, receipt_id: str) -> ConfidenceReceipt | None:
@@ -41,23 +48,29 @@ class ReceiptStore:
         date_to: str,
         *,
         merchant: str | None = None,
+        tenant_id: str | None = None,
     ) -> list[ConfidenceReceipt]:
         """Filter receipts by date range and optional merchant.
 
         Dates are compared as ISO strings (YYYY-MM-DD), which yields the same
         ordering as date comparison.  The **merchant** filter is case-insensitive
-        substring match.
+        substring match.  When **tenant_id** is given, only receipts stored
+        with that tenant tag are returned.
         """
         results: list[ConfidenceReceipt] = []
         with self._lock:
-            for receipt in self._data.values():
-                if receipt.date is None:
-                    continue
-                if receipt.date < date_from or receipt.date > date_to:
-                    continue
-                if merchant is not None and merchant.lower() not in (receipt.merchant or "").lower():
-                    continue
-                results.append(receipt)
+            items = list(self._data.items())
+            tenants = dict(self._tenants)
+        for receipt_id, receipt in items:
+            if tenant_id is not None and tenants.get(receipt_id) != tenant_id:
+                continue
+            if receipt.date is None:
+                continue
+            if receipt.date < date_from or receipt.date > date_to:
+                continue
+            if merchant is not None and merchant.lower() not in (receipt.merchant or "").lower():
+                continue
+            results.append(receipt)
         return results
 
 

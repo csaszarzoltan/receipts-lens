@@ -42,6 +42,7 @@ class Alert:
         pct_used: float | None = None,
         created_at: str | None = None,
         acknowledged: bool = False,
+        tenant_id: str | None = None,
     ) -> None:
         self.alert_id = alert_id
         self.type = alert_type
@@ -51,6 +52,7 @@ class Alert:
         self.pct_used = pct_used
         self.created_at = created_at or datetime.now(UTC).isoformat().replace("+00:00", "Z")
         self.acknowledged = acknowledged
+        self.tenant_id = tenant_id
 
 
 class AlertStore:
@@ -71,6 +73,7 @@ class AlertStore:
         category: str,
         message: str,
         pct_used: float | None = None,
+        tenant_id: str | None = None,
     ) -> Alert:
         """Create a new alert and store it.  Returns the stored ``Alert``."""
         alert_id = str(uuid.uuid4())
@@ -81,17 +84,24 @@ class AlertStore:
             category=category,
             message=message,
             pct_used=pct_used,
+            tenant_id=tenant_id,
         )
         with self._lock:
             self._data[alert_id] = alert
         return alert
 
-    def list_alerts(self) -> list[Alert]:
-        """Return all active (non-acknowledged) alerts."""
+    def list_alerts(self, tenant_id: str | None = None) -> list[Alert]:
+        """Return all active (non-acknowledged) alerts.
+
+        When *tenant_id* is given, only that tenant's alerts are returned —
+        alerts without a tenant tag (legacy) are visible to nobody once
+        tenant filtering is active, so cross-tenant leaks are impossible.
+        """
         with self._lock:
             return [
                 a for a in self._data.values()
                 if not a.acknowledged
+                and (tenant_id is None or a.tenant_id == tenant_id)
             ]
 
     def all_alerts(self) -> list[Alert]:
@@ -99,19 +109,30 @@ class AlertStore:
         with self._lock:
             return list(self._data.values())
 
-    def acknowledge(self, alert_id: str) -> bool:
-        """Mark an alert as acknowledged.  Returns ``True`` if found."""
+    def acknowledge(self, alert_id: str, tenant_id: str | None = None) -> bool:
+        """Mark an alert as acknowledged.  Returns ``True`` if found.
+
+        When *tenant_id* is given, a foreign tenant's alert is NOT touched
+        and ``False`` is returned (the route maps this to 404) — silent
+        cross-tenant suppression is impossible.
+        """
         with self._lock:
             alert = self._data.get(alert_id)
             if alert is None:
                 return False
+            if tenant_id is not None and alert.tenant_id != tenant_id:
+                return False
             alert.acknowledged = True
         return True
 
-    def unread_count(self) -> int:
-        """Number of alerts where acknowledged == False."""
+    def unread_count(self, tenant_id: str | None = None) -> int:
+        """Number of alerts where acknowledged == False (tenant-scoped when given)."""
         with self._lock:
-            return sum(1 for a in self._data.values() if not a.acknowledged)
+            return sum(
+                1 for a in self._data.values()
+                if not a.acknowledged
+                and (tenant_id is None or a.tenant_id == tenant_id)
+            )
 
     def schedule_renewal_alerts(
         self,

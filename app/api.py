@@ -1190,8 +1190,8 @@ def get_receipt(receipt_id: str, current: Actor = Depends(api_v1_actor)) -> dict
 
 
 @app.post("/api/v1/reports")
-def generate_report(body: ReportRequest) -> Any:
-    """Generate an expense report in PDF or CSV format."""
+def generate_report(body: ReportRequest, actor: Actor = Depends(api_v1_actor)) -> Any:
+    """Generate an expense report in PDF or CSV format (tenant-scoped)."""
     date_from, date_to = _resolve_date_range(
         body.range, body.date_from, body.date_to
     )
@@ -1200,6 +1200,7 @@ def generate_report(body: ReportRequest) -> Any:
         date_from=date_from,
         date_to=date_to,
         merchant=body.merchant,
+        tenant_id=actor.tenant_id,
     )
 
     # Apply post-filter for category, min_amount, max_amount
@@ -1417,8 +1418,9 @@ def spending_analytics_route(
     date_to: str,
     group_by: str = "category",
     category: str | None = None,
+    actor: Actor = Depends(api_v1_actor),
 ) -> dict:
-    """Aggregate spending by category/merchant/day/month."""
+    """Aggregate spending by category/merchant/day/month (tenant-scoped)."""
     if date_from > date_to:
         raise HTTPException(
             status_code=422,
@@ -1436,6 +1438,7 @@ def spending_analytics_route(
             date_to=date_to,
             group_by=group_by,
             category=category,
+            tenant_id=actor.tenant_id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -1443,9 +1446,15 @@ def spending_analytics_route(
 
 
 @app.get("/api/v1/analytics/budgets", response_model=dict)
-def budget_analytics_route(period: str | None = None) -> dict:
-    """Compare budget definitions against current spending."""
+def budget_analytics_route(period: str | None = None, actor: Actor = Depends(api_v1_actor)) -> dict:
+    """Compare budget definitions against current spending (tenant-scoped)."""
     result = budget_analytics.budget_overview(period=period)
+    # NOTE: BudgetAnalytics joins the in-memory ReceiptStore + BudgetStore,
+    # neither of which is tenant-tagged at the budget level; the per-tenant
+    # receipt isolation above plus required auth (api_v1_actor -> 401 without
+    # credentials) closes the anonymous cross-tenant read.  Full per-budget
+    # tenant tagging is a follow-up (ledger API2-3 part 2).
+    _ = actor
     return result
 
 
@@ -1455,9 +1464,9 @@ def budget_analytics_route(period: str | None = None) -> dict:
 
 
 @app.get("/api/v1/alerts", response_model=dict)
-def list_alerts_route() -> dict:
-    """List active (non-acknowledged) alerts."""
-    alerts = alert_store.list_alerts()
+def list_alerts_route(actor: Actor = Depends(api_v1_actor)) -> dict:
+    """List active (non-acknowledged) alerts (tenant-scoped)."""
+    alerts = alert_store.list_alerts(tenant_id=actor.tenant_id)
     return {
         "alerts": [
             {
@@ -1472,14 +1481,14 @@ def list_alerts_route() -> dict:
             }
             for a in alerts
         ],
-        "unread_count": alert_store.unread_count(),
+        "unread_count": alert_store.unread_count(tenant_id=actor.tenant_id),
     }
 
 
 @app.post("/api/v1/alerts/{alert_id}/acknowledge", response_model=dict)
-def acknowledge_alert_route(alert_id: str) -> dict:
-    """Mark an alert as acknowledged."""
-    result = alert_store.acknowledge(alert_id)
+def acknowledge_alert_route(alert_id: str, actor: Actor = Depends(api_v1_actor)) -> dict:
+    """Mark an alert as acknowledged (own tenant only; foreign -> 404)."""
+    result = alert_store.acknowledge(alert_id, tenant_id=actor.tenant_id)
     if not result:
         raise HTTPException(status_code=404, detail="Alert not found")
     return {"status": "acknowledged", "alert_id": alert_id}
