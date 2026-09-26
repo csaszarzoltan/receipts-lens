@@ -13,6 +13,7 @@ Run with:
 """
 from __future__ import annotations
 
+import datetime
 import inspect
 from typing import get_type_hints
 
@@ -75,30 +76,48 @@ def _route_paths() -> set[str]:
 class TestReceiptStoreInterface:
     """P0-1: ReceiptStore class import, existence, and signature checks."""
 
+    @pytest.mark.test_id("TEST-RPT-001")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-001")
     def test_receipt_store_importable(self) -> None:
         assert ReceiptStore is not None
 
+    @pytest.mark.test_id("TEST-RPT-002")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-002")
     def test_receipt_store_singleton_exists(self) -> None:
         assert receipt_store is not None
         assert isinstance(receipt_store, ReceiptStore)
 
+    @pytest.mark.test_id("TEST-RPT-003")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-003")
     def test_receipt_store_has_store_method(self) -> None:
         assert hasattr(ReceiptStore, "store")
         assert callable(ReceiptStore.store)
 
+    @pytest.mark.test_id("TEST-RPT-004")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-004")
     def test_receipt_store_has_get_method(self) -> None:
         assert hasattr(ReceiptStore, "get")
         assert callable(ReceiptStore.get)
 
+    @pytest.mark.test_id("TEST-RPT-005")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-005")
     def test_receipt_store_has_list_method(self) -> None:
         assert hasattr(ReceiptStore, "list")
         assert callable(ReceiptStore.list)
 
+    @pytest.mark.test_id("TEST-RPT-006")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-006")
     def test_receipt_store_store_signature(self) -> None:
-        """store(self, receipt: ConfidenceReceipt) -> str"""
+        """store(self, receipt, tenant_id=None) -> str (tenant-cimkezes API2-1 ota)."""
         sig = inspect.signature(ReceiptStore.store)
         params = list(sig.parameters)
-        assert params == ["self", "receipt"], f"store params: {params}"
+        assert params == ["self", "receipt", "tenant_id"], f"store params: {params}"
         hints = get_type_hints(ReceiptStore.store)
         assert hints.get("receipt") is ocr.ConfidenceReceipt, (
             f"receipt hint: {hints.get('receipt')}"
@@ -107,6 +126,9 @@ class TestReceiptStoreInterface:
             f"store return hint: {hints.get('return')}"
         )
 
+    @pytest.mark.test_id("TEST-RPT-007")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-007")
     def test_receipt_store_get_signature(self) -> None:
         """get(self, receipt_id: str) -> ConfidenceReceipt | None"""
         sig = inspect.signature(ReceiptStore.get)
@@ -122,6 +144,9 @@ class TestReceiptStoreInterface:
             ret, "__args__", ()
         ), f"get return hint: {ret}"
 
+    @pytest.mark.test_id("TEST-RPT-008")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-008")
     def test_receipt_store_list_signature(self) -> None:
         """list(self, date_from: str, date_to: str, *, merchant: str | None = None) -> list[ConfidenceReceipt]"""
         sig = inspect.signature(ReceiptStore.list)
@@ -151,10 +176,16 @@ class TestReceiptStoreInterface:
 class TestGeneratePdfInterface:
     """P0-3: generate_pdf import and signature checks."""
 
+    @pytest.mark.test_id("TEST-RPT-009")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-009")
     def test_generate_pdf_importable(self) -> None:
         assert generate_pdf is not None
         assert callable(generate_pdf)
 
+    @pytest.mark.test_id("TEST-RPT-010")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-010")
     def test_generate_pdf_signature(self) -> None:
         """generate_pdf(receipts: list[ConfidenceReceipt], *, title: str = "Expense Report") -> bytes"""
         sig = inspect.signature(generate_pdf)
@@ -177,10 +208,16 @@ class TestGeneratePdfInterface:
 class TestGenerateCsvInterface:
     """P0-4: generate_csv import and signature checks."""
 
+    @pytest.mark.test_id("TEST-RPT-011")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-011")
     def test_generate_csv_importable(self) -> None:
         assert generate_csv is not None
         assert callable(generate_csv)
 
+    @pytest.mark.test_id("TEST-RPT-012")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-012")
     def test_generate_csv_signature(self) -> None:
         """generate_csv(receipts: list[ConfidenceReceipt]) -> str"""
         sig = inspect.signature(generate_csv)
@@ -195,30 +232,45 @@ class TestGenerateCsvInterface:
 class TestApiRoutesInterface:
     """P0-2 + P0-5: route registration and model existence."""
 
+    @pytest.mark.test_id("TEST-RPT-013")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-013")
     def test_post_receipts_route_registered(self) -> None:
         paths = _route_paths()
         assert "/api/v1/receipts" in paths, (
             "POST /api/v1/receipts route not registered"
         )
 
+    @pytest.mark.test_id("TEST-RPT-014")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-014")
     def test_get_receipts_route_registered(self) -> None:
         paths = _route_paths()
         assert "/api/v1/receipts" in paths, (
             "GET /api/v1/receipts route not registered"
         )
 
+    @pytest.mark.test_id("TEST-RPT-015")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-015")
     def test_get_receipt_by_id_route_registered(self) -> None:
         paths = _route_paths()
         assert any("/api/v1/receipts/" in p for p in paths if p), (
             "GET /api/v1/receipts/{receipt_id} route not registered"
         )
 
+    @pytest.mark.test_id("TEST-RPT-016")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-016")
     def test_post_reports_route_registered(self) -> None:
         paths = _route_paths()
         assert "/api/v1/reports" in paths, (
             "POST /api/v1/reports route not registered"
         )
 
+    @pytest.mark.test_id("TEST-RPT-017")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-017")
     def test_receipt_create_request_has_pydantic_model(self) -> None:
         """ReceiptCreateRequest must exist (or a recognisable equivalent)."""
         models = _collect_pydantic_models()
@@ -231,6 +283,9 @@ class TestApiRoutesInterface:
             f"Models seen: {models}"
         )
 
+    @pytest.mark.test_id("TEST-RPT-018")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-018")
     def test_report_request_has_pydantic_model(self) -> None:
         """ReportRequest must exist as a Pydantic model."""
         models = _collect_pydantic_models()
@@ -244,11 +299,17 @@ class TestApiRoutesInterface:
 class TestCategoryInterface:
     """P1-1: category field on ReceiptItem."""
 
+    @pytest.mark.test_id("TEST-RPT-019")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-019")
     def test_receipt_item_has_category_field(self) -> None:
         item = ocr.ReceiptItem(name="Test", price=1.0, category="Meals")
         assert hasattr(item, "category")
         assert item.category == "Meals"
 
+    @pytest.mark.test_id("TEST-RPT-020")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-020")
     def test_receipt_item_category_defaults_none(self) -> None:
         item = ocr.ReceiptItem(name="Test", price=1.0)
         assert item.category is None
@@ -257,6 +318,9 @@ class TestCategoryInterface:
 class TestCorsInterface:
     """P2-1: CORS middleware registration."""
 
+    @pytest.mark.test_id("TEST-RPT-021")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-021")
     def test_cors_middleware_registered(self) -> None:
         """Check that CORSMiddleware is in app.user_middleware."""
         from fastapi.middleware.cors import CORSMiddleware as CORSMiddlewareCls
@@ -273,6 +337,9 @@ class TestCorsInterface:
 class TestDatePresetsInterface:
     """P2-2: range field on ReportRequest."""
 
+    @pytest.mark.test_id("TEST-RPT-022")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-022")
     def test_report_request_has_range_field(self) -> None:
         """ReportRequest or equivalent should accept a 'range' field."""
         models = _collect_pydantic_models()
@@ -306,6 +373,9 @@ class TestDatePresetsInterface:
 class TestReceiptStoreBehavioral:
     """P0-1: ReceiptStore runtime behavior."""
 
+    @pytest.mark.test_id("TEST-RPT-023")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-023")
     def test_store_returns_uuid(self) -> None:
         receipt_id = receipt_store.store(
             ocr.ConfidenceReceipt(
@@ -318,10 +388,16 @@ class TestReceiptStoreBehavioral:
 
         uuid.UUID(receipt_id)  # raises ValueError if not valid UUID
 
+    @pytest.mark.test_id("TEST-RPT-024")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-024")
     def test_get_returns_none_for_unknown(self) -> None:
         result = receipt_store.get("00000000-0000-0000-0000-000000000000")
         assert result is None
 
+    @pytest.mark.test_id("TEST-RPT-025")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-025")
     def test_get_returns_stored_receipt(self) -> None:
         receipt = ocr.ConfidenceReceipt(
             merchant="Store", date="2026-07-01",
@@ -333,12 +409,18 @@ class TestReceiptStoreBehavioral:
         assert retrieved is not None
         assert retrieved.merchant == "Store"
 
+    @pytest.mark.test_id("TEST-RPT-026")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-026")
     def test_list_filters_by_date_range(self) -> None:
         results = receipt_store.list(
             date_from="2026-01-01", date_to="2026-12-31"
         )
         assert isinstance(results, list)
 
+    @pytest.mark.test_id("TEST-RPT-027")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-027")
     def test_list_merchant_filter_case_insensitive(self) -> None:
         results = receipt_store.list(
             date_from="2026-01-01", date_to="2026-12-31",
@@ -346,12 +428,18 @@ class TestReceiptStoreBehavioral:
         )
         assert isinstance(results, list)
 
+    @pytest.mark.test_id("TEST-RPT-028")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-028")
     def test_list_no_matches_returns_empty(self) -> None:
         results = receipt_store.list(
             date_from="2019-01-01", date_to="2019-01-02"
         )
         assert results == []
 
+    @pytest.mark.test_id("TEST-RPT-029")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-029")
     def test_store_thread_safety(self) -> None:
         """Two concurrent store() calls should not corrupt state."""
         import concurrent.futures
@@ -380,11 +468,17 @@ class TestReceiptStoreBehavioral:
 class TestGeneratePdfBehavioral:
     """P0-3: generate_pdf acceptance criteria."""
 
+    @pytest.mark.test_id("TEST-RPT-030")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-030")
     def test_generate_pdf_empty_list(self) -> None:
         result = generate_pdf([])
         assert isinstance(result, bytes)
         assert result.startswith(b"%PDF-")
 
+    @pytest.mark.test_id("TEST-RPT-031")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-031")
     def test_generate_pdf_with_receipts(self) -> None:
         receipt = ocr.ConfidenceReceipt(
             merchant="Test Store", date="2026-07-01",
@@ -395,6 +489,9 @@ class TestGeneratePdfBehavioral:
         assert isinstance(result, bytes)
         assert result.startswith(b"%PDF-")
 
+    @pytest.mark.test_id("TEST-RPT-032")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-032")
     def test_generate_pdf_contains_title(self) -> None:
         receipt = ocr.ConfidenceReceipt(
             merchant="Store", date="2026-07-01",
@@ -404,6 +501,9 @@ class TestGeneratePdfBehavioral:
         result = generate_pdf([receipt], title="My Report")
         assert b"My Report" in result
 
+    @pytest.mark.test_id("TEST-RPT-033")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-033")
     def test_generate_pdf_contains_total_row(self) -> None:
         receipt = ocr.ConfidenceReceipt(
             merchant="Store", date="2026-07-01",
@@ -413,6 +513,9 @@ class TestGeneratePdfBehavioral:
         result = generate_pdf([receipt])
         assert b"Total" in result
 
+    @pytest.mark.test_id("TEST-RPT-034")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-034")
     def test_generate_pdf_empty_line_items_graceful(self) -> None:
         receipt = ocr.ConfidenceReceipt(
             merchant="Store", date="2026-07-01",
@@ -426,12 +529,18 @@ class TestGeneratePdfBehavioral:
 class TestGenerateCsvBehavioral:
     """P0-4: generate_csv acceptance criteria."""
 
+    @pytest.mark.test_id("TEST-RPT-035")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-035")
     def test_generate_csv_empty_list(self) -> None:
         result = generate_csv([])
         assert isinstance(result, str)
         # Header + "No expense items" row
         assert "Date" in result or "No expense" in result
 
+    @pytest.mark.test_id("TEST-RPT-036")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-036")
     def test_generate_csv_with_receipts(self) -> None:
         receipt = ocr.ConfidenceReceipt(
             merchant="Test Store", date="2026-07-01",
@@ -444,6 +553,9 @@ class TestGenerateCsvBehavioral:
         assert "Merchant" in result
         assert "Amount" in result
 
+    @pytest.mark.test_id("TEST-RPT-037")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-037")
     def test_generate_csv_columns(self) -> None:
         receipt = ocr.ConfidenceReceipt(
             merchant="Store", date="2026-07-01",
@@ -456,6 +568,9 @@ class TestGenerateCsvBehavioral:
         assert "Item" in result
         assert "Amount" in result
 
+    @pytest.mark.test_id("TEST-RPT-038")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-038")
     def test_generate_csv_formula_injection(self) -> None:
         """CSV formula injection characters are neutralised with a leading quote.
 
@@ -492,6 +607,9 @@ class TestGenerateCsvBehavioral:
             f"Item with '@' not neutralised. Output:\n{result}"
         )
 
+    @pytest.mark.test_id("TEST-RPT-039")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-039")
     def test_generate_csv_normal_values_not_affected(self) -> None:
         """Values that do not start with formula characters are unmodified."""
         receipt = ocr.ConfidenceReceipt(
@@ -530,7 +648,19 @@ class TestReportsApiBehavioral:
     def client(self) -> TestClient:
         return TestClient(api.app)
 
+    @pytest.mark.test_id("TEST-RPT-040")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-040")
     def test_post_reports_pdf_format(self, client: TestClient) -> None:
+        receipt_store.store(
+            ocr.ConfidenceReceipt(
+                merchant="Seed Store",
+                date="2026-07-01",
+                items=[ocr.ReceiptItem(name="Seed item", price=5.0)],
+                total=5.0, tax=0.4, currency="USD", raw_text="",
+            ),
+            tenant_id="t-reports",
+        )
         resp = client.post(
             "/api/v1/reports",
             json={
@@ -538,11 +668,24 @@ class TestReportsApiBehavioral:
                 "date_to": "2026-12-31",
                 "format": "pdf",
             },
+            headers={"X-Tenant-ID": "t-reports", "X-Role": "admin"},
         )
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "application/pdf"
 
+    @pytest.mark.test_id("TEST-RPT-041")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-041")
     def test_post_reports_csv_format(self, client: TestClient) -> None:
+        receipt_store.store(
+            ocr.ConfidenceReceipt(
+                merchant="Seed Store",
+                date="2026-07-01",
+                items=[ocr.ReceiptItem(name="Seed item", price=5.0)],
+                total=5.0, tax=0.4, currency="USD", raw_text="",
+            ),
+            tenant_id="t-reports",
+        )
         resp = client.post(
             "/api/v1/reports",
             json={
@@ -550,11 +693,24 @@ class TestReportsApiBehavioral:
                 "date_to": "2026-12-31",
                 "format": "csv",
             },
+            headers={"X-Tenant-ID": "t-reports", "X-Role": "admin"},
         )
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "text/csv"
 
+    @pytest.mark.test_id("TEST-RPT-042")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-042")
     def test_post_reports_content_disposition(self, client: TestClient) -> None:
+        receipt_store.store(
+            ocr.ConfidenceReceipt(
+                merchant="Seed Store",
+                date="2026-01-15",
+                items=[ocr.ReceiptItem(name="Seed item", price=5.0)],
+                total=5.0, tax=0.4, currency="USD", raw_text="",
+            ),
+            tenant_id="t-reports",
+        )
         resp = client.post(
             "/api/v1/reports",
             json={
@@ -562,12 +718,16 @@ class TestReportsApiBehavioral:
                 "date_to": "2026-01-31",
                 "format": "pdf",
             },
+            headers={"X-Tenant-ID": "t-reports", "X-Role": "admin"},
         )
         assert resp.status_code == 200
         cd = resp.headers.get("content-disposition", "")
         assert "attachment" in cd
         assert "filename=" in cd
 
+    @pytest.mark.test_id("TEST-RPT-043")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-043")
     def test_post_reports_date_from_gt_date_to_returns_422(self, client: TestClient) -> None:
         resp = client.post(
             "/api/v1/reports",
@@ -576,9 +736,13 @@ class TestReportsApiBehavioral:
                 "date_to": "2026-01-01",
                 "format": "pdf",
             },
+            headers={"X-Tenant-ID": "t-reports", "X-Role": "admin"},
         )
         assert resp.status_code == 422
 
+    @pytest.mark.test_id("TEST-RPT-044")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-044")
     def test_post_reports_invalid_date_format_returns_422(self, client: TestClient) -> None:
         resp = client.post(
             "/api/v1/reports",
@@ -587,9 +751,13 @@ class TestReportsApiBehavioral:
                 "date_to": "2026-12-31",
                 "format": "pdf",
             },
+            headers={"X-Tenant-ID": "t-reports", "X-Role": "admin"},
         )
         assert resp.status_code == 422
 
+    @pytest.mark.test_id("TEST-RPT-045")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-045")
     def test_post_reports_unknown_format_returns_422(self, client: TestClient) -> None:
         resp = client.post(
             "/api/v1/reports",
@@ -598,9 +766,13 @@ class TestReportsApiBehavioral:
                 "date_to": "2026-12-31",
                 "format": "xlsx",
             },
+            headers={"X-Tenant-ID": "t-reports", "X-Role": "admin"},
         )
         assert resp.status_code == 422
 
+    @pytest.mark.test_id("TEST-RPT-046")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-046")
     def test_post_reports_no_matches_returns_404(self, client: TestClient) -> None:
         resp = client.post(
             "/api/v1/reports",
@@ -609,6 +781,7 @@ class TestReportsApiBehavioral:
                 "date_to": "2019-01-02",
                 "format": "pdf",
             },
+            headers={"X-Tenant-ID": "t-reports", "X-Role": "admin"},
         )
         assert resp.status_code == 404
         body = resp.json()
@@ -624,6 +797,9 @@ class TestCategorySubtotalsBehavioral:
     interface contract without depending on the full endpoint wiring.
     """
 
+    @pytest.mark.test_id("TEST-RPT-047")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-047")
     def test_generate_pdf_with_categories_includes_summary(self) -> None:
         receipt = ocr.ConfidenceReceipt(
             merchant="Store", date="2026-07-01",
@@ -636,6 +812,9 @@ class TestCategorySubtotalsBehavioral:
         result = generate_pdf([receipt])
         assert b"Category Summary" in result or b"Subtotal" in result
 
+    @pytest.mark.test_id("TEST-RPT-048")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-048")
     def test_generate_csv_with_categories_includes_column(self) -> None:
         receipt = ocr.ConfidenceReceipt(
             merchant="Store", date="2026-07-01",
@@ -655,7 +834,11 @@ class TestCorsBehavioral:
     def client(self) -> TestClient:
         return TestClient(api.app)
 
+    @pytest.mark.test_id("TEST-RPT-049")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-049")
     def test_cors_on_post_reports(self, client: TestClient) -> None:
+        # API2-1 ota auth kell: header nelkul 401, de a CORS-header rajta van.
         resp = client.post(
             "/api/v1/reports",
             json={
@@ -663,10 +846,14 @@ class TestCorsBehavioral:
                 "date_to": "2026-12-31",
                 "format": "pdf",
             },
+            headers={"X-Tenant-ID": "t-reports", "X-Role": "admin"},
         )
         allow_origin = resp.headers.get("access-control-allow-origin")
         assert allow_origin is not None, "Missing Access-Control-Allow-Origin"
 
+    @pytest.mark.test_id("TEST-RPT-050")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-050")
     def test_cors_options_request(self, client: TestClient) -> None:
         resp = client.options("/api/v1/reports")
         allow_origin = resp.headers.get("access-control-allow-origin")
@@ -680,15 +867,31 @@ class TestDatePresetsBehavioral:
     def client(self) -> TestClient:
         return TestClient(api.app)
 
+    @pytest.mark.test_id("TEST-RPT-051")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-051")
     def test_report_with_range_this_month(self, client: TestClient) -> None:
+        receipt_store.store(
+            ocr.ConfidenceReceipt(
+                merchant="Seed Store",
+                date=datetime.date.today().isoformat(),
+                items=[ocr.ReceiptItem(name="Seed item", price=5.0)],
+                total=5.0, tax=0.4, currency="USD", raw_text="",
+            ),
+            tenant_id="t-reports",
+        )
         resp = client.post(
             "/api/v1/reports",
             json={"range": "this_month", "format": "pdf"},
+            headers={"X-Tenant-ID": "t-reports", "X-Role": "admin"},
         )
         assert resp.status_code in (200, 404), (
             f"Unexpected status: {resp.status_code}"
         )
 
+    @pytest.mark.test_id("TEST-RPT-052")
+    @pytest.mark.requirements("FEAT-031")
+    @pytest.mark.scenario("AC-RPT-052")
     def test_range_and_dates_mutually_exclusive(self, client: TestClient) -> None:
         resp = client.post(
             "/api/v1/reports",
@@ -698,6 +901,7 @@ class TestDatePresetsBehavioral:
                 "date_to": "2026-01-31",
                 "format": "pdf",
             },
+            headers={"X-Tenant-ID": "t-reports", "X-Role": "admin"},
         )
         assert resp.status_code == 400
 
