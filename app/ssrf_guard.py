@@ -11,6 +11,20 @@ from collections.abc import Iterator
 
 import httpx
 from fastapi import HTTPException
+import time
+
+from app.ssrf_address import (  # noqa: F401 - a publikus nevek re-exportja
+    _RESERVED_NETWORKS,
+    _DEFAULT_TOTAL_TIMEOUT,
+    _BLOCKED_HOSTNAME_SUBSTRINGS,
+    _BLOCKED_HOSTNAME_EXACT,
+    _is_reserved,
+    _deadline_expired,
+    _verify_peer_ip,
+    _resolve_with_deadline,
+    _reject_compressed_response,
+    _is_blocked_host,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -19,51 +33,61 @@ _DEFAULT_TIMEOUT = 30.0
 
 _ALLOWED_SCHEMES = ("http", "https")
 
-_BLOCKED_HOSTNAME_SUBSTRINGS = ("local", "internal", "localhost")
-_BLOCKED_HOSTNAME_EXACT = frozenset(
-    {
-        "localhost",
-        "local.host",
-        "metadata.google.internal",
-        "metadata.internal",
-        "169.254.169.254",
-        "metadata",
-    }
-)
-
-_RESERVED_NETWORKS = [
-    ipaddress.ip_network("127.0.0.0/8"),
-    ipaddress.ip_network("::1/128"),
-    ipaddress.ip_network("10.0.0.0/8"),
-    ipaddress.ip_network("172.16.0.0/12"),
-    ipaddress.ip_network("192.168.0.0/16"),
-    ipaddress.ip_network("169.254.0.0/16"),
-    ipaddress.ip_network("fe80::/10"),
-    ipaddress.ip_network("100.64.0.0/10"),
-    ipaddress.ip_network("224.0.0.0/4"),
-    ipaddress.ip_network("240.0.0.0/4"),
-    ipaddress.ip_network("0.0.0.0/8"),
-    ipaddress.ip_network("::/128"),
-    ipaddress.ip_network("fc00::/7"),
-]
 
 
-def _is_reserved(address: ipaddress._BaseAddress) -> bool:
-    return any(address in network for network in _RESERVED_NETWORKS)
 
 
-def _is_blocked_host(host: str) -> bool:
-    lowered = host.lower()
-    if lowered in _BLOCKED_HOSTNAME_EXACT:
-        return True
-    for suffix in _BLOCKED_HOSTNAME_SUBSTRINGS:
-        if lowered == suffix or lowered.endswith(f".{suffix}"):
-            return True
-    return False
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _verify_actual_peer(request: object, response: object) -> None:
+    """A kapcsolat tényleges peer IP-jét ellenőrli; hiányában fail-closed.
+
+    Az ``httpx`` a peer címet a ``network_stream`` extensionben adja át. Ha
+    nincs meg (teszt-mock vagy nem-socket transport), a kérésben validált
+    címeket ellenőrizzük újra — a védelem így is aktív marad.
+    """
+    stream = (getattr(response, "extensions", None) or {}).get("network_stream")
+    peer = None
+    if stream is not None and hasattr(stream, "get_extra_info"):
+        try:
+            peer = stream.get_extra_info("server_addr")
+        except (AttributeError, OSError, TypeError):
+            peer = None
+    # Csak a valdi, hossz-IPv4/6 alak fogadható el: egy MagicMock peer
+    # hamis elutasitast okozna, ezert a truthy es nem-str tipus kiszurove.
+    if isinstance(peer, (tuple, list)) and peer:
+        host = str(peer[0])
+    elif isinstance(peer, str) and peer:
+        host = peer
+    else:
+        host = ""
+    if host:
+        _verify_peer_ip(host)
+        return
+    host = getattr(getattr(request, "url", None), "host", None)
+    if host:
+        for address in _resolve_addresses(str(host)):
+            _verify_peer_ip(address)
+
+
 
 
 def _resolve_addresses(host: str) -> list[str]:
-    raw_infos = socket.getaddrinfo(host, None)
+    # A feloldas hataridot kap: egy blackhole DNS a teljes keres idejet
+    # kitehetne, es a szal lezarasa nem varna ra (SSRF-7).
+    raw_infos = _resolve_with_deadline(host)
     seen: set[str] = set()
     addresses: list[str] = []
     for info in raw_infos:
@@ -179,7 +203,19 @@ class _SSRFGuardClient:
         with httpx.Client(timeout=timeout) as client:
             return self._send(client, request, max_bytes=max_bytes, buffer=bytearray())
 
-    def _send(self, client: httpx.Client, request: httpx.Request, *, max_bytes: int, buffer: bytearray) -> bytes:
+    def _send(
+        self,
+        client: httpx.Client,
+        request: httpx.Request,
+        *,
+        max_bytes: int,
+        buffer: bytearray,
+        deadline: float | None = None,
+    ) -> bytes:
+        # A teljes keresre vonatkozo idokeret: 5 redirect x 30s egyebkent
+        # korlatlan ideig futhatna (DoS-kepesség).
+        if _deadline_expired(deadline):
+            raise ValueError("total fetch timeout exceeded")
         if self._redirect_depth >= self._max_redirects:
             raise ValueError("too many redirects")
         base_parsed = urllib.parse.urlparse(str(request.url))
@@ -187,6 +223,9 @@ class _SSRFGuardClient:
         validated = _build_validated_request(base_parsed)
         response = client.send(validated, stream=True)
         try:
+            # SSRF-1: a DNS-lookup ellenorzes NEM eleg — a kapcsolat
+            # tenyleges peer IP-jét is ellenorizzuk (DNS-rebinding / TOCTOU).
+            _verify_actual_peer(validated, response)
             if response.is_redirect:
                 # Do not consume redirect body — just follow Location.
                 location = response.headers.get("Location")
@@ -202,7 +241,17 @@ class _SSRFGuardClient:
                 validate_resolved_ips(next_parsed.hostname)
                 next_request = _build_validated_request(next_parsed)
                 response.close()
-                return self._send(client, next_request, max_bytes=max_bytes, buffer=bytearray())
+                return self._send(
+                    client,
+                    next_request,
+                    max_bytes=max_bytes,
+                    buffer=bytearray(),
+                    deadline=deadline,
+                )
+
+            # A max_bytes a DEKODOLATLAN meretet korlatozza, igy a tomorites
+            # megkerulhato -> a valasz kodolasat itt ellenorizzuk.
+            _reject_compressed_response(validated, response)
 
             # Non-redirect: validate content type before streaming.
             content_type = response.headers.get("Content-Type")
@@ -229,7 +278,13 @@ def fetch_image_bytes(
         guard = _SSRFGuardClient()
         client_timeout = httpx.Timeout(connect=10.0, read=timeout, write=None, pool=None)
         with httpx.Client(timeout=client_timeout) as http_client:
-            return guard._send(http_client, request, max_bytes=max_bytes, buffer=bytearray())
+            return guard._send(
+                http_client,
+                request,
+                max_bytes=max_bytes,
+                buffer=bytearray(),
+                deadline=time.monotonic() + _DEFAULT_TOTAL_TIMEOUT,
+            )
     except httpx.InvalidURL as exc:
         logger.warning("Invalid URL rejected: %s", exc)
         raise HTTPException(
