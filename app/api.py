@@ -7,7 +7,7 @@ import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
@@ -245,6 +245,27 @@ class _ApiPrefixAliasMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(_ApiPrefixAliasMiddleware)
+
+
+def _v1_route(method: str, path: str, **kwargs: Any) -> Callable:
+    """A route-ot két alakban regisztrálja: /api/v1/... (kanonikus) és /v1/... (legacy).
+
+    Miért: a Caddy `handle_path /api/*` leveszi a leading /api-t, így a
+    production kérés `/v1/...` alakban érkezik, amit a middleware
+    `/api/v1/...`-re ír vissza — ezért a kanonikus alak a prefixes kell legyen.
+    A prefix nélküli legacy regisztráció a backward compat miatt marad.
+    """
+    canonical = "/api/v1" + path
+    legacy = "/v1" + path
+    dec_canonical = getattr(app, method)(canonical, **kwargs)
+    dec_legacy = getattr(app, method)(legacy, **kwargs)
+
+    def decorator(func: Callable) -> Callable:
+        dec_canonical(func)
+        dec_legacy(func)
+        return func
+
+    return decorator
 app.add_middleware(_UnconditionalCorsMiddleware)
 app.include_router(product_router)
 app.include_router(forecast_router)
@@ -638,7 +659,7 @@ async def parse_receipt_endpoint(file: bytes, ai_scan: bool = False) -> dict:
     return _render_receipt(parsed)
 
 
-@app.post("/v1/parse-receipt", response_model=dict)
+@_v1_route("post", "/parse-receipt", response_model=dict)
 async def parse_receipt_route(
     file: UploadFile | None = File(default=None, description="Receipt image file"),
     image_url: str | None = Form(default=None, description="Public URL of a receipt image"),
@@ -716,7 +737,7 @@ async def parse_receipt_route(
         ) from exc
 
 
-@app.post("/v1/parse-receipt/async", response_model=dict)
+@_v1_route("post", "/parse-receipt/async", response_model=dict)
 async def parse_receipt_async_route(
     file: UploadFile | None = File(default=None, description="Receipt image file"),
     image_url: str | None = Form(default=None, description="Public URL of a receipt image"),
@@ -763,7 +784,7 @@ async def parse_receipt_async_route(
     return {"job_id": job["job_id"], "status": "queued", "webhook_url": webhook_url}
 
 
-@app.get("/v1/jobs/{job_id}", response_model=dict)
+@_v1_route("get", "/jobs/{job_id}", response_model=dict)
 async def job_status_route(job_id: str) -> dict:
     """Poll the status and result of an async OCR job."""
     job = _job_store.get(job_id)
@@ -794,7 +815,7 @@ def _build_error_item(index: int, error: str) -> dict[str, Any]:
     }
 
 
-@app.post("/v1/parse-receipts", response_model=dict)
+@_v1_route("post", "/parse-receipts", response_model=dict)
 async def parse_receipts_route(
     files: list[UploadFile] | None = File(default=None, description="Receipt image files"),
     image_urls: str | None = Form(default=None, description="JSON array of receipt image URLs"),
@@ -917,7 +938,7 @@ async def parse_receipts_route(
     }
 
 
-@app.post("/v1/parse-receipts/async", response_model=dict)
+@_v1_route("post", "/parse-receipts/async", response_model=dict)
 async def parse_receipts_async_route(
     files: list[UploadFile] | None = File(default=None, description="Receipt image files"),
     image_urls: str | None = Form(default=None, description="JSON array of receipt image URLs"),
@@ -1023,7 +1044,7 @@ class DuplicateCheckRequest(BaseModel):
         return v
 
 
-@app.post("/v1/check-duplicates", response_model=dict)
+@_v1_route("post", "/check-duplicates", response_model=dict)
 async def check_duplicates_route(body: DuplicateCheckRequest) -> dict:
     """Check a batch of parsed receipts for potential duplicates."""
     try:
