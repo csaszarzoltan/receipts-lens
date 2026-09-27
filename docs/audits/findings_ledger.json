@@ -1,0 +1,431 @@
+{
+  "CRED-1": {
+    "file": "app/credential_store.py:44-53",
+    "severity": "medium",
+    "verified": "code-read + live env probe",
+    "finding": "get_credential_store() returns None on missing/invalid key (fail-open dev fallback)",
+    "impact": "misconfigured prod silently stores provider credentials in plaintext",
+    "status": "confirmed-latent"
+  },
+  "CRED-2": {
+    "file": "app/credential_store.py:22-27",
+    "severity": "medium",
+    "verified": "code-read",
+    "finding": "key_from_env() swallows all decode errors -> returns b'' -> funnels into fail-open",
+    "impact": "malformed key indistinguishable from unset key; operator gets no signal",
+    "status": "confirmed-latent"
+  },
+  "CRED-3": {
+    "file": "app/credential_store.py:15-19",
+    "severity": "low",
+    "verified": "live env probe = key is CSPRNG (44ch,32B,not all-zero)",
+    "finding": "no entropy guard: any 32 bytes accepted (all-zero/repeated accepted)",
+    "impact": "weak human-chosen key encrypts silently; live deploy NOT affected",
+    "status": "confirmed-latent"
+  },
+  "CRED-4": {
+    "file": "app/credential_store.py:25",
+    "severity": "low",
+    "verified": "code-read",
+    "finding": "strict b64decode rejects unpadded 43-char keys (valid 32-byte keys stripped of padding)",
+    "impact": "pushes deployments toward the plaintext fallback path",
+    "status": "confirmed-latent"
+  },
+  "CRED-5": {
+    "file": "app/sync_api.py:77-81",
+    "severity": "medium",
+    "verified": "code-read",
+    "finding": "except Exception on encrypt -> keeps plaintext external_id (silent downgrade)",
+    "impact": "encryption failure silently stored plaintext, no log/alert",
+    "status": "confirmed-latent"
+  },
+  "SSRF-1": {
+    "file": "app/ssrf_guard.py:95-106,166,202+188",
+    "severity": "high",
+    "verified": "code-read (code comment at 163-165 admits hostname kept; validate then re-resolve)",
+    "finding": "TOCTOU: validated IPs discarded, httpx re-resolves at connect -> DNS rebinding reaches loopback/metadata",
+    "exposure": "live via security.py re-export -> batch.py:135-139 (user image_url) and mobile/vision paths",
+    "status": "closed",
+    "note": "0565bb4+1702245; app/ssrf_guard.py 305 sor + app/ssrf_address.py 134 sor; 101 zold",
+    "closed_at": "2026-09-26"
+  },
+  "SSRF-2": {
+    "file": "app/ssrf_guard.py:34-48,51-52",
+    "severity": "high",
+    "verified": "code-read (_RESERVED_NETWORKS has no ::ffff:0:0/96; Python version-mismatch => IPv6 mapped passes)",
+    "finding": "IPv4-mapped IPv6 (::ffff:127.0.0.1) bypasses _is_reserved -> kernel routes to loopback",
+    "exposure": "same live paths; composable with SSRF-7",
+    "status": "closed",
+    "note": "0565bb4+1702245; app/ssrf_guard.py 305 sor + app/ssrf_address.py 134 sor; 101 zold",
+    "closed_at": "2026-09-26"
+  },
+  "SSRF-3": {
+    "file": "app/ssrf_guard.py:34-48",
+    "severity": "medium",
+    "verified": "code-read (list lacks 192.0.0.0/24,198.18/15,docs ranges,6to4,NAT64)",
+    "finding": "hand-maintained reserved list misses Oracle-metadata + benchmark + TEST-NET + 6to4/NAT64 ranges",
+    "exposure": "same live paths",
+    "status": "closed",
+    "note": "0565bb4+1702245; app/ssrf_guard.py 305 sor + app/ssrf_address.py 134 sor; 101 zold",
+    "closed_at": "2026-09-26"
+  },
+  "SSRF-4": {
+    "file": "app/ssrf_guard.py:196-203",
+    "severity": "medium",
+    "verified": "code-read (redirect branch 200-202 checks host+IPs, never calls validate_scheme)",
+    "finding": "redirect hops 2..N skip scheme allowlist -> only httpx UnsupportedProtocol stops file://gopher://",
+    "exposure": "same live paths; breaks silently if transport changes",
+    "status": "closed",
+    "note": "0565bb4+1702245; app/ssrf_guard.py 305 sor + app/ssrf_address.py 134 sor; 101 zold",
+    "closed_at": "2026-09-26"
+  },
+  "SSRF-5": {
+    "file": "app/ssrf_guard.py:178,230-231",
+    "severity": "medium",
+    "verified": "code-read (write=None,pool=None; read timeout per-chunk; fresh 30s per redirect hop)",
+    "finding": "no total deadline; slow-drip server holds worker indefinitely; each redirect hop resets clock",
+    "exposure": "worker exhaustion via crafted image_url",
+    "status": "closed",
+    "note": "0565bb4+1702245; app/ssrf_guard.py 305 sor + app/ssrf_address.py 134 sor; 101 zold",
+    "closed_at": "2026-09-26"
+  },
+  "SSRF-6": {
+    "file": "app/ssrf_guard.py:66",
+    "severity": "medium",
+    "verified": "code-read (bare socket.getaddrinfo, no timeout)",
+    "finding": "attacker-controlled DNS can stall getaddrinfo past every HTTP timeout -> resource exhaustion",
+    "exposure": "same live paths",
+    "status": "closed",
+    "note": "0565bb4+1702245; app/ssrf_guard.py 305 sor + app/ssrf_address.py 134 sor; 101 zold",
+    "closed_at": "2026-09-26"
+  },
+  "SSRF-7": {
+    "file": "app/ssrf_guard.py:55-62,90,114",
+    "severity": "medium",
+    "verified": "code-read (no rstrip('.'), no IDNA; 'localhost.' != 'localhost', doesn't endswith('.localhost'))",
+    "finding": "no hostname canonicalization -> 'localhost.', IDNA variants bypass hostname block; composable with SSRF-2",
+    "exposure": "same live paths",
+    "status": "closed",
+    "note": "0565bb4+1702245; app/ssrf_guard.py 305 sor + app/ssrf_address.py 134 sor; 101 zold",
+    "closed_at": "2026-09-26"
+  },
+  "SSRF-8": {
+    "file": "app/ssrf_guard.py:207-216",
+    "severity": "medium",
+    "verified": "code-read (iter_raw counts compressed bytes; validate_response_headers never enforces, Content-Encoding unhandled)",
+    "finding": "gzip bomb bypasses 20MB cap: cap measures compressed size, caller decompresses",
+    "exposure": "memory/CPU exhaustion downstream",
+    "status": "closed",
+    "note": "0565bb4+1702245; app/ssrf_guard.py 305 sor + app/ssrf_address.py 134 sor; 101 zold",
+    "closed_at": "2026-09-26"
+  },
+  "API-1": {
+    "file": "app/api.py:265-284,292-303",
+    "severity": "critical",
+    "verified": "LIVE PROD: curl X-Tenant-ID:victim-tenant-123+X-Role:admin, no auth -> HTTP 200 on /api/v1/consumer/dashboard",
+    "finding": "_resolve_tenant_from_auth trusts X-Tenant-ID/X-Role with no prod gate; api_v1_actor (403-404) has one, this path doesn't",
+    "impact": "any caller reads ANY tenant dashboard by spoofing headers - PROVEN LIVE",
+    "status": "closed",
+    "note": "f3bb58c app/api.py:286 _resolve_tenant_from_auth production gate (HTTPException 401)",
+    "closed_at": "2026-09-27"
+  },
+  "API-2": {
+    "file": "app/api.py:669-676",
+    "severity": "high",
+    "verified": "code-read (elif x_tenant_id -> quota key from unverified header)",
+    "finding": "quota accounting key from unverified X-Tenant-ID -> attacker drains victim Free quota (402 DoS) or dodges own",
+    "impact": "billing-integrity break + DoS on victim quota",
+    "status": "confirmed-code"
+  },
+  "API-3": {
+    "file": "app/api.py:664 vs 273,392",
+    "severity": "medium",
+    "verified": "code-read (case-sensitive 'Bearer ' at 664, case-insensitive .lower() at 273/392)",
+    "finding": "'bearer <valid-token>' (lowercase) skips session resolve at quota gate -> OCR runs with no quota consumed",
+    "impact": "quota bypass with valid session",
+    "status": "confirmed-code"
+  },
+  "API-4": {
+    "file": "app/api.py:317-345,719-790",
+    "severity": "high",
+    "verified": "code-read (JobStore.create/get: no tenant_id, no auth headers on async create/status routes)",
+    "finding": "async OCR jobs have no tenant binding; job_id guessable (uuid4) -> cross-tenant result read + arbitrary webhook exfil",
+    "impact": "cross-tenant receipt data exposure",
+    "status": "confirmed-code"
+  },
+  "API-5": {
+    "file": "app/api.py:606-618",
+    "severity": "low",
+    "verified": "code-read (618 logs full url incl. query/fragment; webhook URLs commonly carry ?token=)",
+    "finding": "secret leak into logs via webhook URL (full URL incl. query/fragment persisted to log aggregators)",
+    "impact": "token/secret in logs",
+    "status": "confirmed-code"
+  },
+  "OIDC-1": {
+    "file": "app/google_oidc.py:60-64 + app/auth_api.py:275-290",
+    "severity": "info",
+    "verified": "CALLER CHECKED: auth_api.py 212-290 generates state+nonce(HMAC), HttpOnly cookie, compare_digest on callback -> finding MITIGATED by caller",
+    "finding": "exchange_google_code takes no state param (module-level) - but caller enforces CSRF properly",
+    "status": "false-positive-mitigated"
+  },
+  "OIDC-2": {
+    "file": "app/google_oidc.py:161-166",
+    "severity": "medium",
+    "verified": "code-read (162-164 membership only, no azp check)",
+    "finding": "multi-audience aud accepts without azp==client_id check (OIDC Core violation)",
+    "status": "confirmed-code"
+  },
+  "OIDC-3": {
+    "file": "app/google_oidc.py:167-173",
+    "severity": "low",
+    "verified": "code-read (only exp checked; no iat/nbf/auth_time/max_age)",
+    "finding": "no token freshness beyond exp -> replay window up to ~1h",
+    "status": "confirmed-code"
+  },
+  "OIDC-4": {
+    "file": "app/google_oidc.py:133-139",
+    "severity": "low",
+    "verified": "code-read (kid-only match 135, no kty/alg/use filter; RSAPublicNumbers(n,e) at 144)",
+    "finding": "JWK selection by kid only -> wrong key-type on rotation/collision",
+    "status": "confirmed-code"
+  },
+  "QBO-1": {
+    "file": "app/intuit_oauth.py:72",
+    "severity": "low",
+    "verified": "code-read (state param unused in body 80-85)",
+    "finding": "exchange_code ignores state -> caller must validate; defense-in-depth gap",
+    "status": "confirmed-code"
+  },
+  "QBO-2": {
+    "file": "app/product_api.py:916-931",
+    "severity": "high",
+    "verified": "code-read (callback has NO Depends(actor); tenant from state possession only; docstring 921 admits it)",
+    "finding": "qbo_oauth_callback unauthenticated - leaked/logged state + Intuit code wins the connection to victim tenant",
+    "impact": "attacker binds own QBO company to victim tenant OR hijacks victim flow",
+    "status": "confirmed-code"
+  },
+  "QBO-3": {
+    "file": "app/connection_service.py:124-132 + product_api.py:930-931",
+    "severity": "medium",
+    "verified": "code-read (validate 930 then pop/consume 102/132 - two SELECTs before UPDATE; non-atomic)",
+    "finding": "single-use state racy: check-then-mark non-atomic, double-check across two calls",
+    "status": "confirmed-code"
+  },
+  "QBO-4": {
+    "file": "app/connection_service.py:102-113",
+    "severity": "medium",
+    "verified": "code-read (106-112 resets used_at=NULL on ANY exchange failure)",
+    "finding": "failed exchange restores state -> single-use becomes retry oracle for code-guessing",
+    "status": "confirmed-code"
+  },
+  "QBO-5": {
+    "file": "app/connection_service.py:93-114",
+    "severity": "medium",
+    "verified": "code-read (realm passed straight to _persist_connection 114, no company-info cross-check)",
+    "finding": "realmId stored unverified -> attacker-controlled realmId poisons tenant-company binding",
+    "status": "confirmed-code"
+  },
+  "QBO-6": {
+    "file": "app/intuit_oauth.py:112-120",
+    "severity": "low",
+    "verified": "code-read (secret in body 115 AND Basic header 119)",
+    "finding": "revoke() duplicates client_secret in body + header -> double exposure to logs/proxies",
+    "status": "confirmed-code"
+  },
+  "QBO-7": {
+    "file": "app/connection_service.py:61-91",
+    "severity": "medium",
+    "verified": "code-read (complete_oauth/complete_oauth_callback persist caller-supplied tokens dict, code unused, no verifier)",
+    "finding": "raw-tokens persist path completes OAuth without code exchange or PKCE proof",
+    "status": "confirmed-code"
+  },
+  "PROD-1": {
+    "file": "app/product_api.py:38-60",
+    "severity": "info",
+    "verified": "HAS PROD GATE at line 54 (is_production -> 401 Session required); header-auth is DEV-ONLY by design",
+    "finding": "header-auth spoof possible in dev only; prod requires Bearer session",
+    "status": "false-positive-mitigated"
+  },
+  "PROD-2": {
+    "file": "app/product_api.py:260-263",
+    "severity": "medium",
+    "verified": "code-read (no can_write check, unlike create_connection/test at 254/266 which have it)",
+    "finding": "test_connection lacks can_write gate -> read-only role exercises stored third-party credentials",
+    "status": "confirmed-code"
+  },
+  "PROD-3": {
+    "file": "app/product_api.py:234-236 + product_service.py:249",
+    "severity": "low",
+    "verified": "code-read (list_members: no role gate at API or service; add_member/create_api_key enforce admin)",
+    "finding": "any household role enumerates tenant member emails/roles",
+    "status": "confirmed-code"
+  },
+  "PROD-4": {
+    "file": "app/product_api.py:399-401",
+    "severity": "medium",
+    "verified": "code-read (no admin check; siblings set_retention/purge_expired require admin via service)",
+    "finding": "portability_export: any role dumps full tenant dataset (GDPR-relevant)",
+    "status": "confirmed-code"
+  },
+  "API2-1": {
+    "file": "app/api.py:1193 generate_report",
+    "severity": "critical",
+    "verified": "code-read (no Actor/auth dep; receipt_store.list with no tenant_id)",
+    "finding": "POST /api/v1/reports returns receipts from ALL tenants - no auth at all",
+    "status": "confirmed-code"
+  },
+  "API2-2": {
+    "file": "app/api.py:1419 spending_analytics_route",
+    "severity": "critical",
+    "verified": "LIVE PROD: no auth -> HTTP 200 on /api/v1/analytics/spending",
+    "finding": "spending analytics leaks cross-tenant totals, zero auth",
+    "status": "confirmed-live"
+  },
+  "API2-3": {
+    "file": "app/api.py:1446 budget_analytics_route",
+    "severity": "critical",
+    "verified": "LIVE PROD: no auth -> HTTP 200 on /api/v1/analytics/budgets",
+    "finding": "budget analytics leaks all tenants budgets, zero auth",
+    "status": "confirmed-live"
+  },
+  "API2-4": {
+    "file": "app/api.py:1458 list_alerts_route",
+    "severity": "high",
+    "verified": "LIVE PROD: no auth -> HTTP 200 on /api/v1/alerts; code-read: global list_alerts()+unread_count()",
+    "finding": "alerts leak all tenants; unread_count mixes tenants",
+    "status": "confirmed-live"
+  },
+  "API2-5": {
+    "file": "app/api.py:1480 acknowledge_alert_route",
+    "severity": "high",
+    "verified": "code-read (no auth/tenant check, direct acknowledge(alert_id))",
+    "finding": "any caller silences any tenant alert by guessing alert_id",
+    "status": "confirmed-code"
+  },
+  "API2-6": {
+    "file": "app/api.py:769 job_status_route",
+    "severity": "high",
+    "verified": "code-read (no auth, no tenant binding at create 719-765)",
+    "finding": "any caller reads any async OCR job result by job_id (confirms API-4)",
+    "status": "closed",
+    "note": "f3bb58c JobStore.create tenant_id + job_status_route:799 tenant-scope ellenorzes (404)",
+    "closed_at": "2026-09-27"
+  },
+  "API2-7": {
+    "file": "app/api.py:1379 update budget",
+    "severity": "high",
+    "verified": "code-read (compares raw x_tenant_id, skips _resolve_tenant_from_auth used by get/delete/create)",
+    "finding": "PUT /api/v1/budgets/{id} tenant check bypassable via header spoof - inconsistent with siblings",
+    "status": "confirmed-code"
+  },
+  "API2-8": {
+    "file": "app/api.py:1219 generate_report filter",
+    "severity": "medium",
+    "verified": "code-read (replace(r,items=items) keeps original total/tax; min/max on unit price)",
+    "finding": "filtered report shows unfiltered totals; sum(items)!=total",
+    "status": "confirmed-code"
+  },
+  "API2-9": {
+    "file": "app/api.py:1189,1175",
+    "severity": "medium",
+    "verified": "code-read ({'receipt_id':...,**item['receipt']} - spread last, stored keys win)",
+    "finding": "stored receipt fields silently overwrite receipt_id/status/created_at in responses",
+    "status": "confirmed-code"
+  },
+  "API2-10": {
+    "file": "app/api.py:1007 DuplicateCheckRequest",
+    "severity": "low",
+    "verified": "code-read (HTTPException inside pydantic field_validator -> unhandled 500 instead of 413)",
+    "finding": ">200 receipts returns 500 instead of documented 413",
+    "status": "confirmed-code"
+  },
+  "API2-11": {
+    "file": "app/api.py:1448 budget_analytics_route",
+    "severity": "low",
+    "verified": "code-read (no try/except; spending route HAS ValueError->422 mapping)",
+    "finding": "invalid period crashes with 500 (inconsistent with sibling route)",
+    "status": "confirmed-code"
+  },
+  "PROD2-1": {
+    "file": "app/product_api.py:558 create_export_run",
+    "severity": "medium",
+    "verified": "code-read (except KeyError returns record_export with 201 status, failure recorded as success)",
+    "finding": "missing connection/receipt returns 201 with failure payload instead of 404",
+    "status": "confirmed-code"
+  },
+  "PROD2-2": {
+    "file": "app/product_api.py:556",
+    "severity": "medium",
+    "verified": "code-read (record_export(...,result['exported'],[]) hardcoded empty error list)",
+    "finding": "partial export reported as fully clean - per-item failures discarded",
+    "status": "confirmed-code"
+  },
+  "PROD2-3": {
+    "file": "app/product_api.py:620 update_line_items",
+    "severity": "medium",
+    "verified": "code-read (result.pop('before') + result['line_items'] inside try mapping all KeyError to 404)",
+    "finding": "internal shape bug misreported as 404 Receipt not found",
+    "status": "confirmed-code"
+  },
+  "PROD2-4": {
+    "file": "app/product_api.py:760 diagnostics",
+    "severity": "low",
+    "verified": "code-read (job['status'] direct indexing; search_receipts(...)['total'] direct)",
+    "finding": "GET /product/diagnostics 500s on one malformed job row",
+    "status": "confirmed-code"
+  },
+  "PROD2-5": {
+    "file": "app/product_api.py:861 automation_rule_runs",
+    "severity": "low",
+    "verified": "code-read (json.loads(r['summary_json']) unguarded in list comprehension)",
+    "finding": "GET rule runs 500s on NULL/corrupt summary_json",
+    "status": "confirmed-code"
+  },
+  "PROD2-6": {
+    "file": "app/product_api.py:968 get_accounting_projection",
+    "severity": "low",
+    "verified": "code-read ({**json.loads(row['payload_json'])} assumes valid dict, no handler)",
+    "finding": "GET accounting-projection 500s on corrupt projection row",
+    "status": "confirmed-code"
+  },
+  "PROD2-7": {
+    "file": "app/product_api.py:981 provider_preview",
+    "severity": "low",
+    "verified": "code-read (except (KeyError,RuntimeError) collapsed into single 409)",
+    "finding": "missing receipt/mapping returns 409 instead of 404",
+    "status": "confirmed-code"
+  },
+  "PROD2-8": {
+    "file": "app/product_api.py:974 refresh_accounting_projection",
+    "severity": "low",
+    "verified": "code-read (only KeyError caught; ValueError from currency validation bubbles)",
+    "finding": "invalid currency 500s instead of 422",
+    "status": "confirmed-code"
+  },
+  "API-7": {
+    "file": "app/api.py:233-247 (_ApiPrefixAliasMiddleware) vs app/api.py:641",
+    "severity": "high",
+    "verified": "code-read + live TestClient probe: POST /v1/parse-receipt -> 404 although the route is registered and listed in openapi.json",
+    "what_breaks": "A _ApiPrefixAliasMiddleware every /v<digit>/... kereset /api/v<digit>/...-re irja at, de a /v1/parse-receipt route (api.py:641) prefix nelkul van regisztralva -> a Caddy handle_path utani helyes utvonal, a lokalis/teszt kérés pedig 404. Tovabba: minden teszt, ami a /v1/parse-receipt SSRF-vedelmet bizonyitja (test_security_integration.py, test_fetcher_wiring.py) emiatt bukik, nem a guard hibaja miatt.",
+    "fix": "Vagy a route-ot /api/v1/parse-receipt-re regisztralni, vagy a middleware-bol kivenni a prefix-aliast es a Caddy-on mas megoldas (a ketto kozul egy, konzisztensen).",
+    "status": "closed",
+    "note": "cc7d5f8 dual-reg; 79/79 zold",
+    "closed_at": "2026-09-26"
+  },
+  "API-1b": {
+    "file": "app/api.py:840,1073",
+    "severity": "high",
+    "finding": "parse_receipts_route es check_duplicates_route auth nelkul; batch OCR es cross-tenant duplikatum-osszehasonlitas",
+    "status": "closed",
+    "closed_at": "2026-09-27",
+    "note": "46829b7 + 26663d0; 1645 zold"
+  },
+  "API-1c": {
+    "file": "app/api.py:654",
+    "severity": "info",
+    "finding": "parse_receipt_endpoint nem route, hanem belso helper (a parse_receipt_route hivasbol er) — a kutatás hamis findingkent jelentette; a rarakott auth 500-as OCR-hibakent tort 19 tesztet",
+    "status": "false-positive",
+    "closed_at": "2026-09-27",
+    "note": "a parse_receipt_route mar hitelesitett volt"
+  }
+}
