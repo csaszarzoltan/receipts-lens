@@ -302,6 +302,8 @@ def _resolve_tenant_from_auth(
         raise HTTPException(401, "Tenant identity is required")
     if x_role is None or x_role not in {"admin", "reviewer", "integrator"}:
         raise HTTPException(403, "Unknown role")
+    if _is_production:
+        raise HTTPException(401, "Session required")
     return x_tenant_id.strip()
 
 
@@ -340,10 +342,15 @@ class JobStore:
         self._jobs: dict[str, dict[str, Any]] = {}
         self._executor = ThreadPoolExecutor(max_workers=2)
 
-    def create(self, webhook_url: str | None = None) -> dict[str, Any]:
+    def create(
+        self,
+        webhook_url: str | None = None,
+        tenant_id: str | None = None,
+    ) -> dict[str, Any]:
         job_id = str(uuid.uuid4())
         self._jobs[job_id] = {
             "job_id": job_id,
+            "tenant_id": tenant_id,
             "status": "queued",
             "created_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "webhook_url": webhook_url,
@@ -742,12 +749,16 @@ async def parse_receipt_async_route(
     file: UploadFile | None = File(default=None, description="Receipt image file"),
     image_url: str | None = Form(default=None, description="Public URL of a receipt image"),
     webhook_url: str | None = Form(default=None, description="Optional webhook URL for completion callback"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict:
     """Queue an async OCR job and return a job_id immediately.
 
         Optionally provide **webhook_url** to receive a JSON POST when processing
     completes or fails.
         """
+    tenant_id = _resolve_tenant_from_auth(authorization, x_tenant_id, x_role)
     if file is not None and image_url is not None:
         raise HTTPException(
             status_code=400,
@@ -761,7 +772,7 @@ async def parse_receipt_async_route(
 
     if file is not None:
         image_bytes = _bytes_from_upload(file)
-        job = _job_store.create(webhook_url=webhook_url)
+        job = _job_store.create(webhook_url=webhook_url, tenant_id=tenant_id)
         # Fire-and-forget background task — file bytes are ready
         import asyncio
 
@@ -770,7 +781,7 @@ async def parse_receipt_async_route(
         )
     else:
         # Defer the URL fetch to the background job (P1-2 non-blocking)
-        job = _job_store.create(webhook_url=webhook_url)
+        job = _job_store.create(webhook_url=webhook_url, tenant_id=tenant_id)
         import asyncio
 
         asyncio.get_running_loop().create_task(
@@ -785,10 +796,20 @@ async def parse_receipt_async_route(
 
 
 @_v1_route("get", "/jobs/{job_id}", response_model=dict)
-async def job_status_route(job_id: str) -> dict:
-    """Poll the status and result of an async OCR job."""
+async def job_status_route(
+    job_id: str,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
+) -> dict:
+    """Poll the status and result of an async OCR job.
+    Auth: Bearer session token or dev headers; job is tenant-scoped.
+    """
+    tenant_id = _resolve_tenant_from_auth(authorization, x_tenant_id, x_role)
     job = _job_store.get(job_id)
     if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.get("tenant_id") not in (None, tenant_id):
         raise HTTPException(status_code=404, detail="Job not found")
     return {
         "job_id": job["job_id"],
@@ -943,8 +964,12 @@ async def parse_receipts_async_route(
     files: list[UploadFile] | None = File(default=None, description="Receipt image files"),
     image_urls: str | None = Form(default=None, description="JSON array of receipt image URLs"),
     webhook_url: str | None = Form(default=None, description="Optional webhook URL for completion callback"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict:
     """Queue an async batch OCR job and return a job_id immediately."""
+    tenant_id = _resolve_tenant_from_auth(authorization, x_tenant_id, x_role)
     if files is not None and image_urls is not None:
         raise HTTPException(
             status_code=400,
@@ -982,7 +1007,7 @@ async def parse_receipts_async_route(
                 detail="Too many URLs: maximum 20 per request.",
             )
         # Defer URL fetching to the background job (P1-2 non-blocking)
-        job = _job_store.create(webhook_url=webhook_url)
+        job = _job_store.create(webhook_url=webhook_url, tenant_id=tenant_id)
         import asyncio
 
         asyncio.get_running_loop().create_task(
@@ -1000,7 +1025,7 @@ async def parse_receipts_async_route(
             detail="Missing required input: send 'files' or 'image_urls'.",
         )
 
-    job = _job_store.create(webhook_url=webhook_url)
+    job = _job_store.create(webhook_url=webhook_url, tenant_id=tenant_id)
     import asyncio
 
     asyncio.get_running_loop().create_task(
