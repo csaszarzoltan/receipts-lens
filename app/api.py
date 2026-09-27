@@ -657,6 +657,9 @@ async def parse_receipt_endpoint(file: bytes, ai_scan: bool = False) -> dict:
     With *ai_scan* the vision-LLM path runs first (with automatic Tesseract
     fallback) and the response exposes ``source`` plus ``ai_result`` /
     ``tesseract_result``; without it the classic Tesseract path is used.
+
+    Not registered as a route: `parse_receipt_route` calls this helper
+    directly, and that route already resolves the tenant.
     """
     if not file:
         raise HTTPException(status_code=422, detail="Empty image payload")
@@ -840,12 +843,16 @@ def _build_error_item(index: int, error: str) -> dict[str, Any]:
 async def parse_receipts_route(
     files: list[UploadFile] | None = File(default=None, description="Receipt image files"),
     image_urls: str | None = Form(default=None, description="JSON array of receipt image URLs"),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict:
     """Parse multiple receipt images in one request.
 
     Send either **files** (multipart uploads) or **image_urls** (JSON array),
     not both.
     """
+    _resolve_tenant_from_auth(authorization, x_tenant_id, x_role)
     if files is not None and image_urls is not None:
         raise HTTPException(
             status_code=400,
@@ -1070,8 +1077,14 @@ class DuplicateCheckRequest(BaseModel):
 
 
 @_v1_route("post", "/check-duplicates", response_model=dict)
-async def check_duplicates_route(body: DuplicateCheckRequest) -> dict:
+async def check_duplicates_route(
+    body: DuplicateCheckRequest,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
+) -> dict:
     """Check a batch of parsed receipts for potential duplicates."""
+    _resolve_tenant_from_auth(authorization, x_tenant_id, x_role)
     try:
         result = check_duplicates(body.receipts)
     except ValueError as exc:
