@@ -629,9 +629,11 @@ def verify_test_metadata(staged_only: bool = False) -> bool:
 def check_history_secrets(max_commits: int = 50) -> bool:
     """History scan — committed secrets in product paths fail the gate.
 
-    Runs ``git log -S`` per literal probe plus ``git log -G`` per
-    regex probe over the last ``max_commits`` commits. Any hit = FAIL.
-    Fail-closed on git errors (exit 2 path via _mark_git_context_failed).
+    Runs ``git log -G`` over the last ``max_commits`` commits, one regex
+    probe per secret family. Each regex demands a value beside the key, so
+    the gate's own documentation (key word only, no value) cannot match.
+    Any hit = FAIL. Fail-closed on git errors (exit 2 via
+    _mark_git_context_failed).
     """
     print(">> [VERITAS GATE] Scanning git history for committed secrets...")
     try:
@@ -642,9 +644,9 @@ def check_history_secrets(max_commits: int = 50) -> bool:
         _mark_git_context_failed()
         return False
     probes = [
-        "BEGIN PRIVATE KEY",
-        "aws_secret_access_key",
-        "xoxb-",
+        (r"aws_secret_access_key\s*[\"']?\s*[:=]\s*[\"']?AKIA[0-9A-Z]{16}", "aws_secret_access_key"),
+        (r"xoxb-[0-9A-Za-z-]{10,}", "xoxb-"),
+        (r"BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY", "BEGIN PRIVATE KEY"),
     ]
     # Regex-shaped probes (sk_live_/ghp_/AIza) match documentation of the
     # scanner itself — verify those with content grep (-G), not -S pickaxe.
@@ -655,14 +657,14 @@ def check_history_secrets(max_commits: int = 50) -> bool:
     ]
     history_paths = ["app", "frontend", "tests"]
     hits: list[str] = []
-    for probe in probes:
+    for pattern, label in probes:
         try:
             result = _run_git(
                 [
                     "log",
                     f"--max-count={max_commits}",
-                    "-S",
-                    probe,
+                    "-G",
+                    pattern,
                     "--oneline",
                     "--",
                     *history_paths,
@@ -675,7 +677,7 @@ def check_history_secrets(max_commits: int = 50) -> bool:
             return False
         for line in result.stdout.splitlines():
             if line.strip():
-                hits.append(f"{probe} :: {line.strip()[:100]}")
+                hits.append(f"{label}<value> :: {line.strip()[:100]}")
     for pattern, label in regex_probes:
         try:
             result = _run_git(
