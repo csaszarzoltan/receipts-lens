@@ -26,6 +26,9 @@ def bundle():
     return service,advanced,actor
 
 
+@pytest.mark.test_id("TEST-WS-001")
+@pytest.mark.requirements("REQ-WS-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_source_asset_is_tenant_scoped_and_preserves_boxes(bundle):
     service,advanced,actor=bundle
     rid=service.create_receipt(actor,parsed(),"r.png")["receipt_id"]
@@ -36,6 +39,9 @@ def test_source_asset_is_tenant_scoped_and_preserves_boxes(bundle):
     assert advanced.asset("other",rid) is None
 
 
+@pytest.mark.test_id("TEST-WS-002")
+@pytest.mark.requirements("REQ-WS-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_saved_views_validate_filter_contract_and_isolate_tenants(bundle):
     _,advanced,actor=bundle
     view=advanced.create_view(actor.tenant_id,"High value",{"min_total":500},pinned=True)
@@ -45,6 +51,9 @@ def test_saved_views_validate_filter_contract_and_isolate_tenants(bundle):
     with pytest.raises(ValueError): advanced.create_view(actor.tenant_id,"Bad",{"sql":"DROP"})
 
 
+@pytest.mark.test_id("TEST-WS-003")
+@pytest.mark.requirements("REQ-WS-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_notifications_support_read_archive_and_read_all(bundle):
     _,advanced,actor=bundle
     first=advanced.notify(actor.tenant_id,"review","Review","Needs review","r1")
@@ -55,6 +64,9 @@ def test_notifications_support_read_archive_and_read_all(bundle):
     assert advanced.mark_all_read(actor.tenant_id)==1
 
 
+@pytest.mark.test_id("TEST-WS-004")
+@pytest.mark.requirements("REQ-WS-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_automation_preview_and_application(bundle):
     service,advanced,actor=bundle
     service.create_approval_policy(actor,"Manager",100,"CHF")
@@ -69,6 +81,9 @@ def test_automation_preview_and_application(bundle):
     assert service.list_approvals(actor,"pending")[0]["receipt_id"]==rid
 
 
+@pytest.mark.test_id("TEST-WS-005")
+@pytest.mark.requirements("REQ-WS-01")
+@pytest.mark.scenario("BUG-008: a 422  invalid rule  must name the offending key(s).")
 def test_create_rule_rejects_unsupported_keys_with_specific_message(bundle):
     """BUG-008: a 422 'invalid rule' must name the offending key(s)."""
     _,advanced,actor=bundle
@@ -99,6 +114,9 @@ def parsed_payload(service,actor,rid):
     return service.search_receipts(actor)["items"][0]["receipt"]
 
 
+@pytest.mark.test_id("TEST-WS-006")
+@pytest.mark.requirements("REQ-WS-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_duplicate_comparison_and_decision_removes_candidate(bundle):
     service,advanced,actor=bundle
     service.create_receipt(actor,parsed("SBB",120),"a.png")
@@ -109,16 +127,24 @@ def test_duplicate_comparison_and_decision_removes_candidate(bundle):
     assert advanced.duplicates(actor)==[]
 
 
+@pytest.mark.test_id("TEST-WS-007")
+@pytest.mark.requirements("REQ-WS-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_history_preferences_and_export_runs(bundle):
     _,advanced,actor=bundle
     advanced.record_history(actor,"r1","receipt.corrected",{"total":1},{"total":2})
     assert advanced.history(actor.tenant_id,"r1")[0]["after"]=={"total":2}
     prefs=advanced.save_preferences(actor.tenant_id,actor.role,{"language":"en","compact":True,"evil":1})
-    assert prefs=={"language":"en","compact":True}
+    assert prefs == {"language": "en", "compact": True, "base_currency": "USD",
+                       "high_contrast": False,
+                       "dashboard_widgets": ["kpis", "actions", "spending", "quality"]}
     run=advanced.record_export(actor.tenant_id,"csv",3,2,["missing field"])
     assert run["status"]=="partial" and advanced.exports(actor.tenant_id)[0]["exported"]==2
 
 
+@pytest.mark.test_id("TEST-WS-008")
+@pytest.mark.requirements("REQ-WS-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_advanced_gui_sections_and_pwa_assets_are_shipped():
     html=client.get("/workspace").text
     for marker in ("savedViewSelect","reviewImage","ocrOverlay","showHistory","duplicates",
@@ -128,6 +154,9 @@ def test_advanced_gui_sections_and_pwa_assets_are_shipped():
     assert client.get("/assets/service-worker.js").status_code==200
 
 
+@pytest.mark.test_id("TEST-WS-009")
+@pytest.mark.requirements("REQ-WS-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_new_api_routes_are_registered():
     paths = get_all_paths(app)
     expected={
@@ -151,6 +180,9 @@ def get_all_paths(app):
     return paths
 
 
+@pytest.mark.test_id("TEST-WS-010")
+@pytest.mark.requirements("REQ-WS-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_asset_api_rejects_cross_tenant_access(monkeypatch):
     from app import product_api
 
@@ -171,6 +203,9 @@ def test_asset_api_rejects_cross_tenant_access(monkeypatch):
     assert ok.status_code == 200 and ok.content == b"abc" and ok.headers["cache-control"] == "private, no-store"
 
 
+@pytest.mark.test_id("TEST-WS-011")
+@pytest.mark.requirements("REQ-WS-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_workspace_javascript_contains_real_workflows():
     js=client.get("/assets/workspace.js").text
     for contract in ("loadSavedViews","loadDuplicates","loadRules","loadNotifications",

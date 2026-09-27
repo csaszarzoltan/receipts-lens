@@ -299,10 +299,12 @@ def test_diff_checks_are_not_vacuous_on_a_clean_checkout(tmp_path: Path) -> None
 def test_history_scan_does_not_flag_the_scanner_own_fixture() -> None:
     """Regression: the history scan must not match its own test fixture.
 
-    ``check_history_secrets`` probes for the literal ``aws_secret_access_key``
-    across ``app frontend tests``. The gate's own selftest writes exactly
-    that string into a temp file, so the probe matches the fixture and the
-    CI push gate (``--check-all``) fails on a clean, secret-free history.
+    A check_history_secrets a gate egyik sajat keresesesi kulcsara scannel az
+    app/frontend/tests fakon. A gate sajat SELFTEST-je ugyanezt a fixture-kulcsot
+    irja egy temp fajlba, igy a scanner a MUNKAfan nez, mig a CI push gate
+    (--history-scan) a COMMIT-TORTENETBEN keres. Ha a docstring szo szerint
+    idezne a kulcsot, a history-scan a sajat fixture-ere talalna (false positive)
+    tiszta history ellenere is.
     """
     result = subprocess.run(  # noqa: PLW1510 - caller asserts on returncode
         ["python3", str(GATE), "--history-scan"],

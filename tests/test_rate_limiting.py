@@ -76,6 +76,9 @@ def _inbound():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-RL-001")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_upload_exceeding_limit_returns_429_with_retry_after() -> None:
     rl.set_limits({"POST /product/receipts/upload": (2, 60)})
     assert _upload().status_code == 201
@@ -90,6 +93,9 @@ def test_upload_exceeding_limit_returns_429_with_retry_after() -> None:
     assert limited.headers.get("X-RateLimit-Remaining") == "0"
 
 
+@pytest.mark.test_id("TEST-RL-002")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_upload_success_carries_remaining_header() -> None:
     rl.set_limits({"POST /product/receipts/upload": (2, 60)})
     resp = _upload()
@@ -97,6 +103,9 @@ def test_upload_success_carries_remaining_header() -> None:
     assert resp.headers.get("X-RateLimit-Remaining") == "1"
 
 
+@pytest.mark.test_id("TEST-RL-003")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_upload_retry_after_matches_window_boundary() -> None:
     rl.set_limits({"POST /product/receipts/upload": (1, 60)})
     _upload()
@@ -106,6 +115,9 @@ def test_upload_retry_after_matches_window_boundary() -> None:
     assert 1 <= int(limited.headers["Retry-After"]) <= 60
 
 
+@pytest.mark.test_id("TEST-RL-004")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("Per-tenant isolation: a different tenant is NOT limited by tenant A s quota.")
 def test_upload_limit_resets_across_tenants() -> None:
     """Per-tenant isolation: a different tenant is NOT limited by tenant A's quota."""
     rl.set_limits({"POST /product/receipts/upload": (2, 60)})
@@ -121,6 +133,9 @@ def test_upload_limit_resets_across_tenants() -> None:
     assert other.status_code == 201  # tenant B unaffected
 
 
+@pytest.mark.test_id("TEST-RL-005")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("Same tenant, different client IP -> separate counters.")
 def test_upload_quota_is_per_ip_within_same_tenant() -> None:
     """Same tenant, different client IP -> separate counters."""
     rl.set_limits({"POST /product/receipts/upload": (2, 60)})
@@ -139,6 +154,9 @@ def test_upload_quota_is_per_ip_within_same_tenant() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-RL-006")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_inbound_emails_exceeding_limit_returns_429_with_retry_after() -> None:
     rl.set_limits({"POST /product/inbound-emails": (2, 60)})
     assert _inbound().status_code == 201
@@ -154,8 +172,11 @@ def test_inbound_emails_exceeding_limit_returns_429_with_retry_after() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-RL-007")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_parse_receipt_exceeding_limit_returns_429() -> None:
-    rl.set_limits({"POST /v1/parse-receipt": (2, 60)})
+    rl.set_limits({"POST /api/v1/parse-receipt": (2, 60)})
     payload = {"image_url": "https://example.com/r.png"}
     for _ in range(2):
         resp = client.post("/v1/parse-receipt", data=payload)
@@ -166,6 +187,9 @@ def test_parse_receipt_exceeding_limit_returns_429() -> None:
     assert limited.headers["X-RateLimit-Remaining"] == "0"
 
 
+@pytest.mark.test_id("TEST-RL-008")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("No tenant header -> the client IP is the key (per-IP limit).")
 def test_unauthenticated_endpoint_keyed_by_ip() -> None:
     """No tenant header -> the client IP is the key (per-IP limit)."""
     rl.set_limits({"POST /v1/parse-receipt": (2, 60)})
@@ -185,6 +209,9 @@ def test_unauthenticated_endpoint_keyed_by_ip() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-RL-009")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_health_and_readiness_never_limited() -> None:
     rl.set_limits({"POST /v1/parse-receipt": (2, 60)})
     for _ in range(5):
@@ -192,6 +219,9 @@ def test_health_and_readiness_never_limited() -> None:
         assert client.get("/ready").status_code == 200
 
 
+@pytest.mark.test_id("TEST-RL-010")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_unlisted_route_not_limited() -> None:
     rl.set_limits({"POST /product/receipts/upload": (2, 60)})
     for _ in range(10):
@@ -199,6 +229,9 @@ def test_unlisted_route_not_limited() -> None:
         assert resp.status_code == 200
 
 
+@pytest.mark.test_id("TEST-RL-011")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
 def test_options_preflight_not_limited() -> None:
     rl.set_limits({"POST /product/receipts/upload": (2, 60)})
     for _ in range(5):
@@ -211,6 +244,9 @@ def test_options_preflight_not_limited() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-RL-012")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("A new window bucket resets the counter (injectable clock).")
 def test_fixed_window_rolls_over() -> None:
     """A new window bucket resets the counter (injectable clock)."""
     clock = {"t": 1000.0}
@@ -229,6 +265,9 @@ def test_fixed_window_rolls_over() -> None:
         rl._time = original
 
 
+@pytest.mark.test_id("TEST-RL-013")
+@pytest.mark.requirements("REQ-RL-01")
+@pytest.mark.scenario("The production defaults must include the SEC-005 attack surface.")
 def test_default_limits_cover_ticket_endpoints() -> None:
     """The production defaults must include the SEC-005 attack surface."""
     for route in (

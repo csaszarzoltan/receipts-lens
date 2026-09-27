@@ -10,6 +10,9 @@ Contract:
 6. History scan: clean = PASS, committed secret = FAIL.
 7. Metadata markers must carry a non-empty value, and the pytest markers
    themselves must be registered in pyproject.toml.
+8. (ZOO-30) Staged-mode checks read the index blob (``git show :path``), not
+   the working tree; non-staged diff file collection honours VERITAS_DIFF_BASE
+   so CI sees the merged diff instead of a vacuous clean-tree PASS.
 """
 from __future__ import annotations
 
@@ -25,6 +28,40 @@ AI_DIR = ROOT / ".ai"
 MANIFEST_DIR = ROOT / ".agent-pipeline" / "00_index"
 
 SCRUB_VARS = ("VERITAS_APPROVAL", "VERITAS_HUMAN_APPROVAL")
+
+# ZOO-30 fixtures: comment-prefixed like the QA suite so the gate's own
+# line-based ``def test_*`` scan cannot read these as real unmarked tests.
+_ZOO30_UNMARKED_FIXTURE = """
+# import pytest
+#
+#
+# def test_staged_probe():
+#     assert True
+"""
+
+_ZOO30_MARKED_FIXTURE = """
+# import pytest
+#
+#
+# @pytest.mark.test_id("ZOO30-T1")
+# @pytest.mark.requirements("ZOO-REQ-STAGED")
+# @pytest.mark.scenario("AC-ZOO30")
+# def test_staged_probe():
+#     assert True
+"""
+
+
+def _zoo30_source(fixture: str) -> str:
+    """Uncomment a fixture so it can be written to disk as real Python."""
+    return "".join(
+        line.removeprefix("# ") if line.startswith("# ") else line.lstrip("#")
+        for line in fixture.splitlines(keepends=True)
+        if line.strip("# \n")
+    )
+
+
+ZOO30_UNMARKED = _zoo30_source(_ZOO30_UNMARKED_FIXTURE)
+ZOO30_MARKED = _zoo30_source(_ZOO30_MARKED_FIXTURE)
 
 
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -244,7 +281,12 @@ def test_history_scan_finds_committed_secret(tmp_path: Path) -> None:
     repo = _make_repo(tmp_path)
     target = repo / "app" / "leaky.py"
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text('KEY = "aws_secret_access_key=AKIAIO...MPLE"\n')
+    # A KEY-ID ertek a valós formatumot követi (AKIA + 16 nagy alfanumerikus),
+    # hogy a gate AKIA-probe-ja megtalalja a commitban. A maszkolt alak
+    # ("AKIAIO...MPLE") NEM illeszkedne, es a sajat fixture a diff-ben
+    # (a gate a torolt sorokat is nez) sajat magat jelentené.
+    _LEAK = "aws_secret" "_access_key"  # a gate ne lassa szovegkent
+    target.write_text(f'KEY = "{_LEAK}=AKIAIOSFODNN7EXAMPLE"\n')
     assert _git(repo, "add", ".").returncode == 0
     assert _git(repo, "commit", "-m", "leak", "-q").returncode == 0
     proc = _run_gate(repo, "--history-scan")
@@ -311,6 +353,124 @@ def test_empty_marker_value_blocked(tmp_path: Path) -> None:
     assert "test_emptyval_v02" in out, "expected the offending file named"
 
 
+@pytest.mark.test_id("TEST-RL-V02-012")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-010")
+@pytest.mark.scenario("AC-RL-V02-10")
+def test_staged_metadata_reads_index_not_worktree(tmp_path: Path) -> None:
+    """ZOO-30/F1a: staged marker-less test + compliant worktree = FAIL.
+
+    Stages the marker-less blob, then rewrites the working tree with markers
+    WITHOUT re-staging. The gate must judge the indexed content and block.
+    Runs with an explicit non-implementer role so the tests/** deny matrix
+    cannot mask the metadata verdict.
+    """
+    repo = _make_repo(tmp_path)
+    target = repo / "tests" / "test_staged_blob_v02.py"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(ZOO30_UNMARKED, encoding="utf-8")
+    assert _git(repo, "add", "tests/test_staged_blob_v02.py").returncode == 0
+    # Working tree now looks compliant; the index still holds the bad blob.
+    target.write_text(ZOO30_MARKED, encoding="utf-8")
+    staged = _git(repo, "show", ":tests/test_staged_blob_v02.py").stdout
+    assert "mark.test_id" not in staged, "precondition failed: index is not marker-less"
+
+    proc = _run_gate(repo, "--verify-metadata", "--staged", "--role", "test_author")
+    assert proc.returncode != 0, (
+        "staged marker-less test must be BLOCKED even when the worktree "
+        f"looks compliant:\n{proc.stdout}\n{proc.stderr}"
+    )
+    out = proc.stdout + proc.stderr
+    assert "FAIL" in out.upper(), "expected FAIL output"
+    assert "test_staged_blob_v02" in out, "expected the offending file named"
+
+
+@pytest.mark.test_id("TEST-RL-V02-013")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-010")
+@pytest.mark.scenario("AC-RL-V02-10")
+def test_staged_secret_scan_reads_index_not_worktree(tmp_path: Path) -> None:
+    """ZOO-30/F1b: staged secret + cleaned worktree = FAIL.
+
+    Stages a file containing a live secret pattern, then scrubs the working
+    tree WITHOUT re-staging. The secret scan must judge the indexed content
+    and block. (Inverse of the metadata probe: proves the index, not the
+    tree, is the source of truth.)
+    """
+    repo = _make_repo(tmp_path)
+    target = repo / "docs" / "note.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    # a kulcs osszefuzese, hogy a forrasban ne legyen a gate sajat mintaja
+    _TOK = "to" "ken"  # a gate ne lassa szovegkent a forrasban
+    _SK = "sk_" "live_"  # a gate ne lassa szovegkent a forrasban
+    target.write_text(f'{_TOK} = "{_SK}aaaaaaaaaaaaaaaaaaaaaaaa"\n', encoding="utf-8")
+    assert _git(repo, "add", "docs/note.md").returncode == 0
+    # Working tree now looks clean; the index still holds the secret.
+    target.write_text("nothing to see here\n", encoding="utf-8")
+    staged = _git(repo, "show", ":docs/note.md").stdout
+    assert "sk_live_" in staged, "precondition failed: index does not hold the secret"
+
+    proc = _run_gate(repo, "--verify-diff", "--staged", "--role", "implementer")
+    assert proc.returncode != 0, (
+        "staged secret must be BLOCKED even when the worktree "
+        f"looks clean:\n{proc.stdout}\n{proc.stderr}"
+    )
+    assert "FAIL" in (proc.stdout + proc.stderr).upper(), "expected FAIL output"
+
+
+@pytest.mark.test_id("TEST-RL-V02-014")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-010")
+@pytest.mark.scenario("AC-RL-V02-10")
+def test_diff_base_exposes_committed_violation_on_clean_tree(tmp_path: Path) -> None:
+    """ZOO-30/F2: VERITAS_DIFF_BASE sees a violating commit on a clean tree.
+
+    Reproduces the CI condition: worktree clean, violation already committed.
+    With VERITAS_DIFF_BASE=HEAD~1 the file collection must surface the file
+    and the metadata check must block instead of vacuously passing.
+    """
+    repo = _make_repo(tmp_path)
+    target = repo / "tests" / "test_ci_blob_v02.py"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(ZOO30_UNMARKED, encoding="utf-8")
+    assert _git(repo, "add", "tests/test_ci_blob_v02.py").returncode == 0
+    assert _git(repo, "commit", "-m", "violating", "-q", "--no-verify").returncode == 0
+    assert _git(repo, "reset", "-q", "--hard", "HEAD").returncode == 0
+    status = _git(repo, "status", "--porcelain=v1", "--untracked-files=all").stdout
+    assert status.strip() == "", f"precondition failed: worktree not clean\n{status}"
+
+    proc = _run_gate(
+        repo, "--verify-metadata", "--role", "auto", extra_env={"VERITAS_DIFF_BASE": "HEAD~1"}
+    )
+    assert proc.returncode != 0, (
+        "committed marker-less test must be BLOCKED via VERITAS_DIFF_BASE "
+        f"on a clean tree:\n{proc.stdout}\n{proc.stderr}"
+    )
+    out = proc.stdout + proc.stderr
+    assert "FAIL" in out.upper(), "expected FAIL output"
+    assert "test_ci_blob_v02" in out, "expected the offending file named"
+
+
+@pytest.mark.test_id("TEST-RL-V02-015")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-010")
+@pytest.mark.scenario("AC-RL-V02-10")
+def test_staged_deletion_needs_no_markers(tmp_path: Path) -> None:
+    """ZOO-30 edge: staging a tests/** deletion must not crash the gate.
+
+    A deleted path has no staged blob; the metadata check skips it and the
+    diff check passes (no new content to judge).
+    """
+    repo = _make_repo(tmp_path)
+    target = repo / "tests" / "test_gone_v02.py"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(ZOO30_MARKED, encoding="utf-8")
+    assert _git(repo, "add", "tests/test_gone_v02.py").returncode == 0
+    assert _git(repo, "commit", "-m", "add", "-q", "--no-verify").returncode == 0
+    assert _git(repo, "rm", "-q", "tests/test_gone_v02.py").returncode == 0
+
+    meta = _run_gate(repo, "--verify-metadata", "--staged", "--role", "test_author")
+    assert meta.returncode == 0, (
+        f"staged deletion must not fail the metadata gate:\n{meta.stdout}\n{meta.stderr}"
+    )
+
+
 @pytest.mark.test_id("TEST-RL-V02-011")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-009")
 @pytest.mark.scenario("AC-RL-V02-09")
@@ -335,6 +495,130 @@ def test_valued_markers_still_pass(tmp_path: Path) -> None:
     proc = _run_gate(repo, "--verify-metadata")
     assert proc.returncode == 0, (
         f"valued markers must PASS, got {proc.returncode}\n"
+        f"stdout: {proc.stdout}\nstderr: {proc.stderr}"
+    )
+    assert "PASS" in proc.stdout, "expected PASS output"
+
+
+@pytest.mark.test_id("TEST-RL-V02-016")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-011")
+@pytest.mark.scenario("AC-RL-V02-11")
+def test_auto_role_infers_test_author_for_tests_only_diff(tmp_path: Path) -> None:
+    """ZOO-28: tests-only staged diff with --role auto = PASS as test_author.
+
+    Reproduces the pre-commit failure: --role auto used to mean implementer,
+    whose deny matrix covers tests/**, so the Test Author could only commit
+    with --no-verify.
+    """
+    repo = _make_repo(tmp_path)
+    _stage_files(repo, {"tests/test_zz_probe_v02.py": "def test_x():\n    pass\n"})
+    proc = _run_gate(repo, "--verify-diff", "--staged", "--role", "auto")
+    out = proc.stdout + proc.stderr
+    assert proc.returncode == 0, (
+        f"tests-only diff with --role auto must PASS, got {proc.returncode}\n"
+        f"stdout: {proc.stdout}\nstderr: {proc.stderr}"
+    )
+    assert "Inferred role 'test_author'" in out, "expected role inference logged"
+
+
+@pytest.mark.test_id("TEST-RL-V02-017")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-012")
+@pytest.mark.scenario("AC-RL-V02-12")
+def test_auto_role_infers_spec_author_for_specs_only_diff(tmp_path: Path) -> None:
+    """ZOO-28: specs-only staged diff with --role auto = PASS as spec_author."""
+    repo = _make_repo(tmp_path)
+    _stage_files(repo, {"specs/probe_v02.md": "# probe\n"})
+    proc = _run_gate(repo, "--verify-diff", "--staged", "--role", "auto")
+    out = proc.stdout + proc.stderr
+    assert proc.returncode == 0, (
+        f"specs-only diff with --role auto must PASS, got {proc.returncode}\n"
+        f"stdout: {proc.stdout}\nstderr: {proc.stderr}"
+    )
+    assert "Inferred role 'spec_author'" in out, "expected role inference logged"
+
+
+@pytest.mark.test_id("TEST-RL-V02-018")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-013")
+@pytest.mark.scenario("AC-RL-V02-13")
+def test_auto_role_stays_implementer_for_mixed_diff(tmp_path: Path) -> None:
+    """ZOO-28: mixed app+tests diff with --role auto stays fail-closed.
+
+    Ambiguous packets must keep the historical implementer default (and
+    therefore FAIL on the tests/** deny), never guess a lenient role.
+    """
+    repo = _make_repo(tmp_path)
+    _stage_files(
+        repo,
+        {
+            "app/probe_v02.py": "X = 1\n",
+            "tests/test_probe_v02.py": "def test_x():\n    pass\n",
+        },
+    )
+    proc = _run_gate(repo, "--verify-diff", "--staged", "--role", "auto")
+    out = proc.stdout + proc.stderr
+    assert proc.returncode != 0, "mixed app+tests diff with --role auto must be BLOCKED"
+    assert "FAIL" in out.upper(), "expected FAIL output"
+    assert "Inferred role" not in out, "ambiguous diff must not infer any role"
+
+
+@pytest.mark.test_id("TEST-RL-V02-019")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-014")
+@pytest.mark.scenario("AC-RL-V02-14")
+def test_auto_role_without_git_context_fails_closed(tmp_path: Path) -> None:
+    """ZOO-28: --role auto outside a repo = FAIL with exit 2, never a guess."""
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    scripts = plain / "scripts"
+    scripts.mkdir()
+    (scripts / "veritas_gate.py").write_bytes(GATE.read_bytes())
+    env = {k: v for k, v in os.environ.items() if k not in SCRUB_VARS}
+    proc = subprocess.run(  # noqa: PLW1510 - returncode asserted below
+        ["python3", str(scripts / "veritas_gate.py"), "--verify-diff", "--role", "auto"],
+        cwd=plain,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert proc.returncode == 2, (
+        f"--role auto without git context must exit 2, got {proc.returncode}\n"
+        f"stdout: {proc.stdout}\nstderr: {proc.stderr}"
+    )
+    assert "FAIL" in (proc.stdout + proc.stderr).upper()
+
+
+@pytest.mark.test_id("TEST-RL-V02-020")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-015")
+@pytest.mark.scenario("AC-RL-V02-15")
+def test_auto_role_passes_hook_invocation_for_marked_test(tmp_path: Path) -> None:
+    """ZOO-28: the exact hook invocation passes for a marked test-only commit.
+
+    Runs the same flags .githooks/pre-commit passes
+    (--verify-diff --verify-metadata --staged --role auto) against a fully
+    marked test file: inference must pick test_author and both gates PASS.
+    """
+    repo = _make_repo(tmp_path)
+    _stage_files(
+        repo,
+        {
+            "tests/test_author_probe_v02.py": (
+                "import pytest\n"
+                "\n"
+                "\n"
+                '@pytest.mark.test_id("TEST-RL-V02-020")\n'
+                '@pytest.mark.requirements("FEAT-RL-V02-REQ-015")\n'
+                '@pytest.mark.scenario("AC-RL-V02-15")\n'
+                "def test_author_probe():\n"
+                "    pass\n"
+            )
+        },
+    )
+    proc = _run_gate(
+        repo, "--verify-diff", "--verify-metadata", "--staged", "--role", "auto"
+    )
+    assert proc.returncode == 0, (
+        f"hook invocation for marked test-only commit must PASS, "
+        f"got {proc.returncode}\n"
         f"stdout: {proc.stdout}\nstderr: {proc.stderr}"
     )
     assert "PASS" in proc.stdout, "expected PASS output"
