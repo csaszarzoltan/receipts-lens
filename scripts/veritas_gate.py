@@ -530,27 +530,40 @@ def verify_diff(role: str = DEFAULT_ROLE, staged_only: bool = False) -> bool:
     # Secret scanning
     try:
         diff_args = configured_diff_args(staged_only)
-        diff_text = _run_git(diff_args).stdout
+        git_diff = _run_git(diff_args).stdout
         # Git diff omits untracked file contents, so scan every changed file directly too.
         # ZOO-30/F1b: in staged mode the index blob is the source of truth —
         # a secret scrubbed from the worktree but still staged must block.
         # Outside staged mode (untracked files have no blob) read the worktree.
+        extra_texts: list[str] = []
         for changed_file in files:
             if staged_only:
                 blob = read_staged_text(changed_file)
                 if blob is not None and len(blob.encode("utf-8")) <= 5 * 1024 * 1024:
-                    diff_text += "\n" + blob
+                    extra_texts.append(blob)
                 continue
             candidate = REPO_ROOT / changed_file
             if candidate.is_file() and candidate.stat().st_size <= 5 * 1024 * 1024:
-                diff_text += "\n" + candidate.read_text(encoding="utf-8", errors="replace")
+                extra_texts.append(candidate.read_text(encoding="utf-8", errors="replace"))
+        # Only added (+) lines leak; removed (-) lines are the fix itself.
+        # Raw blobs carry no diff markers — scan them whole (fail-closed).
+        diff_lines = git_diff.splitlines()
+        if any(line.startswith(("+", "-", " ", "@@")) for line in diff_lines):
+            added = [
+                line[1:]
+                for line in diff_lines
+                if line.startswith("+") and not line.startswith("+++")
+            ]
+            scan_text = "\n".join([*added, *extra_texts])
+        else:
+            scan_text = git_diff + ("\n" + "\n".join(extra_texts) if extra_texts else "")
     except RuntimeError as exc:
         print(f"[FAIL] Secret scan cannot obtain Git diff: {exc}")
         log_audit_event("VERIFY_DIFF", {"error": "secret_scan_diff_unavailable"}, "FAIL")
         return False
 
     for secret_pat in SECRET_PATTERNS:
-        matches = secret_pat.findall(diff_text)
+        matches = secret_pat.findall(scan_text)
         if matches:
             print(f"[FAIL] Potential secret detected matching pattern: {matches[0]}")
             log_audit_event(
