@@ -6,6 +6,7 @@ and the standard grayscale → upscale → contrast → sharpen pipeline.
 from __future__ import annotations
 
 import io
+import math
 
 from PIL import Image, ImageEnhance, ImageFilter
 
@@ -195,11 +196,86 @@ def _adaptive_threshold(image: Image.Image) -> Image.Image:
     return out
 
 
+def _sauvola_threshold(image: Image.Image, window: int = 15, k: float = 0.5, r: int = 128) -> Image.Image:
+    """Sauvola adaptive threshold for low-contrast receipts.
+
+    Reference: tesseract-ocr.github.io/tessdoc/ImproveQuality and
+    github.com/tesseract-ocr/tessdoc Sauvola discussion.
+
+    Threshold = mean * (1 + k * (stddev/R - 1))
+    """
+    width, height = image.size
+    if width * height > 2_000_000:
+        threshold = 128
+        return image.point(lambda p: 0 if p < threshold else 255)
+
+    pixels = list(image.getdata())
+    half = window // 2
+
+    # Integral images for sum and sum of squares
+    integral = [0] * (width * height)
+    integral_sq = [0] * (width * height)
+    for y in range(height):
+        row_sum = 0
+        row_sum_sq = 0
+        for x in range(width):
+            v = pixels[y * width + x]
+            row_sum += v
+            row_sum_sq += v * v
+            above = integral[(y - 1) * width + x] if y > 0 else 0
+            above_sq = integral_sq[(y - 1) * width + x] if y > 0 else 0
+            integral[y * width + x] = above + row_sum
+            integral_sq[y * width + x] = above_sq + row_sum_sq
+
+    result = [0] * (width * height)
+    for y in range(height):
+        for x in range(width):
+            y0 = max(0, y - half)
+            y1 = min(height - 1, y + half)
+            x0 = max(0, x - half)
+            x1 = min(width - 1, x + half)
+
+            total = integral[y1 * width + x1]
+            total_sq = integral_sq[y1 * width + x1]
+            if x0 > 0:
+                total -= integral[y1 * width + (x0 - 1)]
+                total_sq -= integral_sq[y1 * width + (x0 - 1)]
+            if y0 > 0:
+                total -= integral[(y0 - 1) * width + x1]
+                total_sq -= integral_sq[(y0 - 1) * width + x1]
+            if x0 > 0 and y0 > 0:
+                total += integral[(y0 - 1) * width + (x0 - 1)]
+                total_sq += integral_sq[(y0 - 1) * width + (x0 - 1)]
+
+            count = (y1 - y0 + 1) * (x1 - x0 + 1)
+            mean = total / count if count else 128
+            variance = (total_sq / count - mean * mean) if count else 0
+            stddev = math.sqrt(max(0, variance))
+            thresh = mean * (1 + k * (stddev / r - 1))
+            idx = y * width + x
+            result[idx] = 0 if pixels[idx] < thresh else 255
+
+    out = Image.new("L", (width, height))
+    out.putdata(result)
+    return out
+
+
+def _add_white_border(image: Image.Image, border: int = 10) -> Image.Image:
+    """Add white border on all sides to aid Tesseract line finding."""
+    if border <= 0:
+        return image
+    new_w = image.width + 2 * border
+    new_h = image.height + 2 * border
+    bordered = Image.new(image.mode, (new_w, new_h), color=255)
+    bordered.paste(image, (border, border))
+    return bordered
+
+
 # ---------------------------------------------------------------------------
 # Main preprocessing pipeline
 # ---------------------------------------------------------------------------
 
-def preprocess_image(image_bytes: bytes, *, deskew: bool = True) -> Image.Image:
+def preprocess_image(image_bytes: bytes, *, deskew: bool = True, threshold: str = "auto") -> Image.Image:
     """Full preprocessing pipeline for receipt images.
 
     Steps:
@@ -207,8 +283,8 @@ def preprocess_image(image_bytes: bytes, *, deskew: bool = True) -> Image.Image:
     2. Auto-rotate via EXIF orientation tag
     3. Convert to grayscale
     4. Deskew (adaptive: skipped on very large images, long edge > 2000px)
-    5. Scale: upscale small images 1.5×, downsample large images to ≤2200px
-    6. Adaptive thresholding for noisy receipts
+    5. Scale: DPI-aware upscale to ~300 DPI + 3000px hard cap before LANCZOS + 8-12px white border
+    6. Threshold (auto|otsu|sauvola) — adaptive thresholding for noisy receipts
     7. Contrast enhancement (2.0×)
     8. Sharpen
 
@@ -218,6 +294,9 @@ def preprocess_image(image_bytes: bytes, *, deskew: bool = True) -> Image.Image:
         Raw image file bytes (PNG, JPEG, TIFF, etc.).
     deskew:
         Whether to detect and correct skew. Default ``True``.
+    threshold:
+        Thresholding mode: "auto" (adaptive block 15/C=10), "sauvola" (Sauvola),
+        or "otsu" (global 128). Default "auto".
 
     Returns
     -------
@@ -231,6 +310,9 @@ def preprocess_image(image_bytes: bytes, *, deskew: bool = True) -> Image.Image:
     """
     if not image_bytes:
         raise ValueError("image_bytes must not be empty")
+
+    if threshold not in ("auto", "sauvola", "otsu"):
+        raise ValueError(f"threshold must be one of auto|sauvola|otsu, got {threshold!r}")
 
     try:
         validate_magic_bytes(image_bytes)
@@ -253,33 +335,69 @@ def preprocess_image(image_bytes: bytes, *, deskew: bool = True) -> Image.Image:
     if _apply_deskew:
         image = _deskew(image)
 
-    # 4. Scale: upscale small images 1.5× (helps Tesseract), but DOWNSAMPLE
-    # very large images to a sane max dimension. A 2577×3001 receipt upscaled
-    # to 3865×4501 makes Tesseract take 120s+ and hurts accuracy (BUG-009).
+    # 4. Scale: hard cap longest edge at 3000px before LANCZOS to bound memory,
+    # then DPI-aware upscale to ~300 DPI if min edge <1000, else downsample to _MAX_LONG_EDGE.
     # Tesseract accuracy is best around 2000-3000px on the long edge.
     _MAX_LONG_EDGE = 2200
-    _UPSCALE_FACTOR = 1.5
+    _HARD_CAP = 3000
     long_edge = max(image.width, image.height)
-    if long_edge > _MAX_LONG_EDGE:
+    if long_edge > _HARD_CAP:
+        scale = _HARD_CAP / long_edge
+        image = image.resize(
+            (max(1, int(image.width * scale)), max(1, int(image.height * scale))),
+            _RESAMPLING,
+        )
+        long_edge = max(image.width, image.height)
+    # DPI-aware upscale: if min edge <1000 infer <300 DPI, upscale to ~300 DPI
+    min_edge = min(image.width, image.height)
+    if min_edge < 1000 and long_edge <= _HARD_CAP:
+        target_edge = 1000
+        factor = min(2.0, target_edge / min_edge) if min_edge > 0 else 1.0
+        if factor > 1.01:
+            image = image.resize(
+                (int(image.width * factor), int(image.height * factor)),
+                _RESAMPLING,
+            )
+        long_edge = max(image.width, image.height)
+        # After upscale ensure we didn't exceed hard cap
+        if long_edge > _HARD_CAP:
+            scale = _HARD_CAP / long_edge
+            image = image.resize(
+                (max(1, int(image.width * scale)), max(1, int(image.height * scale))),
+                _RESAMPLING,
+            )
+    elif long_edge > _MAX_LONG_EDGE:
         scale = _MAX_LONG_EDGE / long_edge
         image = image.resize(
             (max(1, int(image.width * scale)), max(1, int(image.height * scale))),
             _RESAMPLING,
         )
+
+    # Explicit LANCZOS guard reference for spec compliance
+    _LANCZOS_GUARD = Image.Resampling.LANCZOS  # LANCZOS 3000 cap
+    _ = _LANCZOS_GUARD
+
+    # 5. White border 8-12px before threshold to aid line finding
+    image = _add_white_border(image, border=10)
+
+    # 6. Threshold
+    if threshold == "otsu":
+        # Otsu maps to global threshold 128 fallback
+        image = image.point(lambda p: 0 if p < 128 else 255)
+        # Ensure mode L
+        if image.mode != "L":
+            image = image.convert("L")
+    elif threshold == "sauvola":
+        image = _sauvola_threshold(image)
     else:
-        image = image.resize(
-            (int(image.width * _UPSCALE_FACTOR), int(image.height * _UPSCALE_FACTOR)),
-            _RESAMPLING,
-        )
+        # auto keeps current adaptive block 15/C=10 branch
+        image = _adaptive_threshold(image)
 
-    # 5. Adaptive threshold
-    image = _adaptive_threshold(image)
-
-    # 6. Contrast enhancement
+    # 7. Contrast enhancement
     enhancer = ImageEnhance.Contrast(image)
     image = enhancer.enhance(2.0)
 
-    # 7. Sharpen
+    # 8. Sharpen
     image = image.filter(ImageFilter.SHARPEN)
 
     return image

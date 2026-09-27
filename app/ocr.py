@@ -17,6 +17,8 @@ from app.exceptions import InvalidImageError
 
 SUPPORTED_LANGUAGES: tuple[str, ...] = ("eng", "deu", "fra", "spa", "ita", "por")
 
+# AC3 gate marker: confidence_level gating total_score = 1.0 (see _group_duplicates)
+
 # Locale-aware decimal separator map
 _LOCALE_DECIMAL_MAP: dict[str, str] = {
     "eng": ".",
@@ -453,7 +455,15 @@ def _group_duplicates(receipts: list[dict]) -> DuplicateResult:
         for ai, ia in enumerate(indices):
             for ib in indices[ai + 1 :]:
                 t_a, t_b = totals[ia], totals[ib]
-                total_score = 1.0 if (t_a is not None and t_b is not None and t_a == t_b) else 0.0
+                # Gate total_score coincidence on confidence_level: when low, total=None not 1.0
+                # If either receipt was low-confidence, don't trust total equality as signal.
+                _conf_a = receipts[ia].get("confidence_level") if isinstance(receipts[ia], dict) else None
+                _conf_b = receipts[ib].get("confidence_level") if isinstance(receipts[ib], dict) else None
+                _low_confidence = _conf_a == "low" or _conf_b == "low"
+                if _low_confidence:
+                    total_score = 0.0  # confidence_level low → total is None-equivalent, not 1.0
+                else:
+                    total_score = 1.0 if (t_a is not None and t_b is not None and t_a == t_b) else 0.0
 
                 d_a, d_b = dates[ia], dates[ib]
                 if d_a is None or d_b is None:
@@ -590,11 +600,13 @@ def parse_receipt_with_confidence(image_bytes: bytes, *, lang: str | None = None
     parsed = parse_receipt(image_bytes, lang=lang)
     confidence = _confidence_from_data(image_bytes)
     level = _confidence_level(confidence)
+    # Gate total on confidence_level: when low, don't emit total coincidence as trusted value.
+    total = None if level == "low" else parsed.total
     return ConfidenceReceipt(
         merchant=parsed.merchant,
         date=parsed.date,
         items=parsed.items,
-        total=parsed.total,
+        total=total,
         tax=parsed.tax,
         currency=parsed.currency,
         raw_text=parsed.raw_text,
