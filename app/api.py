@@ -19,6 +19,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.alerts import alert_store
 from app.analytics import budget_analytics, spending_analytics
+from app.recurring import RecurringAnalytics
 from app.api_v2 import batch_router
 from app.auth_api import router as auth_router
 from app.budgets import budget_store
@@ -1515,6 +1516,16 @@ def budget_analytics_route(period: str | None = None, actor: Actor = Depends(api
     # tenant tagging is a follow-up (ledger API2-3 part 2).
     _ = actor
     return result
+
+
+@_v1_route("get", "/analytics/recurring", response_model=dict)
+async def recurring_analytics_route(
+    period: str = "90d",
+    actor: Actor = Depends(api_v1_actor),
+) -> dict:
+    """Weekly recurring-spend list for the authenticated tenant."""
+    items = RecurringAnalytics().for_actor(actor, service)
+    return {"period": period, "items": items}
 
 
 # ---------------------------------------------------------------------------
