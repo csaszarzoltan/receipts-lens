@@ -124,7 +124,7 @@ async def _poll_until(client, job_id, *, timeout=5.0, interval=0.02):
     deadline = time.monotonic() + timeout
     last: dict[str, Any] | None = None
     while time.monotonic() < deadline:
-        resp = await client.get(f"/v1/jobs/{job_id}")
+        resp = await client.get(f"/v1/jobs/{job_id}", headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"})
         last = resp.json()
         if last["status"] not in ("queued", "processing"):
             return last
@@ -137,21 +137,33 @@ async def _poll_until(client, job_id, *, timeout=5.0, interval=0.02):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-ASYNCNB-001")
+@pytest.mark.requirements("REQ-OCR-ASYNC")
+@pytest.mark.scenario("Async fetch contract: async single route registered")
 def test_async_single_route_registered():
     routes = {getattr(r, "path", None) for r in api.app.routes}
     assert "/v1/parse-receipt/async" in routes
 
 
+@pytest.mark.test_id("TEST-ASYNCNB-002")
+@pytest.mark.requirements("REQ-OCR-ASYNC")
+@pytest.mark.scenario("Async fetch contract: async batch route registered")
 def test_async_batch_route_registered():
     routes = {getattr(r, "path", None) for r in api.app.routes}
     assert "/v1/parse-receipts/async" in routes
 
 
+@pytest.mark.test_id("TEST-ASYNCNB-003")
+@pytest.mark.requirements("REQ-OCR-ASYNC")
+@pytest.mark.scenario("Async fetch contract: jobs status route registered")
 def test_jobs_status_route_registered():
     routes = {getattr(r, "path", None) for r in api.app.routes}
     assert "/v1/jobs/{job_id}" in routes
 
 
+@pytest.mark.test_id("TEST-ASYNCNB-004")
+@pytest.mark.requirements("REQ-OCR-ASYNC")
+@pytest.mark.scenario("Async fetch contract: async single route is async")
 def test_async_single_route_is_async():
     import inspect
 
@@ -163,6 +175,9 @@ def test_async_single_route_is_async():
         pytest.fail("Route /v1/parse-receipt/async not found")
 
 
+@pytest.mark.test_id("TEST-ASYNCNB-005")
+@pytest.mark.requirements("REQ-OCR-ASYNC")
+@pytest.mark.scenario("Async fetch contract: async batch route has image urls param")
 def test_async_batch_route_has_image_urls_param():
     from typing import get_type_hints
 
@@ -180,6 +195,9 @@ def test_async_batch_route_has_image_urls_param():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-ASYNCNB-006")
+@pytest.mark.requirements("REQ-OCR-ASYNC")
+@pytest.mark.scenario("Async fetch contract: single async returns queued immediately for valid url")
 def test_single_async_returns_queued_immediately_for_valid_url(ocr_stub, monkeypatch):
     """A valid image_url returns {"job_id", "status":"queued"} promptly.
 
@@ -194,6 +212,7 @@ def test_single_async_returns_queued_immediately_for_valid_url(ocr_stub, monkeyp
         resp = await client.post(
             "/v1/parse-receipt/async",
             data={"image_url": "https://example.com/receipt.png"},
+            headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
         )
         assert resp.status_code == 200
         body = resp.json()
@@ -203,6 +222,9 @@ def test_single_async_returns_queued_immediately_for_valid_url(ocr_stub, monkeyp
     asyncio.run(do())
 
 
+@pytest.mark.test_id("TEST-ASYNCNB-007")
+@pytest.mark.requirements("REQ-OCR-ASYNC")
+@pytest.mark.scenario("Async fetch contract: single async returns queued without blocking on fetch")
 def test_single_async_returns_queued_without_blocking_on_fetch(ocr_stub, monkeypatch):
     """P1-2 core: a SLOW fetch must NOT delay the 'queued' response.
 
@@ -226,6 +248,7 @@ def test_single_async_returns_queued_without_blocking_on_fetch(ocr_stub, monkeyp
         resp = await client.post(
             "/v1/parse-receipt/async",
             data={"image_url": "https://example.com/slow.png"},
+            headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
         )
         elapsed = time.monotonic() - start
         assert resp.status_code == 200
@@ -240,6 +263,9 @@ def test_single_async_returns_queued_without_blocking_on_fetch(ocr_stub, monkeyp
     asyncio.run(do())
 
 
+@pytest.mark.test_id("TEST-ASYNCNB-008")
+@pytest.mark.requirements("REQ-OCR-ASYNC")
+@pytest.mark.scenario("Async fetch contract: single async bad url polls failed with error")
 def test_single_async_bad_url_polls_failed_with_error(ocr_stub, monkeypatch):
     """P1-2: a bad URL -> job status 'failed' with 'error', NOT a 500 at request.
 
@@ -263,7 +289,11 @@ def test_single_async_bad_url_polls_failed_with_error(ocr_stub, monkeypatch):
 
     async def do() -> None:
         # Request itself must NOT 500; it returns queued (fetch deferred to job).
-        resp = await client.post("/v1/parse-receipt/async", data={"image_url": BAD})
+        resp = await client.post(
+            "/v1/parse-receipt/async",
+            data={"image_url": BAD},
+            headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
+        )
         assert resp.status_code == 200, f"request 500'd on bad URL: {resp.status_code} {resp.text}"
         body = resp.json()
         assert body["status"] == "queued"
@@ -277,6 +307,9 @@ def test_single_async_bad_url_polls_failed_with_error(ocr_stub, monkeypatch):
     asyncio.run(do())
 
 
+@pytest.mark.test_id("TEST-ASYNCNB-009")
+@pytest.mark.requirements("REQ-OCR-ASYNC")
+@pytest.mark.scenario("Async fetch contract: batch async mixed valid and private host queued")
 def test_batch_async_mixed_valid_and_private_host_queued(ocr_stub, monkeypatch):
     """P1-2 batch: mix of valid + private-host URLs returns queued immediately,
     and the final job result flags the private one with an 'error'.
@@ -306,6 +339,7 @@ def test_batch_async_mixed_valid_and_private_host_queued(ocr_stub, monkeypatch):
         resp = await client.post(
             "/v1/parse-receipts/async",
             data={"image_urls": f'["{VALID}", "{PRIVATE}"]'},
+            headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
         )
         assert resp.status_code == 200, f"request 500'd: {resp.status_code} {resp.text}"
         body = resp.json()
