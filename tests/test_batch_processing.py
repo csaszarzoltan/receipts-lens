@@ -22,11 +22,17 @@ from app.main import app
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-BATCHP-001")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_batch_route_is_registered():
     routes = {getattr(r, "path", None) for r in api.app.routes}
     assert "/v1/parse-receipts" in routes
 
 
+@pytest.mark.test_id("TEST-BATCHP-002")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_batch_accepts_files_list():
     """The batch endpoint should declare a `files` parameter."""
     for route in api.app.routes:
@@ -38,6 +44,9 @@ def test_batch_accepts_files_list():
         pytest.fail("Batch endpoint not found")
 
 
+@pytest.mark.test_id("TEST-BATCHP-003")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_batch_accepts_image_urls():
     """The batch endpoint should declare an `image_urls` parameter."""
     for route in api.app.routes:
@@ -49,6 +58,9 @@ def test_batch_accepts_image_urls():
         pytest.fail("Batch endpoint not found")
 
 
+@pytest.mark.test_id("TEST-BATCHP-004")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_batch_rejects_mixed_inputs():
     """Providing both files and image_urls must return 400."""
     transport = ASGITransport(app=app)
@@ -64,6 +76,7 @@ def test_batch_rejects_mixed_inputs():
             "/v1/parse-receipts",
             files=[("files", ("a.png", buf, "image/png"))],
             data={"image_urls": '["https://example.com/r.jpg"]'},
+            headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
         )
         assert resp.status_code == 400
 
@@ -72,6 +85,9 @@ def test_batch_rejects_mixed_inputs():
     asyncio.run(do())
 
 
+@pytest.mark.test_id("TEST-BATCHP-005")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_batch_rejects_more_than_20_files():
     """Providing >20 files must return 413."""
     transport = ASGITransport(app=app)
@@ -85,7 +101,7 @@ def test_batch_rejects_more_than_20_files():
             image.save(buf, format="PNG")
             buf.seek(0)
             files.append(("files", (f"f{i}.png", buf, "image/png")))
-        resp = await client.post("/v1/parse-receipts", files=files)
+        resp = await client.post("/v1/parse-receipts", files=files, headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"})
         assert resp.status_code == 413
 
     import asyncio
@@ -98,12 +114,15 @@ def test_batch_rejects_more_than_20_files():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-BATCHP-006")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_empty_request_returns_422():
     transport = ASGITransport(app=app)
     client = httpx.AsyncClient(transport=transport, base_url="http://test")
 
     async def do() -> None:
-        resp = await client.post("/v1/parse-receipts", data={})
+        resp = await client.post("/v1/parse-receipts", data={}, headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"})
         assert resp.status_code == 422
 
     import asyncio
@@ -111,6 +130,9 @@ def test_empty_request_returns_422():
     asyncio.run(do())
 
 
+@pytest.mark.test_id("TEST-BATCHP-007")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_single_file_batch_returns_result_list():
     """A batch with one file must return a list of length 1."""
     transport = ASGITransport(app=app)
@@ -124,6 +146,7 @@ def test_single_file_batch_returns_result_list():
         resp = await client.post(
             "/v1/parse-receipts",
             files=[("files", ("a.png", buf, "image/png"))],
+            headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -136,6 +159,9 @@ def test_single_file_batch_returns_result_list():
     asyncio.run(do())
 
 
+@pytest.mark.test_id("TEST-BATCHP-008")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_empty_image_returns_successful_result():
     """A blank image should parse successfully with empty line_items."""
     transport = ASGITransport(app=app)
@@ -149,6 +175,7 @@ def test_empty_image_returns_successful_result():
         resp = await client.post(
             "/v1/parse-receipts",
             files=[("files", ("blank.png", buf, "image/png"))],
+            headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -165,6 +192,9 @@ def test_empty_image_returns_successful_result():
     asyncio.run(do())
 
 
+@pytest.mark.test_id("TEST-BATCHP-009")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_url_batch_returns_result():
     """A batch with image_urls should fetch and parse each URL."""
     transport = ASGITransport(app=app)
@@ -177,6 +207,7 @@ def test_url_batch_returns_result():
         resp = await client.post(
             "/v1/parse-receipts",
             data={"image_urls": '["https://httpbin.org/image/png"]'},
+            headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
         )
         # Either success or a handled fetch error - both should return 200
         # because the batch endpoint must handle individual failures.
@@ -189,6 +220,9 @@ def test_url_batch_returns_result():
     asyncio.run(do())
 
 
+@pytest.mark.test_id("TEST-BATCHP-010")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_mixed_input_returns_400():
     transport = ASGITransport(app=app)
     client = httpx.AsyncClient(transport=transport, base_url="http://test")
@@ -202,6 +236,7 @@ def test_mixed_input_returns_400():
             "/v1/parse-receipts",
             files=[("files", ("a.png", buf, "image/png"))],
             data={"image_urls": '["https://example.com/r.jpg"]'},
+            headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
         )
         assert resp.status_code == 400
 
@@ -210,6 +245,9 @@ def test_mixed_input_returns_400():
     asyncio.run(do())
 
 
+@pytest.mark.test_id("TEST-BATCHP-011")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_failed_url_returns_error_field():
     """Individual URL failures must produce an `error` field in the result."""
     transport = ASGITransport(app=app)
@@ -219,6 +257,7 @@ def test_failed_url_returns_error_field():
         resp = await client.post(
             "/v1/parse-receipts",
             data={"image_urls": '["https://localhost:1/nonexistent.jpg"]'},
+            headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -232,6 +271,9 @@ def test_failed_url_returns_error_field():
     asyncio.run(do())
 
 
+@pytest.mark.test_id("TEST-BATCHP-012")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint.")
 def test_summary_counts_are_correct():
     """summary.total, summary.successful, summary.failed must match results."""
     transport = ASGITransport(app=app)
@@ -244,6 +286,7 @@ def test_summary_counts_are_correct():
             data={
                 "image_urls": '["https://localhost:1/r1.jpg", "https://localhost:1/r2.jpg"]',
             },
+            headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
         )
         assert resp.status_code == 200
         data = resp.json()

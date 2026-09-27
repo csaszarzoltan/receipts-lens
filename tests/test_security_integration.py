@@ -133,13 +133,13 @@ def validator_spy(monkeypatch):
     return state
 
 
-def _post(route: str, data: dict) -> httpx.Response:
+def _post(route: str, data: dict, headers: dict | None = None) -> httpx.Response:
     """POST to the ASGI app synchronously via asyncio.run."""
     transport = ASGITransport(app=api.app)
     client = httpx.AsyncClient(transport=transport, base_url="http://test")
 
     async def _do():
-        return await client.post(route, data=data)
+        return await client.post(route, data=data, headers=headers)
 
     return asyncio.run(_do())
 
@@ -149,12 +149,18 @@ def _post(route: str, data: dict) -> httpx.Response:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-SECINT-001")
+@pytest.mark.requirements("REQ-SEC-SSRF")
+@pytest.mark.scenario("Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza.")
 def test_security_module_exports_contract_symbols():
     """app.security re-exports validate_image_url + fetch_image_bytes."""
     assert callable(validate_image_url)
     assert callable(fetch_image_bytes)
 
 
+@pytest.mark.test_id("TEST-SECINT-002")
+@pytest.mark.requirements("REQ-SEC-SSRF")
+@pytest.mark.scenario("Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza.")
 def test_validate_image_url_signature():
     """validate_image_url(url: str) -> None."""
     assert callable(validate_image_url)
@@ -169,6 +175,9 @@ def test_validate_image_url_signature():
     )
 
 
+@pytest.mark.test_id("TEST-SECINT-003")
+@pytest.mark.requirements("REQ-SEC-SSRF")
+@pytest.mark.scenario("Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza.")
 def test_fetch_image_bytes_signature():
     """fetch_image_bytes(url: str, ...) -> bytes."""
     assert callable(fetch_image_bytes)
@@ -185,6 +194,9 @@ def test_fetch_image_bytes_signature():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-SECINT-004")
+@pytest.mark.requirements("REQ-SEC-SSRF")
+@pytest.mark.scenario("Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza.")
 def test_endpoint_rejects_ssrf_metadata_url(
     no_real_network, validator_spy
 ):
@@ -207,6 +219,9 @@ def test_endpoint_rejects_ssrf_metadata_url(
     )
 
 
+@pytest.mark.test_id("TEST-SECINT-005")
+@pytest.mark.requirements("REQ-SEC-SSRF")
+@pytest.mark.scenario("Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza.")
 def test_endpoint_rejects_file_scheme(
     no_real_network, validator_spy
 ):
@@ -229,6 +244,9 @@ def test_endpoint_rejects_file_scheme(
     )
 
 
+@pytest.mark.test_id("TEST-SECINT-006")
+@pytest.mark.requirements("REQ-SEC-SSRF")
+@pytest.mark.scenario("Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza.")
 def test_batch_url_ssrf_blocked_returns_error_item(
     no_real_network, validator_spy
 ):
@@ -241,6 +259,7 @@ def test_batch_url_ssrf_blocked_returns_error_item(
     resp = _post(
         "/v1/parse-receipts",
         data={"image_urls": '["http://169.254.169.254/x.jpg"]'},
+        headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"},
     )
     assert resp.status_code == 200, (
         f"batch SSRF URL must not 500, got {resp.status_code}: {resp.text!r}"

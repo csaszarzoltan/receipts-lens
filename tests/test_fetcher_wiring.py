@@ -191,6 +191,9 @@ def _run(coro) -> None:
 # Interface / wiring tests -- must be GREEN once P0-3 lands
 # ---------------------------------------------------------------------------
 
+@pytest.mark.test_id("TEST-FETCHW-001")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik.")
 def test_old_bytes_from_url_is_gone_from_api_module() -> None:
     """P0-3: ``_bytes_from_url`` must no longer exist in ``app.api``."""
     assert not hasattr(api, "_bytes_from_url"), (
@@ -204,6 +207,9 @@ def test_old_bytes_from_url_is_gone_from_api_module() -> None:
     )
 
 
+@pytest.mark.test_id("TEST-FETCHW-002")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik.")
 def test_fetch_image_bytes_is_wired_into_api_module() -> None:
     """P0-3: ``app.api.fetch_image_bytes`` must exist, be callable, return bytes,
     and be used at the four ``image_url`` call sites (279/318/407/527 in the brief)."""
@@ -228,6 +234,9 @@ def test_fetch_image_bytes_is_wired_into_api_module() -> None:
             pytest.fail(f"fetch_image_bytes not importable from app.security/app.ssrf_guard: {exc}")
 
 
+@pytest.mark.test_id("TEST-FETCHW-003")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik.")
 def test_four_entrypoints_registered() -> None:
     """All four ``image_url``-bearing routes must be registered."""
     routes = {getattr(r, "path", None) for r in api.app.routes}
@@ -246,6 +255,9 @@ def test_four_entrypoints_registered() -> None:
 # validator must block the bad input and surface HTTPException(400).
 # ---------------------------------------------------------------------------
 
+@pytest.mark.test_id("TEST-FETCHW-004")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik.")
 def test_parse_receipt_blocks_ssrf_metadata_ip(wired_env: None) -> None:
     """POST /v1/parse-receipt with image_url=http://169.254.169.254/ -> 400 (SSRF)."""
     transport = ASGITransport(app=api.app)
@@ -264,6 +276,9 @@ def test_parse_receipt_blocks_ssrf_metadata_ip(wired_env: None) -> None:
     _run(do())
 
 
+@pytest.mark.test_id("TEST-FETCHW-005")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik.")
 def test_parse_receipt_blocks_file_scheme(wired_env: None) -> None:
     """POST /v1/parse-receipt with image_url=file:///etc/passwd -> 400."""
     transport = ASGITransport(app=api.app)
@@ -282,6 +297,9 @@ def test_parse_receipt_blocks_file_scheme(wired_env: None) -> None:
     _run(do())
 
 
+@pytest.mark.test_id("TEST-FETCHW-006")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik.")
 def test_parse_receipt_blocks_oversize_image(wired_env: None) -> None:
     """POST /v1/parse-receipt with a URL returning a 21 MB image -> 400 (size cap)."""
     transport = ASGITransport(app=api.app)
@@ -300,6 +318,9 @@ def test_parse_receipt_blocks_oversize_image(wired_env: None) -> None:
     _run(do())
 
 
+@pytest.mark.test_id("TEST-FETCHW-007")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik.")
 def test_parse_receipt_blocks_non_image_content_type(wired_env: None) -> None:
     """POST /v1/parse-receipt with a URL returning Content-Type: text/html -> 400."""
     transport = ASGITransport(app=api.app)
@@ -318,6 +339,9 @@ def test_parse_receipt_blocks_non_image_content_type(wired_env: None) -> None:
     _run(do())
 
 
+@pytest.mark.test_id("TEST-FETCHW-008")
+@pytest.mark.requirements("REQ-OCR-BATCH")
+@pytest.mark.scenario("A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik.")
 def test_batch_isolates_private_host_without_500(wired_env: None) -> None:
     """Batch with one private-host URL + one valid -> private yields error,
     summary counts reflect it, and the request returns 200 (no 500)."""
@@ -326,7 +350,7 @@ def test_batch_isolates_private_host_without_500(wired_env: None) -> None:
 
     async def do() -> None:
         payload = '["http://10.0.0.1/secret.png", "http://images.example.com/good.png"]'
-        resp = await client.post("/v1/parse-receipts", data={"image_urls": payload})
+        resp = await client.post("/v1/parse-receipts", data={"image_urls": payload}, headers={"X-Tenant-ID": "test-tenant", "X-Role": "admin"})
         assert resp.status_code == 200, (
             f"Batch request should not 500 on a private-host URL; got {resp.status_code}: {resp.text}"
         )
