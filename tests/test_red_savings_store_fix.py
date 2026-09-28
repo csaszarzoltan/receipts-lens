@@ -14,12 +14,20 @@ section 3. They MUST be RED until app/savings.py is migrated to
 Unlike tests/test_red_savings_p1.py:30-45, ``_parsed`` here attaches ``category``
 to every line item, so seeded receipts land in their real category instead of
 ``Uncategorized``.
+
+``potential_saving`` follows the DECIDED half-split formula in
+docs/plans/potential-saving-formula-spec.md section 1:
+``sum(max(0.0, mean(late[c]) - mean(early[c])))`` over categories where BOTH
+halves have count >= 2. TEST-SAVD1-002 therefore seeds a fixture that straddles
+the 45-day midpoint of the 90d window on purpose and proves the split from the
+stored payloads — a fixture living in one half would return 0.0 for the wrong
+reason and go vacuously green.
 """
 
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 
@@ -102,6 +110,31 @@ def _seed_sav_fix(service: ProductService) -> None:
     _seed(service, "sav-fix", "ShopOld", 999.0, _date_ago(200), "A")
 
 
+def _seed_sav_split(service: ProductService) -> None:
+    """TEST-SAVD1-002 fixture — tenant ``sav-split``, straddles the midpoint.
+
+    ``_period_bounds("90d")`` puts the midpoint at ``today - 45``, so every
+    ``_date_ago(5|10|20)`` date lands in the LATE half and every category
+    guard-trips on ``len(early) >= 2``. This fixture populates BOTH halves:
+
+    * A: 10.0 (60d) + 30.0 (50d)  -> EARLY, mean 20.0
+    * A: 40.0 (40d) + 40.0 (30d)  -> LATE,  mean 40.0
+    * B:  5.0 (20d)               -> LATE only, no early half at all
+    * "Old" 999.0 (200d)          -> outside the 90d window, must NOT count
+
+    Both A rows per half are load-bearing: the spec guard is
+    ``len(early[c]) >= 2 and len(late[c]) >= 2``, so a single late A row would
+    guard-trip category A and force ``potential_saving == 0.0`` for the wrong
+    reason. Distinct merchants keep RecurringAnalytics quiet.
+    """
+    _seed(service, "sav-split", "SplitA1", 10.0, _date_ago(60), "A")
+    _seed(service, "sav-split", "SplitA2", 30.0, _date_ago(50), "A")
+    _seed(service, "sav-split", "SplitA3", 40.0, _date_ago(40), "A")
+    _seed(service, "sav-split", "SplitA4", 40.0, _date_ago(30), "A")
+    _seed(service, "sav-split", "SplitB1", 5.0, _date_ago(20), "B")
+    _seed(service, "sav-split", "SplitOld", 999.0, _date_ago(200), "A")
+
+
 def _stored_payloads(service: ProductService, tenant: str) -> list[dict[str, Any]]:
     rows = service._db.execute(
         "SELECT payload FROM receipts WHERE tenant_id=?", (tenant,)
@@ -136,6 +169,40 @@ def _assert_fixture_landed(service: ProductService, tenant: str, expected_rows: 
     assert "Uncategorized" not in categories, f"category lost on write path: {categories}"
 
 
+def _assert_half_split(
+    service: ProductService,
+    tenant: str,
+    expected_rows: int,
+    expected_early: int,
+    expected_late: int,
+) -> None:
+    """Precondition, read back from SQLite: the fixture really straddles the midpoint.
+
+    A fixture whose receipts all sit in one half returns ``0.0`` because the
+    ``len(early) >= 2 and len(late) >= 2`` guard tripped — indistinguishable from
+    a correct 0.0, i.e. a vacuous green. The counts are therefore computed with
+    the spec's own predicate, ``is_early(d) = 2 * (d - date_from).days < span``
+    (spec section 1, verbatim), not asserted by hand.
+    """
+    payloads = _stored_payloads(service, tenant)
+    assert len(payloads) == expected_rows, f"fixture did not persist: {payloads}"
+
+    today = datetime.now(UTC).date()
+    date_from, date_to = today - timedelta(days=90), today
+    span = (date_to - date_from).days
+    early = late = 0
+    for payload in payloads:
+        day = date.fromisoformat(str(payload["date"]))
+        if not (date_from <= day <= date_to):
+            continue  # out-of-window decoy: the endpoint filters it before the split
+        if 2 * (day - date_from).days < span:
+            early += 1
+        else:
+            late += 1
+    assert early == expected_early, f"expected {expected_early} early receipts, got {early}"
+    assert late == expected_late, f"expected {expected_late} late receipts, got {late}"
+
+
 def _get(client: TestClient, tenant: str, period: str = "90d") -> dict[str, Any]:
     response = client.get(
         f"/api/v1/analytics/savings-summary?period={period}",
@@ -167,19 +234,45 @@ def test_savings_reads_product_store_categories(monkeypatch: pytest.MonkeyPatch)
 @pytest.mark.requirements("REQ-F2-2")
 @pytest.mark.scenario("AC-D1-2")
 def test_savings_potential_saving_literal_arithmetic(monkeypatch: pytest.MonkeyPatch) -> None:
-    """AC-D1-2 — potential_saving is the literal 20.0, not merely "> 0"."""
+    """AC-D1-2 — potential_saving is the literal 20.0, not merely "> 0".
+
+    The arithmetic is the EARLY-vs-LATE MEAN DELTA per category
+    (``max(0.0, mean(late[c]) - mean(early[c]))``, spec section 1), NOT the
+    superseded whole-window ``total - avg``. The fixture straddles the 45-day
+    midpoint so the number comes from a real mean difference rather than from a
+    guard trip.
+    """
     client, service = _isolated_client(monkeypatch)
-    _seed_sav_fix(service)
-    _assert_fixture_landed(service, "sav-fix", 4)
+    _seed_sav_split(service)
+    _assert_fixture_landed(service, "sav-split", 6)
+    # 2 early (60d, 50d) + 3 late in-window (40d, 30d, 20d) + 1 out-of-window (200d).
+    _assert_half_split(service, "sav-split", 6, 2, 3)
 
-    body = _get(client, "sav-fix")
+    body = _get(client, "sav-split")
 
-    # A: total 40, count 2, avg 20 -> delta 20 (winner)
-    # B: total 5,  count 1, avg  5 -> delta  0 (clamp, contributes nothing)
-    expected = round(max(0.0, 40.0 - 20.0) + max(0.0, 5.0 - 5.0), 2)
-    assert expected == 20.0
-    assert body["potential_saving"] == expected
-    assert body["potential_saving"] > 0
+    # ---- LITERAL contract, no self-computed expectation -------------------
+    # The fixture's means are fixed by _seed_sav_split and _assert_half_split:
+    #   A: early (10.0 @60d, 30.0 @50d) mean 20.0 -> late (40.0 @40d, 40.0 @30d) mean 40.0
+    #      both halves clear count>=2, so A contributes 40.0 - 20.0 = 20.0
+    #   B: 5.0 @20d only -> NO early half, the count>=2 guard trips, contributes 0.0
+    # Total is therefore 20.0 EXACTLY. Compared as a literal because every
+    # formula variant lands on a different number, and the negative literals
+    # below pin WHICH category contributed:
+    #   40.0 -> B wrongly counted as a second winner (5.0 late vs 0 early)
+    #   25.0 -> B's 5.0 leaked past the guard
+    #    0.0 -> A guard-tripped, or early/late swapped (max(0.0, 20.0 - 40.0))
+    #   30.0 -> superseded whole-window "sum(total - avg)" formula
+    assert body["potential_saving"] == 20.0, body
+    assert body["potential_saving"] != 40.0, "B was counted as a second winner"
+    assert body["potential_saving"] != 25.0, "B leaked past the count>=2 guard"
+    assert body["potential_saving"] != 0.0, "A guard-tripped or early/late were swapped"
+    assert body["potential_saving"] != 30.0, "whole-window total-avg formula leaked back"
+    # The other two keys are untouched by the half-split formula, so a
+    # regression that zeroes (or halves, or doubles) the whole body is caught.
+    # total_spent: 10 + 30 + 40 + 40 + 5 in-window, NOT the 200-day-old 999.0 decoy.
+    assert body["total_spent"] == 125.0, body
+    # avg_by_category stays the WHOLE-window mean per spec section 3: A 120/4, B 5/1.
+    assert body["avg_by_category"] == {"A": 30.0, "B": 5.0}, body
 
 
 @pytest.mark.test_id("TEST-SAVD1-003")
