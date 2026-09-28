@@ -18,23 +18,19 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.api
-from app.analytics import spending_analytics
-from app.ocr import ConfidenceReceipt, ReceiptItem
 from app.product_api import Actor
 from app.product_service import ProductService
 from app.recurring import RecurringAnalytics
-from app.reports import receipt_store
-from app.savings import _period_bounds
 
 
-def _parsed(merchant: str, total: float, date: str) -> SimpleNamespace:
+def _parsed(merchant: str, total: float, date: str, category: str) -> SimpleNamespace:
     return SimpleNamespace(
         merchant=merchant,
         date=date,
         total=total,
         tax=0.0,
         currency="USD",
-        items=[SimpleNamespace(name=merchant, price=total)],
+        items=[SimpleNamespace(name=merchant, price=total, category=category)],
         confidence={
             "vendor": 0.95,
             "date": 0.95,
@@ -45,44 +41,29 @@ def _parsed(merchant: str, total: float, date: str) -> SimpleNamespace:
     )
 
 
-def _seed(service: ProductService, tenant: str, merchant: str, total: float, date: str) -> str:
+def _seed(
+    service: ProductService,
+    tenant: str,
+    merchant: str,
+    total: float,
+    date: str,
+    category: str,
+) -> str:
     actor = Actor(tenant, "admin")
-    return service.create_receipt(actor, _parsed(merchant, total, date), f"{merchant}.png")[
-        "receipt_id"
-    ]
+    return service.create_receipt(
+        actor, _parsed(merchant, total, date, category), f"{merchant}.png"
+    )["receipt_id"]
 
 
 def _isolated_client(monkeypatch: pytest.MonkeyPatch) -> tuple[TestClient, ProductService]:
     service = ProductService(":memory:")
     monkeypatch.setattr("app.api.service", service)
     monkeypatch.setattr("app.product_api.service", service)
-    with receipt_store._lock:
-        receipt_store._data.clear()
-        receipt_store._tenants.clear()
     return TestClient(app.api.app), service
 
 
 def _date_ago(days: int) -> str:
     return (datetime.now(UTC).date() - timedelta(days=days)).isoformat()
-
-
-def _store_receipt(
-    tenant: str,
-    merchant: str,
-    date: str,
-    items: list[tuple[str, float, str]],
-) -> str:
-    receipt = ConfidenceReceipt(
-        merchant=merchant,
-        date=date,
-        items=[ReceiptItem(name=n, price=p, category=c) for n, p, c in items],
-        total=sum(p for _, p, _ in items),
-        tax=0.0,
-        currency="USD",
-        raw_text="",
-        confidence={},
-    )
-    return receipt_store.store(receipt, tenant_id=tenant)
 
 
 @pytest.mark.test_id("TEST-SAVINGS-P1-001")
@@ -98,11 +79,11 @@ def test_savings_requires_auth(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.requirements("REQ-F2-2")
 @pytest.mark.scenario("AC-P1-2")
 def test_savings_isolates_tenant(monkeypatch: pytest.MonkeyPatch) -> None:
-    client, _ = _isolated_client(monkeypatch)
+    client, service = _isolated_client(monkeypatch)
     tenant_a = "savings-tenant-a"
     tenant_b = "savings-tenant-b"
-    _store_receipt(tenant_a, "OfficeMart", _date_ago(10), [("Desk", 100.0, "Office")])
-    _store_receipt(tenant_b, "LunchBox", _date_ago(10), [("Lunch", 200.0, "Meals")])
+    _seed(service, tenant_a, "OfficeMart", 100.0, _date_ago(10), "Office")
+    _seed(service, tenant_b, "LunchBox", 200.0, _date_ago(10), "Meals")
 
     headers_a = {"X-Tenant-ID": tenant_a, "X-Role": "admin"}
     response = client.get("/api/v1/analytics/savings-summary?period=90d", headers=headers_a)
@@ -144,28 +125,18 @@ def test_savings_clamped_per_category_delta(monkeypatch: pytest.MonkeyPatch) -> 
     tenant = "savings-clamp"
     # Groceries: 10 + 30 => total 40 avg 20 delta 20 (winner)
     # Utilities: 5 => total 5 avg 5 delta 0 (loser, contributes 0)
-    _store_receipt(tenant, "GroceryA", _date_ago(20), [("Milk", 10.0, "Groceries")])
-    _store_receipt(tenant, "GroceryB", _date_ago(10), [("Milk", 30.0, "Groceries")])
-    _store_receipt(tenant, "UtilityC", _date_ago(5), [("Cable", 5.0, "Utilities")])
+    _seed(service, tenant, "GroceryA", 10.0, _date_ago(20), "Groceries")
+    _seed(service, tenant, "GroceryB", 30.0, _date_ago(10), "Groceries")
+    _seed(service, tenant, "UtilityC", 5.0, _date_ago(5), "Utilities")
 
-    # Expected values sourced from SpendingAnalytics.by_category (not re-derived)
-    date_from, date_to = _period_bounds("90d")
-    cat = spending_analytics.by_category(date_from, date_to, tenant_id=tenant)
-    groups = cat.get("groups", [])
-    expected_avg = {g["key"]: g["avg"] for g in groups}
-    expected_total = float(cat.get("total_spent", 0.0))
-    expected_potential = round(sum(max(0.0, float(g["total"]) - float(g["avg"])) for g in groups), 2)
+    # Hard-coded contract (NOT re-derived from the same store the endpoint reads,
+    # which would be self-fulfilling). Groceries total 40 / count 2 -> avg 20,
+    # Utilities total 5 / count 1 -> avg 5 (total == avg, clamped to 0).
+    expected_avg = {"Groceries": 20.0, "Utilities": 5.0}
+    expected_total = 45.0
+    expected_potential = round(max(0.0, 40.0 - 20.0) + max(0.0, 5.0 - 5.0), 2)
+    assert expected_potential == 20.0
 
-    # winner / loser logic explicitly: loser contributes 0
-    groceries_total = next((g["total"] for g in groups if g["key"] == "Groceries"), 0)
-    groceries_avg = next((g["avg"] for g in groups if g["key"] == "Groceries"), 0)
-    utilities_total = next((g["total"] for g in groups if g["key"] == "Utilities"), 0)
-    utilities_avg = next((g["avg"] for g in groups if g["key"] == "Utilities"), 0)
-    assert groceries_total > groceries_avg
-    assert utilities_total == utilities_avg  # loser delta 0, clamped
-    assert expected_potential == round(max(0.0, float(groceries_total - groceries_avg)), 2)
-
-    _ = service  # product store not needed for category delta; silence linter
     headers = {"X-Tenant-ID": tenant, "X-Role": "admin"}
     response = client.get("/api/v1/analytics/savings-summary?period=90d", headers=headers)
     assert response.status_code == 200
@@ -195,7 +166,7 @@ def test_savings_top_candidates_cap_and_sort(monkeypatch: pytest.MonkeyPatch) ->
     dates = [_date_ago(21), _date_ago(14), _date_ago(7)]
     for merchant, amounts in merchants:
         for amount, d in zip(amounts, dates, strict=True):
-            _seed(service, tenant, merchant, amount, d)
+            _seed(service, tenant, merchant, amount, d, "Shopping")
 
     # Non-empty household: top_candidates <=2, DESC by potential_saving
     headers = {"X-Tenant-ID": tenant, "X-Role": "admin"}
