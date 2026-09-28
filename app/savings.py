@@ -7,7 +7,7 @@ and ``RecurringAnalytics.for_actor`` without re-deriving aggregates.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from app.recurring import RecurringAnalytics
@@ -91,6 +91,47 @@ def _category_groups(
     }
 
 
+def _half_means(
+    tenant_id: str | None, date_from: str, date_to: str
+) -> dict[str, tuple[list[float], list[float]]]:
+    """Per-category early/late line amounts for the ``potential_saving`` split.
+
+    Splits the window in half on the spec's exact integer predicate
+    ``2 * (d - date_from).days < span`` (early) with no floating point, and
+    buckets one float per line item into its own category — the same per-line
+    rule as :66-68, so a two-category receipt never adds its total to both.
+    A receipt with no line items contributes its payload ``total`` to
+    ``"Uncategorized"``, mirroring :56-65. Returns
+    ``{category: (early_amounts, late_amounts)}``.
+    """
+    from app.consumer_dashboard import _tenant_receipt_payloads
+
+    if not tenant_id:
+        return {}
+    start = date.fromisoformat(date_from)
+    span = (date.fromisoformat(date_to) - start).days
+    halves: dict[str, tuple[list[float], list[float]]] = {}
+    for payload in _tenant_receipt_payloads(tenant_id):
+        raw_date = str(payload.get("date") or "")
+        if not (date_from <= raw_date <= date_to):
+            continue
+        day = date.fromisoformat(raw_date)
+        side = 0 if 2 * (day - start).days < span else 1
+        items = payload.get("line_items") or []
+        if not items:
+            key = "Uncategorized"
+            amount = float(payload.get("total") or 0.0)
+            bucket = halves.setdefault(key, ([], []))
+            bucket[side].append(amount)
+            continue
+        for item in items:
+            key = str(item.get("category") or "Uncategorized")
+            amount = float(item.get("price", item.get("amount", 0)) or 0.0)
+            bucket = halves.setdefault(key, ([], []))
+            bucket[side].append(amount)
+    return halves
+
+
 class SavingsAnalytics:
     """Stateless savings summary engine mirroring ``RecurringAnalytics``."""
 
@@ -117,8 +158,13 @@ class SavingsAnalytics:
         groups: list[dict[str, Any]] = cat.get("groups", [])
         avg_by_category = {g["key"]: g["avg"] for g in groups}
         total_spent = float(cat.get("total_spent", 0.0))
+        halves = _half_means(tenant_id, date_from, date_to)
         potential_saving = round(
-            sum(max(0.0, float(g["total"]) - float(g["avg"])) for g in groups),
+            sum(
+                max(0.0, sum(late) / len(late) - sum(early) / len(early))
+                for early, late in halves.values()
+                if len(early) >= 2 and len(late) >= 2
+            ),
             2,
         )
 
