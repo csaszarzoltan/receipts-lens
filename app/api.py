@@ -37,6 +37,7 @@ from app.quota_api import router as quota_router
 from app.rate_limits import RateLimitMiddleware
 from app.report_generator import generate_csv, generate_pdf
 from app.reports import receipt_store
+from app.savings import savings_analytics
 from app.security import fetch_image_bytes
 from app.ssrf_guard import validate_scheme_and_host
 from app.subscriptions_api import router as subscriptions_router
@@ -1526,6 +1527,11 @@ async def recurring_analytics_route(
     """Weekly recurring-spend list for the authenticated tenant."""
     items = RecurringAnalytics().for_actor(actor, service)
     return {"period": period, "items": items}
+
+
+@_v1_route("get", "/analytics/savings-summary", response_model=dict)
+async def savings_summary_route(period: str = "90d", actor: Actor = Depends(api_v1_actor)) -> dict:
+    return savings_analytics.for_actor(actor, service, period)
 
 
 # ---------------------------------------------------------------------------
