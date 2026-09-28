@@ -10,7 +10,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from app.analytics import spending_analytics
 from app.recurring import RecurringAnalytics
 
 
@@ -30,6 +29,66 @@ def _period_bounds(period: str) -> tuple[str, str]:
     date_from = (today - timedelta(days=days)).isoformat()
     date_to = today.isoformat()
     return date_from, date_to
+
+
+def _category_groups(
+    tenant_id: str | None, date_from: str, date_to: str
+) -> dict[str, Any]:
+    """Per-category spend for *tenant_id* straight from the product store.
+
+    Reads the tenant SQLite through the dashboard's payload reader (the real
+    ``/api/v1`` write path), NOT the global in-memory ``receipt_store`` that
+    production never populates (F1.2 B1). The import is function-local so
+    importing this module for a pure date helper does not build the
+    ``ProductService`` singleton as a side effect.
+    """
+    from app.consumer_dashboard import _tenant_receipt_payloads
+
+    payloads = _tenant_receipt_payloads(tenant_id) if tenant_id else []
+    group_totals: dict[str, float] = {}
+    group_counts: dict[str, int] = {}
+    group_max: dict[str, float] = {}
+    group_min: dict[str, float] = {}
+    for payload in payloads:
+        if not (date_from <= str(payload.get("date") or "") <= date_to):
+            continue
+        items = payload.get("line_items") or []
+        if not items:
+            key = "Uncategorized"
+            amount = float(payload.get("total") or 0.0)
+            group_totals[key] = group_totals.get(key, 0.0) + amount
+            group_counts[key] = group_counts.get(key, 0) + 1
+            if key not in group_max or amount > group_max[key]:
+                group_max[key] = amount
+            if key not in group_min or amount < group_min[key]:
+                group_min[key] = amount
+            continue
+        for item in items:
+            key = str(item.get("category") or "Uncategorized") or "Uncategorized"
+            amount = float(item.get("price", item.get("amount", 0)) or 0.0)
+            group_totals[key] = group_totals.get(key, 0.0) + amount
+            group_counts[key] = group_counts.get(key, 0) + 1
+            if key not in group_max or amount > group_max[key]:
+                group_max[key] = amount
+            if key not in group_min or amount < group_min[key]:
+                group_min[key] = amount
+
+    groups = [
+        {
+            "key": cat,
+            "total": round(group_totals[cat], 2),
+            "count": group_counts[cat],
+            "avg": round(group_totals[cat] / group_counts[cat], 2) if group_counts[cat] else 0.0,
+            "max": round(group_max.get(cat, 0.0), 2),
+            "min": round(group_min.get(cat, 0.0), 2),
+        }
+        for cat in sorted(group_totals)
+    ]
+    return {
+        "total_spent": round(sum(g["total"] for g in groups), 2),
+        "currency": "USD",
+        "groups": groups,
+    }
 
 
 class SavingsAnalytics:
@@ -54,7 +113,7 @@ class SavingsAnalytics:
         """
         date_from, date_to = _period_bounds(period)
         tenant_id = getattr(actor, "tenant_id", None)
-        cat = spending_analytics.by_category(date_from, date_to, tenant_id=tenant_id)
+        cat = _category_groups(tenant_id, date_from, date_to)
         groups: list[dict[str, Any]] = cat.get("groups", [])
         avg_by_category = {g["key"]: g["avg"] for g in groups}
         total_spent = float(cat.get("total_spent", 0.0))
