@@ -27,6 +27,23 @@ def _parse_date(value: str | None) -> datetime | None:
         return None
 
 
+def parse_period_days(period: str) -> int:
+    """Map a ``"90d"``/``"30"`` period label to a day count.
+
+    Stricter than the sibling ``app/savings.py:16-31``: an unparseable or
+    out-of-range value raises ``ValueError`` (translated to ``422`` by the
+    route) instead of silently falling back to 90 days, which would return a
+    90-day answer under a ``period=7x`` label.
+    """
+    raw = period.strip().lower()
+    if raw.endswith("d"):
+        raw = raw[:-1]
+    days = int(raw)  # ValueError propagates on non-numeric input
+    if not 1 <= days <= 3650:
+        raise ValueError(f"Invalid period: {period!r}. Expected 1d..3650d.")
+    return days
+
+
 def _frequency_for_dates(dates: list[datetime], occurrences: int) -> str:
     """Return ``weekly`` if >=3 distinct weeks in the active 12-week window."""
     if not dates:
@@ -67,17 +84,26 @@ class RecurringGroup:
 class RecurringAnalytics:
     """Stateless aggregator that groups ``list_reviews`` payloads by merchant."""
 
-    def from_reviews(self, reviews: dict[str, Any] | list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def from_reviews(
+        self,
+        reviews: dict[str, Any] | list[dict[str, Any]],
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Group ``ProductService.list_reviews`` result by normalized merchant.
 
         Args:
             reviews: return value of ``ProductService.list_reviews`` (dict with
                 ``items``) or a plain list of review items.
+            date_from: inclusive lower ISO ``YYYY-MM-DD`` bound; ``None`` means
+                no filtering.
+            date_to: inclusive upper ISO ``YYYY-MM-DD`` bound; ``None`` means
+                no filtering.
 
         Returns:
             List of dicts with ``merchant``, ``occurrences``, ``frequency``,
-            ``avg_amount``, ``last_amount``, ``delta_pct``. Empty input yields
-            an empty list (not an error).
+            ``avg_amount``, ``last_amount``, ``delta_pct``, ``price_trend``.
+            Empty input yields an empty list (not an error).
         """
         if reviews is None:
             return []
@@ -99,6 +125,31 @@ class RecurringAnalytics:
             payload = item.get("receipt") if isinstance(item, dict) else None
             if payload is None:
                 payload = item if isinstance(item, dict) else {}
+            # Window filter BEFORE aggregation, at bucket-build time, so
+            # occurrences/avg_amount/delta_pct/price_trend describe the window
+            # only. Filtering after grouping would leave avg_amount all-time.
+            # The ISO YYYY-MM-DD string compares lexically == chronologically,
+            # but only once both sides are plain 10-char dates. Slicing to [:10]
+            # makes an ISO timestamp ("2026-08-31T10:00:00") compare equal to its
+            # own date instead of being falsely rejected by the upper bound.
+            d = str(payload.get("date") or "").strip()[:10]
+            # A missing/blank date cannot be ordered against a bound, and the
+            # old asymmetric guard kept it whenever only date_to was set. Drop
+            # it explicitly so both bounds behave the same with one or both set.
+            if not d:
+                continue
+            # A non-ISO date cannot be ordered correctly against an ISO bound:
+            # "2026-8-31" is 9 chars and "-"(0x2d) < "0"(0x30) makes an
+            # unpadded month sort before every padded one ("2026-1-15" sorts
+            # below "2025-12-31"), so slicing cannot make it safe. Reject it
+            # rather than guess -- a wrongly dropped receipt is recoverable, a
+            # silently mis-windowed one is not.
+            if len(d) != 10 or d[4] != "-" or d[7] != "-":
+                continue
+            if date_from is not None and d < date_from:
+                continue
+            if date_to is not None and d > date_to:
+                continue
             merchant_raw = payload.get("vendor")
             if merchant_raw is None:
                 merchant_raw = payload.get("merchant")
@@ -144,16 +195,37 @@ class RecurringAnalytics:
                 last_amount=last_amount,
                 delta_pct=delta_pct,
             )
-            groups.append(group.__dict__)
+            group_dict = group.__dict__
+            # price_trend is derived ONLY from delta_pct, no new computation.
+            # The 10% band is closed: exactly +/-10.0 is "flat" (spec section 2).
+            trend_delta = float(group_dict["delta_pct"])
+            if trend_delta > 10.0:
+                group_dict["price_trend"] = "up"
+            elif trend_delta < -10.0:
+                group_dict["price_trend"] = "down"
+            else:
+                group_dict["price_trend"] = "flat"
+            groups.append(group_dict)
 
         # deterministic order: merchant asc
         groups.sort(key=lambda g: g["merchant"].lower())
         return groups
 
-    def for_actor(self, actor: Any, service: Any) -> list[dict[str, Any]]:
-        """Fetch reviews for *actor* via *service* and group them."""
+    def for_actor(self, actor: Any, service: Any, period: str | None = None) -> list[dict[str, Any]]:
+        """Fetch reviews for *actor* via *service* and group them.
+
+        Args:
+            period: ``"90d"``-style label scoping the window. ``None`` (the
+                default, e.g. ``app/savings.py:171``) applies no filtering.
+                An unparseable value raises ``ValueError``.
+        """
         reviews = service.list_reviews(actor, limit=200)
-        return self.from_reviews(reviews)
+        if period is None:
+            return self.from_reviews(reviews)
+        days = parse_period_days(period)
+        today = datetime.now(UTC).date()
+        date_from = (today - timedelta(days=days)).isoformat()
+        return self.from_reviews(reviews, date_from=date_from, date_to=today.isoformat())
 
 
 recurring_analytics = RecurringAnalytics()

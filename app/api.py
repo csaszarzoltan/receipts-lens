@@ -1525,8 +1525,14 @@ async def recurring_analytics_route(
     actor: Actor = Depends(api_v1_actor),
 ) -> dict:
     """Weekly recurring-spend list for the authenticated tenant."""
-    items = RecurringAnalytics().for_actor(actor, service)
-    return {"period": period, "items": items}
+    try:
+        items = RecurringAnalytics().for_actor(actor, service, period)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    # currency is hardcoded USD, matching /analytics/savings-summary
+    # (app/savings.py:198); the contract table binds both, and no per-tenant
+    # currency setting exists (spec section 3).
+    return {"period": period, "currency": "USD", "items": items}
 
 
 @_v1_route("get", "/analytics/savings-summary", response_model=dict)
