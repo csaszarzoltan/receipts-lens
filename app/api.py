@@ -19,7 +19,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.alerts import alert_store
 from app.analytics import budget_analytics, spending_analytics
-from app.recurring import RecurringAnalytics
+from app.recurring import RecurringAnalytics, parse_period_days
 from app.api_v2 import batch_router
 from app.auth_api import router as auth_router
 from app.budgets import budget_store
@@ -315,17 +315,18 @@ def _resolve_tenant_from_auth(
 
 @app.get("/api/v1/consumer/dashboard")
 def consumer_dashboard(
+    period: str = "90d",
     authorization: str | None = Header(default=None, alias="Authorization"),
     x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
     x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict[str, Any]:
-    """Consumer dashboard payload — all six blocks, live backend data.
-
-    Auth: Bearer session token (logged-in users) OR X-Tenant-ID/X-Role
-    headers (dev fallback). Session-based auth takes precedence.
-    """
+    """Consumer dashboard payload — live backend data."""
+    try:
+        parse_period_days(period)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     tenant_id = _resolve_tenant_from_auth(authorization, x_tenant_id, x_role)
-    return build_consumer_dashboard(tenant_id)
+    return build_consumer_dashboard(tenant_id, period=period)
 
 # ---------------------------------------------------------------------------
 # Configurable limits (plumbed into fetch_image_bytes defaults)

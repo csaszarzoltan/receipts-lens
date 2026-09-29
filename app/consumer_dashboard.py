@@ -311,8 +311,34 @@ def _recent_receipts(tenant_id: str) -> list[dict[str, Any]]:
     return items
 
 
-def build_consumer_dashboard(tenant_id: str, today: date | None = None) -> dict[str, Any]:
-    """Assemble the full consumer dashboard payload (all six blocks)."""
+def _savings_block(tenant_id: str, period: str = "90d") -> dict[str, Any]:
+    """Block 7 — savings summary (pass-through of the savings engine).
+
+    The whole dict is the *same* object ``GET /api/v1/analytics/savings-summary``
+    returns, plus a ``savings_candidates`` list, so the two surfaces cannot drift.
+    """
+    from app.product_api import service as product_service
+    from app.recurring import RecurringAnalytics
+    from app.savings import savings_analytics
+
+    actor = _TenantActor(tenant_id)
+    data = savings_analytics.for_actor(actor, product_service, period)
+    data["savings_candidates"] = RecurringAnalytics().for_actor(
+        actor, product_service, period
+    )
+    return data
+
+
+def build_consumer_dashboard(
+    tenant_id: str,
+    today: date | None = None,
+    *,
+    period: str = "90d",
+) -> dict[str, Any]:
+    """Assemble the full consumer dashboard payload (all seven blocks)."""
+    from app.recurring import parse_period_days
+
+    parse_period_days(period)  # ValueError propagates; the route maps it to 422
     anchor = today or _today()
     return {
         "generated_at": datetime.now(UTC).isoformat(),
@@ -323,4 +349,5 @@ def build_consumer_dashboard(tenant_id: str, today: date | None = None) -> dict[
         "cancellable_subscriptions": _cancellable(anchor, tenant_id),
         "household": _household(anchor, tenant_id),
         "recent_receipts": _recent_receipts(tenant_id),
+        "savings": _savings_block(tenant_id, period),
     }
