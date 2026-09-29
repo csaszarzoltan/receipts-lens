@@ -17,6 +17,7 @@ endpoint is exercised through a real TestClient with tenant headers.
 """
 from __future__ import annotations
 
+import ast
 import re
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -56,6 +57,10 @@ JARGON = [
     "approval", "export", "accounting", "cost.center", "tenant",
     "api.key", "webhook", "readiness", "work.queue", "recurring",
 ]
+
+# Wire keys that are internal plumbing, not consumer copy (unchanged from the
+# original exemption set -- kept so the narrowed scan does not change scope).
+JARGON_KEY_ALLOWLIST = {"tenant"}
 
 
 def _clean_store() -> None:
@@ -177,10 +182,16 @@ def _headers(tenant: str = "us023", role: str = "admin") -> dict[str, str]:
 
 
 class TestSixBlocksLive:
+    @pytest.mark.test_id("TEST-US023-001")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-001")
     def test_endpoint_registered(self, client: TestClient) -> None:
         paths = {getattr(r, "path", None) for r in api.app.routes}
         assert "/api/v1/consumer/dashboard" in paths
 
+    @pytest.mark.test_id("TEST-US023-002")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-002")
     def test_auth_contract(self, client: TestClient) -> None:
         assert client.get("/api/v1/consumer/dashboard").status_code == 401
         assert client.get(
@@ -190,11 +201,17 @@ class TestSixBlocksLive:
             "/api/v1/consumer/dashboard", headers=_headers()
         ).status_code == 200
 
+    @pytest.mark.test_id("TEST-US023-003")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-003")
     def test_all_six_blocks_present(self, client: TestClient) -> None:
         payload = client.get("/api/v1/consumer/dashboard", headers=_headers()).json()
         for block in BLOCKS:
             assert block in payload, f"missing block {block}"
 
+    @pytest.mark.test_id("TEST-US023-004")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-004")
     def test_blocks_are_live_not_placeholder(self, client: TestClient) -> None:
         """With seeded data every block carries concrete numbers/items."""
         _seed_budget(600.0, tenant="us023")
@@ -224,6 +241,9 @@ class TestSixBlocksLive:
         assert isinstance(payload["price_alerts"], list)
         assert isinstance(payload["cancellable_subscriptions"], list)
 
+    @pytest.mark.test_id("TEST-US023-005")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-005")
     def test_recent_receipts_from_product_store(self, client: TestClient) -> None:
         """Block 6 must come from the tenant product store, newest first."""
         _seed_receipt("Péküzlet", 5.0, 1, tenant="us023")
@@ -236,6 +256,9 @@ class TestSixBlocksLive:
         # newest created_at first (receipt ids are uuid4 — order by created_at desc)
         assert recent[0]["merchant"] == "Piac"
 
+    @pytest.mark.test_id("TEST-US023-006")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-006")
     def test_daily_remaining_uses_budget_countdown(self, client: TestClient) -> None:
         """Block 1 is the budget back-count (existing budget motor)."""
         _seed_budget(620.0, tenant="us023")
@@ -254,21 +277,67 @@ class TestSixBlocksLive:
 
 
 class TestConsumerLanguage:
+    @pytest.mark.test_id("TEST-US023-007")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-007")
     def test_no_business_jargon_in_engine_labels(self) -> None:
-        content = ENGINE.read_text(encoding="utf-8")
-        for term in JARGON:
-            # The module docstring may reference wire terms; only the label
-            # dicts / UI-facing strings are consumer copy.
-            assert term not in content.lower() or term in {
-                "tenant",  # header plumbing is internal, not UI copy
-            }, f"business term leaked into consumer engine: {term}"
+        """No banned term may be a *dictionary key* (wire key) in the engine.
 
+        Only what a consumer can see is scanned. Imports (``from app.recurring
+        import ...``), prose in docstrings and comments are code/notes, not
+        consumer copy -- they are stripped before the check. A leaked wire key
+        like ``"recurring"`` or ``"accounting"`` is still caught.
+        """
+        raw = ENGINE.read_text(encoding="utf-8")
+        tree = ast.parse(raw)
+        # 1. comment-only lines 2. the module docstring.
+        skip: set[int] = set()
+        for node in ast.walk(tree):
+            if not isinstance(
+                node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                continue
+            if not node.body or not isinstance(node.body[0], ast.Expr):
+                continue
+            value = node.body[0].value
+            if not (isinstance(value, ast.Constant) and isinstance(value.value, str)):
+                continue
+            # A bare string statement first in a body is a docstring -> prose.
+            skip.update(
+                range(value.lineno - 1, getattr(value, "end_lineno", value.lineno))
+            )
+        body = "\n".join(
+            ln for i, ln in enumerate(raw.splitlines())
+            if i not in skip and not ln.lstrip().startswith("#")
+        )
+        content = body.lower()
+
+        for term in JARGON:
+            if term in JARGON_KEY_ALLOWLIST:
+                continue
+            # Key position only: ["term"] / "term": / "term",  -- not prose.
+            key_hits = re.findall(
+                rf'(?:\["{re.escape(term)}"\]|"{re.escape(term)}"\s*:|'
+                rf'"{re.escape(term)}"\s*,)',
+                content,
+            )
+            assert not key_hits, (
+                f"business term leaked into a consumer wire key: {term!r} "
+                f"({len(key_hits)} key occurrence(s) in {ENGINE.name})"
+            )
+
+    @pytest.mark.test_id("TEST-US023-008")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-008")
     def test_dashboard_page_has_no_business_jargon(self) -> None:
         content = DASHBOARD_PAGE.read_text(encoding="utf-8")
         for term in ["Approval", "approval", "Export", "export preparation",
                      "Accounting", "cost center", "Work queue", "OCR confidence"]:
             assert term not in content, f"business term in dashboard copy: {term}"
 
+    @pytest.mark.test_id("TEST-US023-009")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-009")
     def test_consumer_labels_used_in_blocks(self, client: TestClient) -> None:
         """Category labels are consumer-facing (Étkezés/Közlekedés)."""
         _seed_receipt("Péküzlet", 8.0, 1, category="Étkezés", tenant="us023")
@@ -283,12 +352,18 @@ class TestConsumerLanguage:
 
 
 class TestEmptyStates:
+    @pytest.mark.test_id("TEST-US023-010")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-010")
     def test_no_budget_yields_null_daily_remaining(self, client: TestClient) -> None:
         """No monthly budget → block 1 is null so the UI shows onboarding CTA."""
         payload = client.get("/api/v1/consumer/dashboard", headers=_headers()).json()
         assert payload["daily_remaining"] is None
         assert payload["household"]["shared_budget"] == 0.0
 
+    @pytest.mark.test_id("TEST-US023-011")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-011")
     def test_no_receipts_yields_empty_category_list(self, client: TestClient) -> None:
         _seed_budget(300.0, tenant="us023-empty")
         payload = client.get(
@@ -299,16 +374,25 @@ class TestEmptyStates:
         assert monthly["categories"] == []
         assert payload["recent_receipts"] == []
 
+    @pytest.mark.test_id("TEST-US023-012")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-012")
     def test_frontend_has_empty_state_component_reference(self) -> None:
         content = DASHBOARD_PAGE.read_text(encoding="utf-8")
         assert "EmptyState" in content, "dashboard must render EmptyState for empty data"
 
+    @pytest.mark.test_id("TEST-US023-013")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-013")
     def test_frontend_references_all_six_blocks(self) -> None:
         """The page wires every backend block (no dead blocks in UI)."""
         content = DASHBOARD_PAGE.read_text(encoding="utf-8")
         for block in BLOCKS:
             assert block in content, f"dashboard page does not render block {block}"
 
+    @pytest.mark.test_id("TEST-US023-014")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-014")
     def test_frontend_links_onboarding_for_empty_state(self) -> None:
         content = DASHBOARD_PAGE.read_text(encoding="utf-8")
         assert "/upload" in content or "/onboarding" in content, (
@@ -322,6 +406,9 @@ class TestEmptyStates:
 
 
 class TestFrontendContract:
+    @pytest.mark.test_id("TEST-US023-015")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-015")
     def test_types_declare_consumer_dashboard(self) -> None:
         content = TYPES.read_text(encoding="utf-8")
         assert "ConsumerDashboard" in content
@@ -330,11 +417,17 @@ class TestFrontendContract:
         assert "cancellable_subscriptions" in content
         assert "recent_receipts" in content
 
+    @pytest.mark.test_id("TEST-US023-016")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-016")
     def test_api_client_has_consumer_dashboard_fn(self) -> None:
         content = API_CLIENT.read_text(encoding="utf-8")
         assert "getConsumerDashboard" in content
         assert "/api/v1/consumer/dashboard" in content
 
+    @pytest.mark.test_id("TEST-US023-017")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-017")
     def test_types_use_dark_mode_safe_tokens(self) -> None:
         """No hardcoded hex colors in the dashboard page (dark mode safe)."""
         content = DASHBOARD_PAGE.read_text(encoding="utf-8")
@@ -348,6 +441,9 @@ class TestFrontendContract:
 
 
 class TestIntegration:
+    @pytest.mark.test_id("TEST-US023-018")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-018")
     def test_full_round_trip_with_seeded_data(self, client: TestClient) -> None:
         """One real request returns all six blocks populated end-to-end."""
         _seed_budget(500.0, tenant="us023-i")
@@ -376,6 +472,9 @@ class TestIntegration:
         ).json()
         assert other["recent_receipts"] == []
 
+    @pytest.mark.test_id("TEST-US023-019")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-019")
     def test_live_blocks_aggregate_receipts_created_via_real_path(
         self, client: TestClient
     ) -> None:
@@ -432,6 +531,9 @@ class TestIntegration:
         assert recent[0]["merchant"] == "Probe Store"
         assert recent[0]["total"] == 42.0
 
+    @pytest.mark.test_id("TEST-US023-020")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-020")
     def test_cross_tenant_isolation_for_blocks_1_2_5(self, client: TestClient) -> None:
         """B2 regression: tenantA budget+receipts are invisible to tenantB.
 
@@ -491,6 +593,9 @@ class TestIntegration:
         assert legacy["household"]["shared_budget"] == 0.0
         assert legacy["monthly_by_category"]["total_spent"] == 0.0
 
+    @pytest.mark.test_id("TEST-US023-021")
+    @pytest.mark.requirements("REQ-F1-2")
+    @pytest.mark.scenario("AC-US023-021")
     def test_price_alerts_use_existing_motor(self) -> None:
         """Block 3 delegates to the subscription price-increase motor."""
         assert _build_subscriptions is not None
