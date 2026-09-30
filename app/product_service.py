@@ -76,6 +76,12 @@ class ProductService:
             CREATE TABLE IF NOT EXISTS members(
               member_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, email TEXT NOT NULL,
               role TEXT NOT NULL, active INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS price_alert_sent(
+              alert_id INTEGER PRIMARY KEY AUTOINCREMENT,
+              tenant_id TEXT NOT NULL, merchant TEXT NOT NULL,
+              amount_cents INTEGER NOT NULL, period_ym TEXT NOT NULL,
+              notified_at TEXT NOT NULL,
+              UNIQUE(tenant_id, merchant, amount_cents, period_ym));
             CREATE TABLE IF NOT EXISTS api_keys(
               key_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL,
               secret_hash TEXT NOT NULL, revoked INTEGER NOT NULL, created_at TEXT NOT NULL);
@@ -252,6 +258,44 @@ class ProductService:
             (actor.tenant_id,),
         ).fetchall()
         return [{**dict(row), "active": bool(row["active"])} for row in rows]
+
+    def has_price_alert_sent(
+        self, tenant_id: str, merchant: str, amount_cents: int, period_ym: str
+    ) -> bool:
+        """True when a price-hike email was already sent for this key.
+
+        The key is (tenant, merchant, cents, billing month) so a second,
+        different hike from the same merchant re-arms while a re-run of the
+        same hike in the same month stays suppressed.
+        """
+        with self._lock:
+            row = self._db.execute(
+                "SELECT 1 FROM price_alert_sent "
+                "WHERE tenant_id=? AND merchant=? AND amount_cents=? AND period_ym=?",
+                (tenant_id, merchant, int(amount_cents), period_ym),
+            ).fetchone()
+        return row is not None
+
+    def record_price_alert_sent(
+        self, tenant_id: str, merchant: str, amount_cents: int, period_ym: str
+    ) -> bool:
+        """Record an actually delivered price alert; False if already recorded.
+
+        Callers must only invoke this after the send returned True — a row is
+        the idempotency claim that this household was told, so a failed send
+        must leave the table untouched and the next run free to retry.
+        """
+        try:
+            with self._lock, self._db:
+                self._db.execute(
+                    "INSERT INTO price_alert_sent"
+                    "(tenant_id,merchant,amount_cents,period_ym,notified_at) "
+                    "VALUES(?,?,?,?,?)",
+                    (tenant_id, merchant, int(amount_cents), period_ym, self._now()),
+                )
+        except sqlite3.IntegrityError:
+            return False
+        return True
 
     def list_connections(self, actor: Actor) -> list[dict[str, Any]]:
         rows = self._db.execute(

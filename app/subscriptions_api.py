@@ -35,15 +35,18 @@ from app.product_api import accounting
 from app.product_service import Actor
 from app.subscription_alerts import (
     CANCEL_GUIDES,
-    Frequency,
-    detect_price_increase,
-    extract_next_renewal_date,
+    build_subscriptions,
     get_cancel_guide,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["subscriptions"])
 
 RENEWAL_LOOKAHEAD_DAYS = 60
+
+# Keys the scheduler needs but the HTTP contract does not: the price-hike
+# baseline and the per-subscription opt-in. Stripped by the projection below
+# so they never reach a response body (AC-3).
+_SCHEDULER_ONLY_KEYS = frozenset({"baseline", "email_alert_enabled"})
 
 
 # ---------------------------------------------------------------------------
@@ -63,11 +66,6 @@ class _EmailAlertRequest(BaseModel):
     enabled: bool
 
 
-def _month_start_iso() -> str:
-    """First day of the current month as an ISO string (renewal fallback)."""
-    return _today_iso()[:8] + "01"
-
-
 def _today_iso() -> str:
     """Current date as an ISO string (single indirection for ruff DTZ011)."""
     return datetime.now(UTC).date().isoformat()
@@ -85,63 +83,23 @@ def _actor(
     return Actor(x_tenant_id, x_role)
 
 
-def _frequency_for(occurrences: int) -> Frequency:
-    """Pick a recurrence frequency from the observed receipt count."""
-    if occurrences >= 12:
-        return Frequency.MONTHLY
-    if occurrences >= 5:
-        return Frequency.QUARTERLY
-    return Frequency.ANNUAL
-
-
-def _monthly_cost(amount: float, occurrences: int) -> float:
-    """Annualise a per-receipt amount into a monthly cost."""
-    if occurrences >= 12:
-        return round(amount, 2)
-    if occurrences >= 5:
-        return round(amount / 3.0, 2)
-    return round(amount / 12.0, 2)
-
-
 def _build_subscriptions(tenant: str) -> list[dict[str, Any]]:
-    """Turn recurring-expense records into subscription view models."""
-    records = accounting.recurring(tenant)
-    subscriptions: list[dict[str, Any]] = []
-    for index, record in enumerate(records, start=1):
-        merchant = str(record.get("merchant") or "Unknown")
-        occurrences = int(record.get("occurrences") or 0)
-        average = float(record.get("average_amount") or 0.0)
-        frequency = _frequency_for(occurrences)
-        # Renewal anchor is the most recent charge date ('' when the receipt
-        # payload predates ISO dates); fall back to the account creation
-        # month so the renewal stays deterministic and in the past.
-        last_date = str(record.get("last_date") or "")
-        if not last_date:
-            last_date = _month_start_iso()
-        renewal_date = extract_next_renewal_date(last_date, frequency)
-        # Price-increase detection: the most recent charge vs the 3-month
-        # rolling average of the charges before it (AC3).  ``amounts`` is
-        # chronological; fewer than 2 historical charges → no baseline.
-        amounts = [float(a) for a in (record.get("amounts") or [])]
-        current = amounts[-1] if amounts else average
-        baseline = amounts[-4:-1] if len(amounts) >= 2 else []
-        price_increase = detect_price_increase(current, baseline)
-        subscriptions.append(
-            {
-                "id": f"sub-{index:03d}",
-                "merchant": merchant,
-                "occurrences": occurrences,
-                "frequency": frequency.value,
-                "renewal_date": renewal_date,
-                "amount": round(current, 2),
-                "monthly_cost": _monthly_cost(average, occurrences),
-                "annualized": float(record.get("annualized") or 0.0),
-                "trend": "up" if price_increase else "stable",
-                "price_increase": price_increase,
-                "likely_subscription": bool(record.get("likely_subscription")),
-            }
-        )
-    return subscriptions
+    """Turn recurring-expense records into subscription view models.
+
+    A thin projection over :func:`app.subscription_alerts.build_subscriptions`,
+    the single builder (Decision A).  This module already module-level-imports
+    ``app.subscription_alerts``, so the ownership points *down*; the builder
+    reaches ``accounting`` through a function-local import to avoid a cycle.
+
+    Drops only the scheduler's ``baseline`` and ``email_alert_enabled`` — the
+    HTTP key set must stay byte-identical and ``baseline`` must not leak into
+    ``GET /api/v1/subscriptions`` (AC-3).  Note the empty-workspace case
+    yields ``[]``: ``DEMO_SUBSCRIPTIONS`` is a scheduler-local fixture.
+    """
+    return [
+        {key: value for key, value in sub.items() if key not in _SCHEDULER_ONLY_KEYS}
+        for sub in build_subscriptions(tenant)
+    ]
 
 
 @router.get("/subscriptions")
