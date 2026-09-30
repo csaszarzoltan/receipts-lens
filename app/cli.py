@@ -9,6 +9,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 from collections.abc import Sequence
 
 
@@ -37,6 +38,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _cmd_forecast(args)
         elif command == "info":
             return _cmd_info(args)
+        elif command == "subscription-alerts":
+            return _cmd_subscription_alerts(args)
         else:
             parser.print_help()
             return 2
@@ -89,6 +92,27 @@ def _build_parser() -> argparse.ArgumentParser:
         type=int,
         default=1,
         help="Number of periods ahead to forecast (default: 1)",
+    )
+
+    # subscription-alerts subcommand
+    alerts_parser = subparsers.add_parser(
+        "subscription-alerts",
+        help="Run the daily subscription check (renewal + price-hike emails)",
+    )
+    alerts_parser.add_argument(
+        "--tenant",
+        default="demo",
+        help="Accounting workspace tenant id (default: demo)",
+    )
+    alerts_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Suppress all outbound email (no send, no price_alert_sent row)",
+    )
+    alerts_parser.add_argument(
+        "--today",
+        default=None,
+        help="ISO date anchor for a reproducible run (YYYY-MM-DD)",
     )
 
     # info subcommand
@@ -204,6 +228,79 @@ def _cmd_forecast(args: argparse.Namespace) -> int:
             f"{entry.get('confidence_high', 0.0):.2f}]",
             flush=True,
         )
+    return 0
+
+
+def _cmd_subscription_alerts(args: argparse.Namespace) -> int:
+    """Execute the subscription-alerts command.
+
+    Builds the SMTP configuration from the environment (no ``to_addr`` — the
+    trigger resolves the active owner itself) and delegates to
+    ``app.subscription_alerts.daily_scheduler``, printing the run counters to
+    stdout.  Returns 0 on success, 2 on failure.
+    """
+    import sys
+
+    from app.subscription_alerts import daily_scheduler
+
+    smtp_config = {
+        "host": os.getenv("RECEIPTLENS_SMTP_HOST"),
+        "port": os.getenv("RECEIPTLENS_SMTP_PORT"),
+        "user": os.getenv("RECEIPTLENS_SMTP_USER"),
+        "password": os.getenv("RECEIPTLENS_SMTP_PASSWORD"),
+        "from_addr": os.getenv("RECEIPTLENS_SMTP_FROM_ADDR"),
+    }
+    if args.dry_run:
+        # Intended: send_email_notification() bails out on its first line when
+        # smtp_config is None, so nothing sends and no price_alert_sent row is
+        # written — exactly what --dry-run's help text promises.
+        smtp_config = None
+
+    try:
+        result = daily_scheduler(
+            smtp_config=smtp_config,
+            tenant=args.tenant,
+            today=args.today,
+        )
+    except Exception:
+        # Never echo the exception: it may carry SMTP credentials.
+        print("Error: price-alert run failed", file=sys.stderr, flush=True)
+        return 2
+
+    for key in (
+        "subscriptions_checked",
+        "renewal_emails_sent",
+        "price_emails_sent",
+        "price_alerts_suppressed",
+        "price_alerts_failed",
+    ):
+        print(f"{key}: {result.get(key, 0)}", flush=True)
+
+    # Exit-code contract (main(), cli.py:15-19): 0 = success, 1 = partial
+    # failure, 2 = fatal.
+    #
+    # The ONLY failure signal is ``price_alerts_failed``: a price hike that
+    # was detected on this run and reached nobody.  Deriving the code from
+    # anything else is a bug in both directions:
+    #
+    # * a healthy tenant whose renewal delivered and which has no price hike
+    #   (renewal_emails_sent=1, price_emails_sent=0) would be reported as a
+    #   failure — the most common real run;
+    # * a real hike blocked by an SMTP gate would exit 0, because there was
+    #   no prior row to suppress, so ``price_alerts_suppressed`` is 0 — the
+    #   exact total failure this code exists to detect.
+    #
+    # A suppressed alert is a SUCCESS: it was delivered on an earlier run.
+    # --dry-run sends nothing *by design*, so it is exempt and must never
+    # exit 1.
+    if not args.dry_run and result.get("price_alerts_failed"):
+        print(
+            f"Error: {result['price_alerts_failed']} price-hike alert(s) "
+            "detected but not delivered",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 1
     return 0
 
 

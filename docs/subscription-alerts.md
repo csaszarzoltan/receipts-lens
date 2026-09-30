@@ -280,6 +280,68 @@ print(result)
 # {"subscriptions_checked": 3, "renewal_emails_sent": 2, "price_emails_sent": 1, "date": "2026-08-10"}
 ```
 
+## Running the daily check from the command line
+
+The scheduler is also exposed as a CLI subcommand, which is the form an
+operator should use for a scheduled run:
+
+```bash
+python -m app.cli subscription-alerts --tenant <id>
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--tenant` | `demo` | Accounting workspace tenant id to scan. |
+| `--dry-run` | off | Suppress all outbound email: no send, and no `price_alert_sent` row is written. |
+| `--today` | *(system date)* | ISO date anchor (`YYYY-MM-DD`) for a reproducible run. |
+
+SMTP connection settings are read from the environment —
+`RECEIPTLENS_SMTP_HOST`, `RECEIPTLENS_SMTP_PORT`, `RECEIPTLENS_SMTP_USER`,
+`RECEIPTLENS_SMTP_PASSWORD`, `RECEIPTLENS_SMTP_FROM_ADDR` — plus the
+`RECEIPTLENS_SMTP_ENABLED` gate described below. The recipient is **not** taken
+from the environment; the run resolves it itself.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Run completed. A suppressed alert counts as success — it was delivered on an earlier run. |
+| `1` | **A price hike was detected on this run but could not be delivered.** Not "some mail failed": renewal emails and suppression are deliberately not failure signals. |
+| `2` | Fatal error — the run could not complete. |
+
+`--dry-run` never exits `1`; it sends nothing by design.
+
+### Run one instance at a time
+
+**This command assumes a single running instance.** Two concurrent runs can
+each send the same price-hike email, because the `price_alert_sent` UNIQUE
+constraint makes the bookkeeping safe but cannot make an SMTP send atomic —
+both runs clear the "already sent" check before either has recorded a row, so
+the table stays truthful (one row, written once) while the household receives
+the alert twice. The counters reflect this honestly: `price_emails_sent`
+counts the mail that really went out and is not decremented.
+
+Do **not** add a second cron entry, a second worker, or an overlapping manual
+run without addressing this first — for example with a lock file or a
+single-owner job wrapper.
+
+### Scheduling is the operator's job
+
+This feature ships the command, not a schedule. No cron entry, systemd timer,
+or launchd plist is installed by the repository; wiring the command into
+whatever scheduler you run is yours to do.
+
+### Who receives the alert
+
+The recipient is the single **active household OWNER** — the first
+`role='owner'` member with `active=1`, resolved from the tenant's `members`
+table. The owner always wins over any caller-supplied address. A tenant with
+no active owner receives nothing at all (the run logs it and continues).
+
+`price_alert_sent` rows are written **only** when a send actually succeeded. A
+hike that was detected but not delivered leaves no row, so the next run
+re-detects and re-arms it.
+
 ## Email alerts
 
 Renewal and price-increase notifications can be delivered by email. Delivery

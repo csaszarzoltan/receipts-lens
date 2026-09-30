@@ -528,8 +528,20 @@ def send_email_notification(
                 smtp.login(user, password)
             smtp.send_message(message)
     except Exception as exc:
-        logger.warning("SMTP notification failed: %s", exc)
-        raise RuntimeError(f"SMTP notification failed: {exc}") from exc
+        # Never interpolate the raw exception: smtplib messages routinely embed
+        # the sender/recipient address (``{'o@x.io': (550, b'...')}``), and the
+        # ``from exc`` chain would republish it to any upstream handler.  The
+        # address-free signal is the exception class plus its numeric code --
+        # enough for an operator to tell auth failure (535) from a connection
+        # refusal (errno 111).  ``smtp_error`` is deliberately NOT used: it is
+        # the free-text server response, which is where the address lives.
+        code = getattr(exc, "smtp_code", None) or getattr(exc, "errno", None)
+        logger.warning(
+            "SMTP notification failed (%s, code=%s)",
+            type(exc).__name__,
+            code if isinstance(code, int) else "n/a",
+        )
+        raise RuntimeError(f"SMTP notification failed ({type(exc).__name__})") from exc
     return True
 
 
@@ -576,13 +588,26 @@ falls within the default 7-day alert window relative to common test anchors
 """
 
 
-def _build_scheduler_subscriptions(
-    tenant: str = "demo",
-) -> list[dict[str, Any]]:
-    """Load subscription view-models from the accounting workspace.
+def build_subscriptions(tenant: str = "demo") -> list[dict[str, Any]]:
+    """Turn recurring-expense records into subscription view models.
 
-    Falls back to :data:`DEMO_SUBSCRIPTIONS` when the accounting workspace
-    has no recurring expenses for *tenant*.
+    The single source of truth for subscription view-models (Decision A).
+    :mod:`app.subscriptions_api` module-level-imports this module, so the
+    builder lives here and the API projects it; importing upward would be a
+    cycle.  ``accounting`` is therefore imported function-locally —
+    ``app.product_api`` builds it at import time.
+
+    Carries both the HTTP keys and the scheduler's ``baseline`` /
+    ``email_alert_enabled``; the API projection drops the latter two, so the
+    HTTP key set stays byte-identical.
+
+    A record whose ``last_date`` is empty is **not** dropped: the renewal
+    anchor falls back to :func:`_month_start_iso`.  The old scheduler
+    loader skipped such records, which silently swallowed the price alert of
+    a merchant that has charges but no usable date (AC-5).
+
+    Returns ``[]`` for an empty workspace — :data:`DEMO_SUBSCRIPTIONS` is a
+    scheduler-local fixture, not a truth source (Decision A.5).
     """
     from app.product_api import accounting as _accounting
 
@@ -591,25 +616,54 @@ def _build_scheduler_subscriptions(
     for index, record in enumerate(records, start=1):
         merchant = str(record.get("merchant") or "Unknown")
         occurrences = int(record.get("occurrences") or 0)
+        average = float(record.get("average_amount") or 0.0)
+        frequency = _frequency_for(occurrences)
+        # Renewal anchor is the most recent charge date ('' when the receipt
+        # payload predates ISO dates); fall back to the account creation
+        # month so the renewal stays deterministic and in the past.
         last_date = str(record.get("last_date") or "")
         if not last_date:
-            continue
-        freq = _frequency_for(occurrences)
-        renewal_date = extract_next_renewal_date(last_date, freq)
+            last_date = _month_start_iso()
+        renewal_date = extract_next_renewal_date(last_date, frequency)
+        # Price-increase detection: the most recent charge vs the 3-month
+        # rolling average of the charges before it (AC3).  ``amounts`` is
+        # chronological; fewer than 2 historical charges → no baseline.
         amounts = [float(a) for a in (record.get("amounts") or [])]
-        current = amounts[-1] if amounts else float(record.get("average_amount") or 0.0)
+        current = amounts[-1] if amounts else average
         baseline = amounts[-4:-1] if len(amounts) >= 2 else []
+        price_increase = detect_price_increase(current, baseline)
         subs.append(
             {
                 "id": f"sub-{index:03d}",
                 "merchant": merchant,
+                "occurrences": occurrences,
+                "frequency": frequency.value,
                 "renewal_date": renewal_date,
                 "amount": round(current, 2),
+                "monthly_cost": _monthly_cost(average, occurrences),
+                "annualized": float(record.get("annualized") or 0.0),
+                "trend": "up" if price_increase else "stable",
+                "price_increase": price_increase,
+                "likely_subscription": bool(record.get("likely_subscription")),
                 "baseline": baseline,
                 "email_alert_enabled": True,
             }
         )
-    return subs if subs else list(DEMO_SUBSCRIPTIONS)
+    return subs
+
+
+def _month_start_iso() -> str:
+    """First day of the current month as an ISO string (renewal fallback)."""
+    return _today_iso()[:8] + "01"
+
+
+def _monthly_cost(amount: float, occurrences: int) -> float:
+    """Annualise a per-receipt amount into a monthly cost."""
+    if occurrences >= 12:
+        return round(amount, 2)
+    if occurrences >= 5:
+        return round(amount / 3.0, 2)
+    return round(amount / 12.0, 2)
 
 
 def _frequency_for(occurrences: int) -> Frequency:
@@ -619,6 +673,111 @@ def _frequency_for(occurrences: int) -> Frequency:
     if occurrences >= 5:
         return Frequency.QUARTERLY
     return Frequency.ANNUAL
+
+
+def _price_alert_store() -> Any | None:
+    """The ``ProductService`` singleton that owns ``price_alert_sent``.
+
+    Imported function-locally (``app.product_api`` builds ``accounting`` at
+    import time, so a module-level import here would be a cycle).  ``None``
+    when the product layer is unavailable — see the callers below.
+    """
+    try:
+        from app.product_api import service
+    except ImportError:  # pragma: no cover - product layer always present in app/
+        return None
+    return service
+
+
+def _price_alert_already_sent(
+    tenant: str, merchant: str, amount_cents: int, period_ym: str
+) -> bool:
+    """True when this exact (tenant, merchant, cents, month) was already sent.
+
+    Fails open (False) when the product layer cannot be reached: the alert is
+    a notification, not accounting state, so an unavailable store must not
+    silently swallow it.
+    """
+    store = _price_alert_store()
+    if store is None:
+        return False
+    return bool(store.has_price_alert_sent(tenant, merchant, amount_cents, period_ym))
+
+
+def _record_price_alert_sent(
+    tenant: str, merchant: str, amount_cents: int, period_ym: str
+) -> bool:
+    """Write the idempotency row for a send that actually went out."""
+    store = _price_alert_store()
+    if store is None:
+        return False
+    return bool(store.record_price_alert_sent(tenant, merchant, amount_cents, period_ym))
+
+
+def _resolve_price_alert_recipient(tenant: str) -> str | None:
+    """The household member a price-hike alert is addressed to, or ``None``.
+
+    Decision B: the recipient is resolved from the ``members`` table through
+    the ``ProductService`` boundary rather than from raw SQL, because
+    ``list_members`` already owns the tenant filter and the ``active``
+    coercion.  The caller's ``to_addr`` is deliberately ignored — an alert
+    about the household's own spending must reach the household, not whatever
+    address the CLI happened to be configured with.
+
+    The synthesized :class:`Actor` is read-only and privilege-neutral:
+    ``list_members`` filters on ``actor.tenant_id`` alone and checks no role
+    (``product_service.py:255-260``), so ``"admin"`` grants no extra access
+    here.  It matches the legacy default in ``subscriptions_api._actor``.
+
+    ``None`` means "no active owner": the caller must send nothing at all.
+    Failing open here would mail a household member who never asked to receive
+    its billing data.
+    """
+    store = _price_alert_store()
+    if store is None:
+        # No product layer: there is no way to prove who the recipient is.
+        return None
+
+    from app.product_api import Actor as _Actor
+
+    # AC-PRICE-12 gate — read-only lookup, no role check downstream.
+    members = store.list_members(_Actor(tenant, "admin"))
+    # A blank address is not an addressee.  ``add_member`` stores whatever it
+    # is handed, so a member row may legitimately carry "" or "   "; and
+    # ``EmailMessage["To"] = ""`` does not raise, it just produces a message
+    # that goes nowhere.  Filtering here — rather than at the send — keeps
+    # both the email and the ``price_alert_sent`` row out of the world.
+    owners = [
+        m
+        for m in members
+        if m.get("role") == "owner"
+        and m.get("active")
+        and str(m.get("email") or "").strip()
+    ]
+
+    if not owners:
+        logger.warning(
+            "No active owner with a non-blank email in tenant %r; "
+            "suppressing price-hike alert",
+            tenant,
+        )
+        return None
+
+    if len(owners) > 1:
+        # ``list_members`` is ``ORDER BY email`` (product_service.py:257), so
+        # this pick is deterministic — never a coin flip.  The spec calls a
+        # multi-owner household a data-quality risk, not an error: alert one
+        # address rather than fan out to all of them.
+        # Count only — member email addresses are PII and do not belong in
+        # logs at any level.
+        logger.warning(
+            "Tenant %r has %d active owners with non-blank emails; "
+            "alerting the first by email",
+            tenant,
+            len(owners),
+        )
+
+    return str(owners[0]["email"]).strip()
 
 
 def daily_scheduler(
@@ -652,15 +811,24 @@ def daily_scheduler(
     -------
     dict
         Summary with keys ``subscriptions_checked``, ``renewal_emails_sent``,
-        ``price_emails_sent``, and ``date``.
+        ``price_emails_sent``, ``price_alerts_suppressed``,
+        ``price_alerts_failed``, and ``date``.  Only ``price_alerts_failed``
+        describes work that was attempted and not delivered; every other
+        counter is either a success or a no-op.
     """
     anchor = _parse_today(today)
 
     if subscriptions is None:
-        subscriptions = _build_scheduler_subscriptions(tenant)
+        subscriptions = build_subscriptions(tenant) or list(DEMO_SUBSCRIPTIONS)
 
     renewal_emails_sent = 0
     price_emails_sent = 0
+    price_alerts_suppressed = 0
+    # Hikes that were DETECTED and NOT delivered — the send came back False or
+    # raised.  This is the only counter the caller may treat as a failure: a
+    # suppressed alert was delivered on an earlier run, so suppressing it is
+    # the feature working, not a lost mail.
+    price_alerts_failed = 0
 
     for sub in subscriptions:
         if not sub.get("email_alert_enabled", True):
@@ -715,13 +883,86 @@ def daily_scheduler(
                 f"{merchant} subscription price increased by {pct:.1f}%\n"
                 f"Previous: ${prev:.2f}  →  Current: ${amount:.2f}"
             )
+            # F2.5 idempotency key: billing month of the charge that caused the
+            # hike, so a *second, different* hike from the same merchant still
+            # alerts while a re-run of this one is suppressed.
+            amount_cents = int(round(float(amount) * 100))
+            period_ym = (renewal_str or anchor.isoformat())[:7]
+            already_sent = _price_alert_already_sent(
+                tenant, merchant, amount_cents, period_ym
+            )
+            if already_sent:
+                logger.info(
+                    "Price-hike alert for %s (%s, %s) already sent; suppressing",
+                    merchant,
+                    amount_cents,
+                    period_ym,
+                )
+                price_alerts_suppressed += 1
+                continue
+
+            # AC-PRICE-12 gate — with no active owner there is no addressee,
+            # so nothing is sent and nothing is counted.  Resolved before the
+            # sender so the AC's "never called" claim is observable.
+            recipient = _resolve_price_alert_recipient(tenant)
+            if recipient is None:
+                continue
+
+            # AC-PRICE-10 gate — the owner always wins over the caller's
+            # ``to_addr``; the caller's dict is copied, never mutated.
+            alert_config: dict[str, Any] | None = None
+            if smtp_config is not None:
+                alert_config = {**smtp_config, "to_addr": recipient}
+            if smtp_config and smtp_config.get("to_addr") not in (None, recipient):
+                # Never log either address — a caller-supplied to_addr is still
+                # a member's email address (see :758: member addresses are PII
+                # and do not belong in logs at any level).  Say only THAT an
+                # override happened; the addresses are not the operator's
+                # business here and the run outcome does not depend on them.
+                logger.warning(
+                    "A caller-supplied to_addr was ignored; the alert is "
+                    "addressed to the active household owner instead"
+                )
+
             try:
                 sent = send_email_notification(
-                    subject, body, smtp_config=smtp_config
+                    subject, body, smtp_config=alert_config
                 )
-                if sent:
+                if sent:  # AC-PRICE-7 gate — the row is written only on a real send
                     price_emails_sent += 1
+                    recorded = _record_price_alert_sent(
+                        tenant, merchant, amount_cents, period_ym
+                    )
+                    if not recorded:
+                        # KNOWN LIMITATION (not solved here, only reported):
+                        # the ``price_alert_sent`` table is concurrency-safe —
+                        # the UNIQUE key makes the second INSERT a no-op — but
+                        # the *email send* is not.  Two overlapping runs both
+                        # clear ``has_price_alert_sent`` and both mail the
+                        # household; only the bookkeeping is deduplicated.
+                        # Making the send atomic would need a transaction that
+                        # spans the SMTP call, which we deliberately do not
+                        # hold open.  We assume a single-instance scheduler.
+                        # ``price_emails_sent`` is deliberately NOT decremented:
+                        # the mail really did go out, so the counter must not
+                        # claim otherwise, and this is NOT counted as a failed
+                        # alert either — nothing was lost.
+                        logger.debug(
+                            "Duplicate price-hike send for %s (%s, %s): the "
+                            "bookkeeping row was already present and was NOT "
+                            "written again — the send itself went through and "
+                            "was not prevented",
+                            merchant,
+                            amount_cents,
+                            period_ym,
+                        )
+                else:
+                    # The send was refused (SMTP host gate, opt-in gate, no
+                    # addressee) — the hike is real and the household was not
+                    # told.  No row is written, so the next run re-detects it.
+                    price_alerts_failed += 1
             except (OSError, RuntimeError):
+                price_alerts_failed += 1
                 logger.warning(
                     "Failed to send price-hike email for %s", merchant
                 )
@@ -730,5 +971,11 @@ def daily_scheduler(
         "subscriptions_checked": len(subscriptions),
         "renewal_emails_sent": renewal_emails_sent,
         "price_emails_sent": price_emails_sent,
+        # AC-PRICE-14 — the two new keys; the four above keep their meanings.
+        # ``price_alerts_suppressed`` counts alerts an EARLIER run already
+        # delivered (a success), ``price_alerts_failed`` counts hikes detected
+        # on THIS run that reached nobody (the only real failure).
+        "price_alerts_suppressed": price_alerts_suppressed,
+        "price_alerts_failed": price_alerts_failed,
         "date": anchor.isoformat(),
     }
