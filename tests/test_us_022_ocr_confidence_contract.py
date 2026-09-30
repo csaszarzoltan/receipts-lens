@@ -126,7 +126,11 @@ def test_bug001_noisy_garbage_low_confidence() -> None:
 def test_bug001_clean_control_still_parses() -> None:
     """Kontroll: tiszta kép továbbra is valós totalt ad (nincs túlkorrekció)."""
     parsed = api.parse_receipt_with_confidence(clean_receipt())
-    assert parsed.total is not None and parsed.total != 1.0
+    assert parsed.total == pytest.approx(3.78), (
+        f"BUG-001: tiszta kontrollkép valós totalja 3.78 (kapott: "
+        f"{parsed.total!r}, raw={parsed.raw_text!r}) — a gyenge total "
+        "nem lehet 1.0, de a helyes értéket is pontosan találnia kell"
+    )
 
 
 # ---------------------------------------------------------------------------

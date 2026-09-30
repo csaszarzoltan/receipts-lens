@@ -10,12 +10,14 @@ from __future__ import annotations
 import io
 
 from PIL import Image, ImageDraw, ImageFilter
+from PIL import ImageFont
 
 
 def _render(text: str, *, size=(700, 380), bg=(255, 255, 255), fg=(0, 0, 0)) -> bytes:
     img = Image.new("RGB", size, bg)
     draw = ImageDraw.Draw(img)
-    draw.multiline_text((24, 24), text, fill=fg)
+    _FONT = ImageFont.truetype("DejaVuSans.ttf", 28)
+    draw.multiline_text((24, 24), text, fill=fg, font=_FONT)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
