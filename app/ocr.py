@@ -34,6 +34,12 @@ _CONF_LEVEL_HIGH = 0.85  # >= high
 _CONF_LEVEL_MEDIUM = 0.60  # >= medium, < high
 # below medium => "low"
 
+# Per-field confidences the total is read from (vendor/total/line_items); the
+# receipt band also counts date/tax/currency, which a receipt may legitimately
+# lack (BUG-001 gate must not punish a total for a missing tax line).
+_TOTAL_SOURCE_FIELDS: tuple[str, ...] = ("total", "vendor", "line_items")
+_TOTAL_MIN_CONF = _CONF_LEVEL_MEDIUM  # total emitted at/above this field confidence
+
 # Default currency per locale
 _CURRENCY_LOCALE_HINTS: dict[str, str] = {
     "eng": "USD",
@@ -310,7 +316,7 @@ def _confidence_from_data(image_bytes: bytes) -> dict[str, float | None]:
             "line_items": None,
         }
 
-    confs = [c for c in data.get("conf", []) if c != "-1"]
+    confs = [c for c in data.get("conf", []) if c != -1]
     avg_conf = sum(confs) / len(confs) / 100.0 if confs else 0.0
     min_conf = min(confs) / 100.0 if confs else 0.0
     weighted = (avg_conf + min_conf) / 2.0
@@ -600,8 +606,13 @@ def parse_receipt_with_confidence(image_bytes: bytes, *, lang: str | None = None
     parsed = parse_receipt(image_bytes, lang=lang)
     confidence = _confidence_from_data(image_bytes)
     level = _confidence_level(confidence)
-    # Gate total on confidence_level: when low, don't emit total coincidence as trusted value.
-    total = None if level == "low" else parsed.total
+    # BUG-001: gate total on the confidence of the fields it was read from
+    # (vendor/total/line_items), not on the whole-receipt band — a receipt with
+    # no tax/currency lines is banded "low" yet reads its total confidently.
+    # A field we could not read scores 0.0 — the honest value, not a skip.
+    source = [(confidence or {}).get(name) or 0.0 for name in _TOTAL_SOURCE_FIELDS]
+    source_conf = sum(source) / len(_TOTAL_SOURCE_FIELDS)
+    total = parsed.total if source_conf >= _TOTAL_MIN_CONF else None
     return ConfidenceReceipt(
         merchant=parsed.merchant,
         date=parsed.date,
