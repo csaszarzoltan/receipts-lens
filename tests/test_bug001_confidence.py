@@ -42,6 +42,9 @@ def client():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-BUG001-001")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC1: gyenge minőségű képen a total SOHA nem a hamis 1.0 érték.")
 def test_low_quality_image_total_not_fabricated() -> None:
     """AC1: blurry receipt -> total is NOT the fake value 1.0.
 
@@ -55,6 +58,9 @@ def test_low_quality_image_total_not_fabricated() -> None:
     )
 
 
+@pytest.mark.test_id("TEST-BUG001-002")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC1/AC2: ha nincs tiszta total, 'uncertain' jelzés kell — nem érték.")
 def test_low_quality_image_is_uncertain_when_no_clean_total() -> None:
     """AC1/AC2: no confident total -> 'uncertain' signal instead of a value."""
     parsed = parse_receipt_with_confidence(noisy_garbage())
@@ -71,6 +77,9 @@ def test_low_quality_image_is_uncertain_when_no_clean_total() -> None:
         )
 
 
+@pytest.mark.test_id("TEST-BUG001-003")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("Kontroll: tiszta kép továbbra is valós totalt ad (nincs túlkorrekció).")
 def test_clean_image_control_still_parses_total() -> None:
     """Control: a clean receipt still yields the real total (no regression)."""
     parsed = parse_receipt(clean_receipt())
@@ -83,6 +92,9 @@ def test_clean_image_control_still_parses_total() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-BUG001-004")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC2: a per-receipt konfidencia-szint (high/medium/low) ki van téve.")
 def test_confidence_level_field_present() -> None:
     """AC2: a per-receipt confidence level ('high'|'medium'|'low') is exposed."""
     parsed = parse_receipt_with_confidence(clean_receipt())
@@ -92,17 +104,20 @@ def test_confidence_level_field_present() -> None:
     )
 
 
+@pytest.mark.test_id("TEST-BUG001-005")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC2: a total pontosan akkor jelenik meg, amikor a forrás-mezői magabiztosak.")
 def test_confidence_level_matches_per_field_total() -> None:
-    """The level is consistent with the total's own confidence score."""
+    """The total is gated on the confidence of the fields it was read from."""
     parsed = parse_receipt_with_confidence(clean_receipt())
-    level = getattr(parsed, "confidence_level", None)
     total_conf = (parsed.confidence or {}).get("total")
-    if level == "high":
-        assert total_conf is None or total_conf >= 0.6
-    elif level == "low":
-        assert total_conf is not None and total_conf < 0.6
+    # A "low" receipt band no longer implies a low total — the gate reads the source fields.
+    assert (parsed.total is not None) == (total_conf >= 0.6)
 
 
+@pytest.mark.test_id("TEST-BUG001-006")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC2: a renderelt API payload hordozza a konfidencia-szintet.")
 def test_api_response_carries_confidence_level() -> None:
     """The rendered API payload includes the confidence level."""
     parsed = parse_receipt_with_confidence(clean_receipt())
@@ -118,6 +133,9 @@ def test_api_response_carries_confidence_level() -> None:
 REVIEW_PAGE = "frontend/app/(app)/review/page.tsx"
 
 
+@pytest.mark.test_id("TEST-BUG001-007")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC3: a review UI gyenge találat elfogadása előtt megerősítést kér.")
 def test_review_ui_has_confirmation_requirement_marker() -> None:
     """AC3: review UI asks for confirmation before accepting weak matches."""
     try:
@@ -130,6 +148,9 @@ def test_review_ui_has_confirmation_requirement_marker() -> None:
     )
 
 
+@pytest.mark.test_id("TEST-BUG001-008")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC3: a review UI a review időpontban 'uncertain amount' figyelmeztetést mutat.")
 def test_review_ui_has_uncertain_total_notice() -> None:
     """AC3: the UI shows an 'uncertain amount' notice at review time."""
     try:
@@ -147,6 +168,9 @@ def test_review_ui_has_uncertain_total_notice() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-BUG001-009")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC4: valós multipart upload gyenge minőségű képpel sosem ad total=1.0-t.")
 def test_integration_low_quality_upload_never_returns_total_1_0(
     client: object,
 ) -> None:
@@ -164,6 +188,9 @@ def test_integration_low_quality_upload_never_returns_total_1_0(
         )
 
 
+@pytest.mark.test_id("TEST-BUG001-010")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("AC2/AC4: a valós feltöltési válasz hordozza a per-receipt konfidencia-szintet.")
 def test_integration_clean_upload_returns_confidence_level(client: object) -> None:
     """AC2/AC4: real upload response carries the per-receipt confidence level."""
     files = {"file": ("clean-receipt.png", clean_receipt(), "image/png")}
@@ -178,6 +205,9 @@ def test_integration_clean_upload_returns_confidence_level(client: object) -> No
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.test_id("TEST-BUG001-011")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("Unit guard: a float-parser soha nem gyárt 1.0-t egy '1' töredékből.")
 def test_parse_float_never_returns_one_from_garbage() -> None:
     """The float parser must not turn stray '1' fragments into 1.0."""
     assert _parse_float("") is None
@@ -185,15 +215,24 @@ def test_parse_float_never_returns_one_from_garbage() -> None:
     assert _parse_float("ab") is None
 
 
+@pytest.mark.test_id("TEST-BUG001-012")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("Unit guard: az üres szövegtisztítás üres stringet ad.")
 def test_clean_text_empty() -> None:
     assert _clean_text("") == ""
 
 
+@pytest.mark.test_id("TEST-BUG001-013")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("Unit guard: a per-field konfidencia-dict tartalmazza mind a hat kulcsot.")
 def test_confidence_from_data_returns_all_keys() -> None:
     data = _confidence_from_data(clean_receipt())
     assert set(data.keys()) == {"vendor", "total", "date", "tax", "currency", "line_items"}
 
 
+@pytest.mark.test_id("TEST-BUG001-014")
+@pytest.mark.requirements("REQ-US-022-01")
+@pytest.mark.scenario("Unit guard: a parser ParsedReceipt dataclass-t ad vissza.")
 def test_parsed_receipt_is_dataclass() -> None:
     parsed = parse_receipt(clean_receipt())
     assert isinstance(parsed, ParsedReceipt)

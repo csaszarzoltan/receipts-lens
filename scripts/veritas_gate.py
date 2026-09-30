@@ -97,12 +97,57 @@ SECRET_PATTERNS = [
 # satisfy the metadata gate. A trailing ``,`` or ``)`` after the first argument
 # keeps legal multi-argument markers (e.g. ``test_id("A", "B")``) valid.
 REQUIRED_TEST_MARKERS = ("test_id", "requirements", "scenario")
+
+# The opening delimiter is captured in a named group and closed by a
+# BACK-REFERENCE to that same character, so only the delimiter that opened the
+# string can close it: an apostrophe inside double-quoted text is legal, and a
+# double quote inside single-quoted text is legal. A second, independent
+# character class ([^"']) forbids both and wrongly rejected correct Hungarian
+# scenario text such as
+#     @pytest.mark.scenario("AC1: total, 'uncertain' jelzés")
+# The inner run is ``.+?`` without re.DOTALL, so a marker call can never run
+# across a newline into a neighbouring decorator to satisfy the gate by
+# accident. The ``\s*[,)]`` tail keeps multi-argument markers and the closing
+# paren valid.
 _MARKER_PATTERNS = {
     name: re.compile(
-        rf"pytest\.mark\.{re.escape(name)}\(\s*[\"'][^\"']+[\"']\s*[,)]"
+        rf"pytest\.mark\.{re.escape(name)}\(\s*(?P<quote>[\"']).+?(?P=quote)\s*[,)]"
     )
     for name in REQUIRED_TEST_MARKERS
 }
+
+# Self-check: the marker patterns must accept every quoting style the suite
+# really uses, and must still reject a bare or empty marker. Without it a later
+# edit to the character class silently re-breaks correct test metadata and the
+# gate reports "missing scenario" on valid tests.
+_MARKER_SELF_CHECK_MATCHES = (
+    ("scenario", "pytest.mark.scenario(\"apostrophe: 'uncertain' jelzés\")"),
+    ("scenario", "pytest.mark.scenario('double quoted \"value\"')"),
+    ("test_id", 'pytest.mark.test_id("TEST-X-1")'),
+    ("requirements", 'pytest.mark.requirements("REQ-US-022-01")'),
+    ("scenario", 'pytest.mark.scenario("trailing comma ok",)'),
+)
+_MARKER_SELF_CHECK_REJECTS = (
+    ("scenario", "pytest.mark.scenario"),
+    ("scenario", 'pytest.mark.scenario("")'),
+)
+
+
+def _assert_marker_patterns_sound() -> None:
+    """Fail at import if the marker regex drifts from real test metadata."""
+    for name, source in _MARKER_SELF_CHECK_MATCHES:
+        assert _MARKER_PATTERNS[name].search(source), (
+            f"veritas_gate regression: marker pattern for '{name}' no longer "
+            f"matches valid metadata: {source!r}"
+        )
+    for name, source in _MARKER_SELF_CHECK_REJECTS:
+        assert not _MARKER_PATTERNS[name].search(source), (
+            f"veritas_gate regression: marker pattern for '{name}' wrongly "
+            f"accepts bare/empty metadata: {source!r}"
+        )
+
+
+_assert_marker_patterns_sound()
 
 
 # Git-context failures are gate failures with exit 2 (never a
