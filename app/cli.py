@@ -248,7 +248,11 @@ def _cmd_subscription_alerts(args: argparse.Namespace) -> int:
         "port": os.getenv("RECEIPTLENS_SMTP_PORT"),
         "user": os.getenv("RECEIPTLENS_SMTP_USER"),
         "password": os.getenv("RECEIPTLENS_SMTP_PASSWORD"),
-        "from_addr": os.getenv("RECEIPTLENS_SMTP_FROM_ADDR"),
+        # Both key spellings are accepted so an existing deployment that sets
+        # only RECEIPTLENS_SMTP_FROM (or only ..._FROM_ADDR) still sends.
+        "from_addr": (
+            os.getenv("RECEIPTLENS_SMTP_FROM") or os.getenv("RECEIPTLENS_SMTP_FROM_ADDR")
+        ),
     }
     if args.dry_run:
         # Intended: send_email_notification() bails out on its first line when
