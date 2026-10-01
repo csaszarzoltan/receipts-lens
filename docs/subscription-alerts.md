@@ -297,9 +297,19 @@ python -m app.cli subscription-alerts --tenant <id>
 
 SMTP connection settings are read from the environment —
 `RECEIPTLENS_SMTP_HOST`, `RECEIPTLENS_SMTP_PORT`, `RECEIPTLENS_SMTP_USER`,
-`RECEIPTLENS_SMTP_PASSWORD`, `RECEIPTLENS_SMTP_FROM_ADDR` — plus the
+`RECEIPTLENS_SMTP_PASSWORD`, `RECEIPTLENS_SMTP_FROM` — plus the
 `RECEIPTLENS_SMTP_ENABLED` gate described below. The recipient is **not** taken
 from the environment; the run resolves it itself.
+
+`RECEIPTLENS_SMTP_FROM_ADDR` is still accepted as a legacy fallback, so either
+spelling works: the sender address is read as `RECEIPTLENS_SMTP_FROM` first and
+falls back to `RECEIPTLENS_SMTP_FROM_ADDR` only when the first is unset.
+
+> **An empty or unset sender address fails at `MAIL FROM`**, not at the
+> recipient (the only fallback is `RECEIPTLENS_SMTP_USER`): the provider
+> rejects the message with `501 Bad recipient address syntax`. Nothing is
+> silently sent, but the error reads like a *recipient* problem, so check the
+> sender key before you chase the wrong one.
 
 ### Exit codes
 
