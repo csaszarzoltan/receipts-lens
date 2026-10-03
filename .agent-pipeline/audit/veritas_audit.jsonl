@@ -269,3 +269,9 @@
 {"timestamp": "2026-10-02T07:28:16.185192+00:00", "event_type": "VERIFY_METADATA", "verdict": "FAIL", "details": {"missing": ["tests/test_price_alert_delivery_proof.py::test_cli_run_delivers_and_records_ledger_row missing test_id,requirements,scenario", "tests/test_price_alert_delivery_proof.py::test_ledger_row_is_complete missing test_id,requirements,scenario", "tests/test_price_alert_delivery_proof.py::test_live_database_is_untouched_by_probe_run missing test_id,requirements,scenario", "tests/test_price_alert_delivery_proof.py::test_captured_message_has_envelope_and_body missing test_id,requirements,scenario"]}}
 {"timestamp": "2026-10-02T07:31:23.507668+00:00", "event_type": "VERIFY_DIFF", "verdict": "PASS", "details": {"files_count": 2, "role": "test_author"}}
 {"timestamp": "2026-10-02T07:31:23.532728+00:00", "event_type": "VERIFY_METADATA", "verdict": "PASS", "details": {"files_count": 2}}
+{"timestamp": "2026-10-02T07:34:46.232868+00:00", "event_type": "VERIFY_DIFF", "verdict": "PASS", "details": {"files_count": 1, "role": "runner"}}
+{"timestamp": "2026-10-02T08:47:14.494683+00:00", "event_type": "HISTORY_SCAN", "verdict": "PASS", "details": {"max_commits": 50, "hits": 0}}
+{"timestamp": "2026-10-02T09:16:10.674167+00:00", "event_type": "HISTORY_SCAN", "verdict": "PASS", "details": {"max_commits": 50, "hits": 0}}
+{"timestamp": "2026-10-02T09:28:54.050874+00:00", "event_type": "VERIFY_DIFF", "verdict": "FAIL", "details": {"violation": "r3_approval_missing", "files": ["app/subscription_alerts.py"]}}
+{"timestamp": "2026-10-03T08:15:27.452990+00:00", "event_type": "HISTORY_SCAN", "verdict": "PASS", "details": {"max_commits": 50, "hits": 0}}
+{"timestamp": "2026-10-03T08:20:52.456118+00:00", "event_type": "VERIFY_DIFF", "verdict": "FAIL", "details": {"violation": "r3_approval_missing", "files": ["app/subscription_alerts.py"]}}

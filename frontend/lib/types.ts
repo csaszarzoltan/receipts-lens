@@ -197,6 +197,22 @@ export interface RecentReceipt {
   confidence_level?: ConfidenceLevel | null;
 }
 
+export interface SavingsCandidate {
+  merchant: string;
+  potential_saving: number;
+  delta_pct: number;
+}
+
+export interface SavingsBlock {
+  period: string;
+  potential_saving: number;
+  total_spent: number;
+  avg_by_category: Record<string, number>;
+  currency: string;
+  top_candidates: SavingsCandidate[];
+  savings_candidates?: SavingsCandidate[];
+}
+
 export interface ConsumerDashboard {
   generated_at: string;
   tenant: string;
@@ -206,6 +222,7 @@ export interface ConsumerDashboard {
   cancellable_subscriptions: CancellableSubscription[];
   household: HouseholdStatus;
   recent_receipts: RecentReceipt[];
+  savings: SavingsBlock;
 }
 
 // ---------------------------------------------------------------------------

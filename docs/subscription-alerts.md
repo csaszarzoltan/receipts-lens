@@ -277,7 +277,7 @@ result = daily_scheduler(
     today="2026-08-10",  # optional anchor for testing
 )
 print(result)
-# {"subscriptions_checked": 3, "renewal_emails_sent": 2, "price_emails_sent": 1, "date": "2026-08-10"}
+# {"subscriptions_checked": 3, "renewal_emails_sent": 2, "price_emails_sent": 1, "price_alerts_suppressed": 0, "price_alerts_failed": 0, "date": "2026-08-10"}
 ```
 
 ## Running the daily check from the command line
@@ -292,7 +292,7 @@ python -m app.cli subscription-alerts --tenant <id>
 | Flag | Default | Description |
 |---|---|---|
 | `--tenant` | `demo` | Accounting workspace tenant id to scan. |
-| `--dry-run` | off | Suppress all outbound email: no send, and no `price_alert_sent` row is written. |
+| `--dry-run` | off | Suppress all outbound email: no send, and no `price_alert_sent` row survives (a claim taken during the scan is released again). |
 | `--today` | *(system date)* | ISO date anchor (`YYYY-MM-DD`) for a reproducible run. |
 
 SMTP connection settings are read from the environment —
@@ -321,19 +321,32 @@ falls back to `RECEIPTLENS_SMTP_FROM_ADDR` only when the first is unset.
 
 `--dry-run` never exits `1`; it sends nothing by design.
 
-### Run one instance at a time
+### Concurrent runs are safe; cross-machine dedup is not
 
-**This command assumes a single running instance.** Two concurrent runs can
-each send the same price-hike email, because the `price_alert_sent` UNIQUE
-constraint makes the bookkeeping safe but cannot make an SMTP send atomic —
-both runs clear the "already sent" check before either has recorded a row, so
-the table stays truthful (one row, written once) while the household receives
-the alert twice. The counters reflect this honestly: `price_emails_sent`
-counts the mail that really went out and is not decremented.
+The send is **single-instance-safe by construction**. The scheduler *claims*
+the `price_alert_sent` row (`ProductService.claim_price_alert_sent`, wrapped
+by `_claim_price_alert_sent`) **before** the mail leaves, so the UNIQUE
+constraint's `INSERT` is the mutual-exclusion token: the first run to insert
+owns the alert, and an overlapping run gets `IntegrityError` → `False`,
+counts the alert as suppressed, and never dials the SMTP server. Two runs
+racing on the same alert deliver **one** email.
 
-Do **not** add a second cron entry, a second worker, or an overlapping manual
-run without addressing this first — for example with a lock file or a
-single-owner job wrapper.
+Nothing is lost on error. Every non-delivery path — a refused send (SMTP host
+or opt-in gate), a send that raises, and even a tenant with no active owner —
+calls `_release_price_alert_sent` to drop the claim, so the next run
+re-detects and re-arms the alert. The release is not best-effort: a stranded
+claim would suppress that alert forever.
+
+A suppressed alert is **not** a failure. `price_alerts_failed` is the only
+failure counter and the only value that makes the run exit `1`; losing the
+race is a success, because the run holding the claim is responsible for the
+delivery.
+
+> **Caveat that still holds.** The claim protects concurrent runs of *this
+> command* against the *same* database file. It does **not** deduplicate
+> across two different machines or two separate database files, and it does
+> not stop two operators from deliberately running against different tenants
+> at once — those are two distinct alerts, and both are legitimately due.
 
 ### Scheduling is the operator's job
 
@@ -348,9 +361,11 @@ The recipient is the single **active household OWNER** — the first
 table. The owner always wins over any caller-supplied address. A tenant with
 no active owner receives nothing at all (the run logs it and continues).
 
-`price_alert_sent` rows are written **only** when a send actually succeeded. A
-hike that was detected but not delivered leaves no row, so the next run
-re-detects and re-arms it.
+A `price_alert_sent` row is a **claim**, taken before the send, not a receipt
+of one: it exists for the whole interval in which the alert is being
+delivered. A hike that was detected but not delivered leaves no row — the
+claim is released — so the next run re-detects and re-arms it. A row that
+survives a run therefore means the send succeeded.
 
 ## Email alerts
 
@@ -430,7 +445,7 @@ send_email_notification("Subject", "Body")
 
 # Daily scheduler (runs the full renewal + price-hike scan)
 result = daily_scheduler(today="2026-08-10")
-# -> {"subscriptions_checked": 3, "renewal_emails_sent": 2, "price_emails_sent": 1, "date": "2026-08-10"}
+# -> {"subscriptions_checked": 3, "renewal_emails_sent": 2, "price_emails_sent": 1, "price_alerts_suppressed": 0, "price_alerts_failed": 0, "date": "2026-08-10"}
 ```
 
 See [examples/subscriptions.py](../examples/subscriptions.py) for a runnable

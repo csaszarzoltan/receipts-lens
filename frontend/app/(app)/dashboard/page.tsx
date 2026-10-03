@@ -10,19 +10,21 @@ import type {
 } from "@/lib/types";
 import { PageSkeleton } from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
+import SavingsBlockCard from "@/components/SavingsBlockCard";
 import { formatDate, formatMoney } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
 /**
  * Consumer dashboard (F1.2 — docs/plans/consumer-pivot-2026-08-13.md §3.4).
  *
- * Six blocks, each shows live backend data (GET /api/v1/consumer/dashboard):
+ * Seven blocks, each shows live backend data (GET /api/v1/consumer/dashboard):
  *   1. „{t("dailyRemaining")}" — daily remaining (budget countdown)
  *   2. Monthly spending by category — „where my money went"
  *   3. {t("priceAlerts")} (existing subscription engine)
  *   4. {t("cancellableSubscriptions")}
  *   5. {t("householdStatus")} (household budget + members)
  *   6. {t("recentReceipts")}
+ *   7. {t("savingsOpportunities")} (SavingsBlockCard)
  *
  * Consumer language: no business jargon. in the empty state the block
  * onboarding/first-step CTA-ra mutat.
@@ -52,7 +54,7 @@ export default function ConsumerDashboardPage() {
     );
   }
 
-  const { daily_remaining, monthly_by_category, price_alerts, cancellable_subscriptions, household, recent_receipts } = data;
+  const { daily_remaining, monthly_by_category, price_alerts, cancellable_subscriptions, household, recent_receipts, savings } = data;
 
   return (
     <div className="space-y-6">
@@ -264,6 +266,9 @@ export default function ConsumerDashboardPage() {
 
       {/* 6. {t("recentReceipts")} */}
       <RecentReceiptsBlock receipts={recent_receipts} />
+
+      {/* 7. {t("savingsOpportunities")} */}
+      <SavingsBlockCard savings={savings} />
     </div>
   );
 }
