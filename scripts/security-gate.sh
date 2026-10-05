@@ -1,11 +1,53 @@
 #!/usr/bin/env bash
+# Security gate -- credential scan, then the tenant / MIME / SSRF test set.
+#
+# Every test file listed below MUST exist. A missing file is a gate failure, not
+# a reason to quietly run a smaller set: the previous `|| fallback` swallowed ANY
+# non-zero pytest exit, so a failing tenant-isolation test still printed
+# "Security gate PASS" and exited 0. The pre-flight loop below turns "file not
+# found" into a visible, explicit error, and the pytest exit code is no longer
+# discarded.
 set -euo pipefail
+
 # The scan below is scoped to the git index and the pytest targets are
 # root-relative, so run from the repo root regardless of the caller's CWD.
-cd "$(git rev-parse --show-toplevel)" || {
+#
+# NOTE: `cd "$(git rev-parse --show-toplevel)" || exit 2` does NOT work as a
+# fail-closed guard. When git fails the substitution expands to the empty
+# string, and bash treats `cd ""` as a no-op that returns 0 -- so the `||` branch
+# never fires and the gate continued in a directory with no git context. The
+# top level is therefore captured and checked explicitly, before anything else.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT" ]; then
   echo "security-gate FAIL: not a git repository — cannot establish scan scope (fail-closed)" >&2
   exit 2
-}
+fi
+cd "$REPO_ROOT"
+# Fail-closed pre-flight: the security test set must be COMPLETE before anything
+# else runs. This runs BEFORE the credential scan on purpose. A missing test file
+# is a different outcome from a credential leak, and the two must never be
+# reported as one result. (ZOO-24: the pre-flight used to run *after* the scan,
+# so the scan had already printed "Security gate PASS" before the gate went on
+# to fail for an entirely unrelated reason.)
+SECURITY_TESTS=(
+  tests/test_security_mime_contract.py
+  tests/test_tenant_isolation.py
+  tests/test_fetch_image_bytes.py
+  tests/test_magic_bytes.py
+)
+missing=()
+for test_file in "${SECURITY_TESTS[@]}"; do
+  if [ ! -f "$test_file" ]; then
+    missing+=("$test_file")
+  fi
+done
+if [ ${#missing[@]} -gt 0 ]; then
+  echo "Security gate FAIL: required test files are missing:" >&2
+  printf '  - %s\n' "${missing[@]}" >&2
+  echo "Add the test, or remove it from the security set. Never fall back silently." >&2
+  exit 1
+fi
+
 python3 - <<'PY'
 """Secret-file scan.
 
@@ -74,5 +116,9 @@ print(
     f'Security gate PASS: scanned {len(all_tracked)} tracked files, no credential files; '
     'tenant, MIME, SSRF, and audit regressions follow'
 )
+sys.exit(0)
 PY
-python3 -m pytest -q tests/test_security_mime_contract.py tests/test_tenant_isolation.py tests/test_fetch_image_bytes.py tests/test_magic_bytes.py 2>/dev/null || python3 -m pytest -q tests/test_fetch_image_bytes.py tests/test_magic_bytes.py
+echo "Security gate: running ${#SECURITY_TESTS[@]} test files (MIME contract, tenant isolation, SSRF fetcher, magic bytes)."
+pytest -q "${SECURITY_TESTS[@]}"
+echo "Security gate PASS: credential scan, MIME-spoof, tenant-isolation, SSRF-fetcher and magic-byte regressions are green."
+

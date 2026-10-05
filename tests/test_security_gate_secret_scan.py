@@ -27,10 +27,18 @@ Contract pinned here, exercised against the real script in a throwaway repo:
 Every case runs the actual ``scripts/security-gate.sh`` in a subprocess with
 its own git repo, so the assertions cover the shipped script, not a re-stated
 copy of its logic.
+
+Requirement: ZOO-24 / FEAT-RL-V02-REQ-010 (AC-RL-V02-10, AC-RL-V02-11) --
+the credential-file scan that ``security-gate.sh`` performs. The ids below
+(TEST-RL-V02-039 .. TEST-RL-V02-045, plus -019/-020) belong to this series
+and to no other. They previously reused TEST-RL-V02-012 .. -018, which
+``tests/test_veritas_gate.py`` owns for its staged-metadata checks; a test id
+must identify exactly one test, so the two subjects were renumbered apart.
 """
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -48,7 +56,28 @@ GATE = ROOT / "scripts" / "security-gate.sh"
 BIN_DIR = str(Path(sys.executable).parent)
 
 STUB_TEST = "def test_noop():\n    assert True\n"
-GATE_PYTEST_TARGETS = ("tests/test_fetch_image_bytes.py", "tests/test_magic_bytes.py")
+
+
+def _gate_security_tests() -> tuple[str, ...]:
+    """The gate's own dependency list, parsed out of the shipped script.
+
+    The fixture used to hard-code two of the four names here, so it silently
+    drifted: the gate gained two more required files and the fixture kept
+    building a tree that could never satisfy it. Parsing the array means a
+    future edit to the gate's dependency list is picked up by these tests
+    instead of failing them with a message about a missing file.
+    """
+    text = GATE.read_text(encoding="utf-8")
+    match = re.search(r"SECURITY_TESTS=\(\s*(.*?)\s*\)", text, re.DOTALL)
+    assert match, "SECURITY_TESTS array not found in the gate script"
+    names = [line.strip() for line in match.group(1).splitlines()]
+    assert names, "SECURITY_TESTS array is empty"
+    for name in names:
+        assert name.startswith("tests/") and name.endswith(".py"), f"unexpected entry {name!r}"
+    return tuple(names)
+
+
+GATE_PYTEST_TARGETS = _gate_security_tests()
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -99,7 +128,7 @@ def _run_gate(repo: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-@pytest.mark.test_id("TEST-RL-V02-012")
+@pytest.mark.test_id("TEST-RL-V02-039")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-010")
 @pytest.mark.scenario("AC-RL-V02-10")
 def test_local_gitignored_env_passes_with_warning(tmp_path: Path) -> None:
@@ -116,7 +145,7 @@ def test_local_gitignored_env_passes_with_warning(tmp_path: Path) -> None:
     assert "Security gate PASS" in result.stdout
 
 
-@pytest.mark.test_id("TEST-RL-V02-013")
+@pytest.mark.test_id("TEST-RL-V02-040")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-010")
 @pytest.mark.scenario("AC-RL-V02-11")
 def test_tracked_env_still_fails_the_gate(tmp_path: Path) -> None:
@@ -134,7 +163,7 @@ def test_tracked_env_still_fails_the_gate(tmp_path: Path) -> None:
     assert "Security gate PASS" not in result.stdout
 
 
-@pytest.mark.test_id("TEST-RL-V02-014")
+@pytest.mark.test_id("TEST-RL-V02-041")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-010")
 @pytest.mark.scenario("AC-RL-V02-10")
 def test_tracked_pem_fails_the_gate(tmp_path: Path) -> None:
@@ -151,7 +180,7 @@ def test_tracked_pem_fails_the_gate(tmp_path: Path) -> None:
     assert "certs/server.pem" in result.stderr
 
 
-@pytest.mark.test_id("TEST-RL-V02-015")
+@pytest.mark.test_id("TEST-RL-V02-042")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-010")
 @pytest.mark.scenario("AC-RL-V02-10")
 def test_tracked_secret_in_junk_named_dir_fails(tmp_path: Path) -> None:
@@ -173,7 +202,7 @@ def test_tracked_secret_in_junk_named_dir_fails(tmp_path: Path) -> None:
     assert "node_modules/pkg/id_rsa" in result.stderr
 
 
-@pytest.mark.test_id("TEST-RL-V02-016")
+@pytest.mark.test_id("TEST-RL-V02-043")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-010")
 @pytest.mark.scenario("AC-RL-V02-11")
 def test_clean_repo_passes_without_warnings(tmp_path: Path) -> None:
@@ -187,7 +216,7 @@ def test_clean_repo_passes_without_warnings(tmp_path: Path) -> None:
     assert "Security gate PASS" in result.stdout
 
 
-@pytest.mark.test_id("TEST-RL-V02-017")
+@pytest.mark.test_id("TEST-RL-V02-044")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-010")
 @pytest.mark.scenario("AC-RL-V02-10")
 def test_untracked_secret_in_ignored_dir_is_not_enumerated(tmp_path: Path) -> None:
@@ -206,7 +235,75 @@ def test_untracked_secret_in_ignored_dir_is_not_enumerated(tmp_path: Path) -> No
     assert "id_ed25519" not in result.stdout, "collapsed dirs are not enumerated by design"
 
 
-@pytest.mark.test_id("TEST-RL-V02-018")
+@pytest.mark.test_id("TEST-RL-V02-019")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-010")
+@pytest.mark.scenario("AC-RL-V02-11")
+def test_missing_security_test_is_not_reported_as_a_scan_result(tmp_path: Path) -> None:
+    """Root cause of the fixture failures: the two outcomes must stay distinct.
+
+    A missing security test is a DEPENDENCY failure, not a credential-scan
+    result. The pre-flight used to run *after* the scan, so the gate printed
+    "Security gate PASS: scanned N tracked files..." and only then failed for an
+    unrelated reason -- one PASS, one FAIL, for one run. Whichever order they
+    land in, a dependency-missing gate must never claim a scan PASS.
+    """
+    repo = _make_repo(tmp_path)
+    (repo / "tests/test_tenant_isolation.py").unlink()
+    _git(repo, "commit", "-qam", "drop a required security test")
+
+    result = _run_gate(repo)
+
+    assert result.returncode == 1, result.stdout
+    assert "required test files are missing" in result.stderr, result.stderr
+    assert "tests/test_tenant_isolation.py" in result.stderr
+    # The credential scan never ran, so it must not have announced a result.
+    assert "Security gate PASS" not in result.stdout, (
+        f"a missing dependency was reported as a scan PASS:\n{result.stdout}"
+    )
+    assert "tracked files" not in result.stdout, (
+        f"the scan reported a result despite the pre-flight failing:\n{result.stdout}"
+    )
+
+
+@pytest.mark.test_id("TEST-RL-V02-020")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-010")
+@pytest.mark.scenario("AC-RL-V02-11")
+def test_gate_never_silently_falls_back_to_a_smaller_test_set(tmp_path: Path) -> None:
+    """The `|| fallback` must not come back.
+
+    The shipped script once carried a second, narrower pytest invocation behind
+    `|| python3 -m pytest ...`, contradicting its own header comment. If any
+    fallback exists, a failing security test would be followed by a smaller run
+    that could still exit 0.
+    """
+    text = GATE.read_text(encoding="utf-8")
+    pytest_invocations = [
+        line for line in text.splitlines() if line.strip().startswith("pytest")
+        or line.strip().startswith("python3 -m pytest")
+    ]
+    assert len(pytest_invocations) == 1, (
+        "expected exactly one test invocation in the gate, found "
+        f"{len(pytest_invocations)}: {pytest_invocations}"
+    )
+    # Only executable shell lines, so a prose mention of `|| fallback` in a
+    # comment does not read as a code path.
+    code = [
+        line
+        for line in text.splitlines()
+        if not line.lstrip().startswith("#")
+    ]
+    # The precise invariant: no pytest run may be guarded by `||`, which is what
+    # let a failing security test fall through to a smaller set that exited 0.
+    # `||` is legitimate elsewhere (`|| true`, `[ a ] || [ b ]` guards).
+    guarded = [
+        line.strip()
+        for line in code
+        if "||" in line and ("pytest" in line or line.strip().startswith("pytest"))
+    ]
+    assert not guarded, f"a pytest invocation is guarded by `||`: {guarded}"
+
+
+@pytest.mark.test_id("TEST-RL-V02-045")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-010")
 @pytest.mark.scenario("AC-RL-V02-11")
 def test_missing_git_context_fails_closed(tmp_path: Path) -> None:

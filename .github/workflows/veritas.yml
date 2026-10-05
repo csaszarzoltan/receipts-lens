@@ -31,6 +31,7 @@ jobs:
         # vacuously on a clean tree. First-push zero-SHA falls back to the
         # empty tree so the whole commit is examined.
         run: |
+
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             git fetch origin "${{ github.base_ref }}" --depth=1
             export VERITAS_DIFF_BASE="origin/${{ github.base_ref }}"
@@ -42,6 +43,19 @@ jobs:
             export VERITAS_DIFF_BASE="$BEFORE"
           fi
           VERITAS_DIFF_BASE="$VERITAS_DIFF_BASE" python scripts/veritas_gate.py --verify-diff --verify-metadata --role auto
+      # ZOO-21: gate 10 is regenerated fresh and verified every run, so CI
+      # always measures the CURRENT tree rather than trusting a committed
+      # artifact. The artifact stays committed so human review can diff it;
+      # the regeneration is what makes CI's verdict independent of it.
+      # --strict-traceability is deliberately NOT passed here: while
+      # traceability_policy.mode is 'migration', unresolved synthetic ids in
+      # the gate's own test files would fail every PR. Strict is the
+      # post-migration posture, flipped together with coverage_enforcement.
+      - name: Regenerate and verify traceability artifact (gate 10)
+        run: |
+          python scripts/traceability_runner.py
+          python scripts/veritas_gate.py --verify-traceability
+
       - name: VERITAS gate — check-all + metadata (push gate)
         # Branch protection required check privat free tieren nem
         # elerheto, ezert ez a gate push-ra IS fut — nem csak PR-ban.

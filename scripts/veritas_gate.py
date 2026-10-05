@@ -684,6 +684,250 @@ def verify_test_metadata(staged_only: bool = False) -> bool:
     return True
 
 
+def _gate_10_config() -> dict:
+    """Gate 10's block from .ai/quality-gates.yaml, or {} if unreadable."""
+    try:
+        gates = yaml.safe_load(QUALITY_GATES.read_text(encoding="utf-8-sig")).get("gates", {})
+        return gates.get("10_traceability_gate", {}) or {}
+    except (OSError, UnicodeError, yaml.YAMLError, AttributeError):
+        return {}
+
+
+def _load_traceability_artifact() -> dict:
+    path = REPO_ROOT / ".agent-pipeline" / "audit" / "traceability.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _artifact_reproduces(artifact: dict) -> tuple[bool, str]:
+    """Re-derive the artifact at the commit it claims, via the runner's --check.
+
+    Checking against the artifact's OWN recorded commit (not HEAD) is what makes
+    this deterministic: it cannot change while this runs, and a concurrent
+    commit in a shared workspace cannot fail the gate for unrelated reasons.
+    """
+    runner = REPO_ROOT / "scripts" / "traceability_runner.py"
+    if not runner.is_file():
+        return False, f"traceability runner is missing: {runner}"
+    proc = subprocess.run(
+        [sys.executable, str(runner), "--check"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    detail = (proc.stdout + proc.stderr).strip().splitlines()
+    return proc.returncode == 0, (detail[-1] if detail else "no output")
+
+
+def verify_traceability(strict: bool = False) -> bool:
+    """Gate 10 — require a runner-generated traceability artifact (ZOO-21).
+
+    Until this existed, gate 10 was UNSATISFIABLE: nothing emitted a
+    traceability artifact, so ``require_runner_generated_traceability: true``
+    described a runner that did not exist and no gate could verify it. The gate
+    now CONSUMES the artifact instead of merely declaring the requirement.
+
+    The artifact is regenerated from the working tree before comparison, so an
+    uncommitted edit cannot hide from the gate. That matters: the artifact's
+    committed-tree scope exists so a figure pinned in .ai/ is reproducible, but
+    a gate that only ever looks at a committed tree cannot see a marker being
+    deleted in the very file being edited. The gate therefore re-measures
+    LIVE and compares against the last RECORDED counts:
+
+      * live measured counts < recorded counts  -> a marker was removed
+      * duplicate test ids                      -> always a failure
+      * measured < target_percent               -> only under fail_below_target
+
+    Under ``ratchet`` enforcement the count comparison is the binding check.
+    Comparing a rounded percentage is not enough: removing one of 80
+    compliant tests moves 4.3% by less than a tenth of a point, so a
+    percentage floor would sail straight past it. Losing a marker is a
+    regression no matter how small the percentage shift, so the ratchet is
+    counted in tests, not percent.
+    """
+    print(">> [VERITAS GATE] Verifying traceability artifact (gate 10)...")
+    policy = {}
+    try:
+        policy = (
+            yaml.safe_load(PROJECT_PROFILE.read_text(encoding="utf-8-sig")) or {}
+        ).get("traceability_policy", {}) or {}
+    except (OSError, UnicodeError, yaml.YAMLError):
+        policy = {}
+
+    # Re-measure the LIVE tree, including uncommitted edits.
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    try:
+        from traceability_runner import build_report  # noqa: PLC0415
+    except ImportError as exc:
+        print(f"[FAIL] Cannot load the traceability runner: {exc}")
+        log_audit_event("TRACEABILITY", {"error": "runner_unimportable"}, "FAIL")
+        return False
+
+    try:
+        live = build_report(include_worktree=True)
+    except Exception as exc:  # noqa: BLE001 - a broken runner must fail closed
+        print(f"[FAIL] Traceability runner could not measure the working tree: {exc}")
+        log_audit_event("TRACEABILITY", {"error": "runner_error"}, "FAIL")
+        return False
+
+    try:
+        recorded = _load_traceability_artifact()
+    except (OSError, json.JSONDecodeError) as exc:
+        print(
+            f"[FAIL] No committed traceability artifact at "
+            f".agent-pipeline/audit/traceability.json ({exc}).\n"
+            f"       Run: python scripts/traceability_runner.py"
+        )
+        log_audit_event("TRACEABILITY", {"error": "artifact_missing"}, "FAIL")
+        return False
+
+    ok, detail = _artifact_reproduces(recorded)
+    print(f"   {detail}")
+    if not ok:
+        log_audit_event("TRACEABILITY", {"error": "artifact_stale"}, "FAIL")
+        return False
+
+    measured_pct = float(recorded.get("compliant_percent", 0.0))
+    recorded_compliant = int(recorded.get("functions_with_all_three_markers", 0))
+    live_compliant = int(live.get("functions_with_all_three_markers", 0))
+    duplicates = int(recorded.get("test_id_identity", {}).get("duplicate_count", 0))
+    unresolved = int(recorded.get("spec_references", {}).get("unresolved_count", 0))
+
+    print(
+        f"   measured marker coverage: {measured_pct}% "
+        f"({recorded_compliant}/{recorded.get('test_functions_total')})"
+        f" @ {(recorded.get('commit') or '?')[:12]}"
+    )
+    print(f"   live working-tree count:   {live_compliant} compliant")
+    print(f"   unresolved spec refs:      {unresolved}")
+    print(f"   duplicate test ids:        {duplicates}")
+
+    failures: list[str] = []
+
+    if duplicates:
+        failures.append(
+            f"{duplicates} test id(s) identify more than one test: "
+            f"{sorted(recorded['test_id_identity']['duplicates'])}"
+        )
+
+    # Marker loss, checked PER FILE against the recorded commit.
+    #
+    # Comparing whole-suite totals looks simpler and is wrong. Adding a new
+    # marker-complete test raises the live count above the recorded one, and
+    # that surplus then cancels out a genuine deletion elsewhere — a single
+    # removed marker was observed sailing through this gate during development.
+    # Per-file comparison has no such cancellation: a file that had all three
+    # markers at the recorded commit and has fewer now has lost one, and no
+    # other file can mask that.
+    recorded_by_file = recorded.get("by_file_compliant", {})
+    live_by_file = live.get("by_file_compliant", {})
+    lost: list[str] = []
+    for path, was in recorded_by_file.items():
+        now = live_by_file.get(path)
+        if now is None:
+            lost.append(f"{path}: file is gone ({was} compliant test(s) recorded)")
+        elif now < was:
+            lost.append(f"{path}: {was} -> {now} compliant test(s)")
+    for item in lost:
+        failures.append(f"markers LOST vs recorded commit — {item}")
+
+    target_raw = policy.get("target_percent")
+    target = None if target_raw is None else float(target_raw)
+    floor_raw = policy.get("enforcement_floor_percent")
+    floor = None if floor_raw is None else float(floor_raw)
+    enforcement = policy.get("coverage_enforcement", "ratchet")
+
+    if target is None:
+        failures.append(
+            "traceability_policy.target_percent is unset, so the 100% expectation "
+            "has no pass/fail criterion at all"
+        )
+    elif enforcement == "fail_below_target":
+        if measured_pct < target:
+            failures.append(
+                f"marker coverage {measured_pct}% is below target_percent {target}%"
+            )
+    elif enforcement == "ratchet":
+        if floor is None:
+            failures.append(
+                "coverage_enforcement is 'ratchet' but enforcement_floor_percent "
+                "is unset, so the ratchet has no threshold to enforce"
+            )
+        elif measured_pct < floor:
+            failures.append(
+                f"marker coverage {measured_pct}% has fallen below the enforced "
+                f"ratchet floor of {floor}%"
+            )
+    else:
+        failures.append(
+            f"unknown coverage_enforcement {enforcement!r}; expected 'ratchet' "
+            f"or 'fail_below_target'"
+        )
+
+    if unresolved and strict:
+        failures.append(f"{unresolved} spec reference(s) resolve to no spec file")
+
+    if failures:
+        for item in failures:
+            print(f"[FAIL] {item}")
+        log_audit_event(
+            "TRACEABILITY",
+            {
+                "compliant_percent": measured_pct,
+                "live_compliant": live_compliant,
+                "recorded_compliant": recorded_compliant,
+                "target_percent": target,
+                "enforcement_floor_percent": floor,
+                "coverage_enforcement": enforcement,
+                "unresolved_spec_refs": unresolved,
+                "duplicate_test_ids": duplicates,
+                "failures": failures,
+            },
+            "FAIL",
+        )
+        return False
+
+    enforced = target if enforcement == "fail_below_target" else floor
+    gained = live_compliant - recorded_compliant
+    print(
+        f"[PASS] Traceability artifact verified at "
+        f"{(recorded.get('commit') or '')[:7]}: coverage {measured_pct}% "
+        f"meets the enforced threshold {enforced}% ({enforcement}); "
+        f"no markers lost ({live_compliant} live, {recorded_compliant} recorded"
+        + (f", +{gained} in flight)." if gained > 0 else ").")
+    )
+    if enforcement == "ratchet" and target is not None and measured_pct < target:
+        # The point of this ticket: the gap between where the repo is and where
+        # it claims to be is printed on EVERY run, so it cannot quietly persist
+        # behind a green gate.
+        print(
+            f"[INFO] TARGET NOT MET: {measured_pct}% measured vs target_percent "
+            f"{target}%. The gap is real and unenforced while the migration is "
+            f"outstanding — see .ai/traceability-gap.md."
+        )
+    if unresolved:
+        print(
+            f"[INFO] {unresolved} spec reference(s) do not resolve; reported, "
+            f"not enforced while mode={policy.get('mode')!r}."
+        )
+    log_audit_event(
+        "TRACEABILITY",
+        {
+            "compliant_percent": measured_pct,
+            "live_compliant": live_compliant,
+            "recorded_compliant": recorded_compliant,
+            "target_percent": target,
+            "enforcement_floor_percent": floor,
+            "coverage_enforcement": enforcement,
+            "unresolved_spec_refs": unresolved,
+            "duplicate_test_ids": duplicates,
+            "commit": recorded.get("commit"),
+        },
+        "PASS",
+    )
+    return True
+
+
 def check_history_secrets(max_commits: int = 50) -> bool:
     """History scan — committed secrets in product paths fail the gate.
 
@@ -887,6 +1131,19 @@ def main():
         help="History scan: git log over last 50 commits for committed secrets.",
     )
     parser.add_argument("--check-all", action="store_true", help="Run all standard gate checks")
+    parser.add_argument(
+        "--verify-traceability",
+        action="store_true",
+        help="Gate 10: verify the runner-generated traceability artifact",
+    )
+    parser.add_argument(
+        "--strict-traceability",
+        action="store_true",
+        help=(
+            "Gate 10: additionally FAIL on spec references that resolve to no "
+            "spec file. Off while traceability_policy.mode is 'migration'."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -903,6 +1160,7 @@ def main():
             args.verify_metadata,
             args.run_suite,
             args.history_scan,
+            args.verify_traceability,
             args.check_all,
         ]
     ):
@@ -917,6 +1175,12 @@ def main():
 
     if args.verify_metadata or args.check_all:
         success = verify_test_metadata(staged_only=args.staged) and success
+
+    # Gate 10. On --check-all so the coverage target is exercised by CI rather
+    # than only declared. --strict-traceability additionally fails on
+    # unresolved spec references — the post-migration posture.
+    if args.verify_traceability or args.check_all:
+        success = verify_traceability(strict=args.strict_traceability) and success
 
     if args.history_scan or args.check_all:
         success = check_history_secrets() and success
