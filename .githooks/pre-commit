@@ -25,10 +25,30 @@ REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" \
   || fail "repo-gyoker lekerese sikertelen (fail-closed)" 2
 cd "$REPO_ROOT"
 
-# 1) Primer ut: runner staged modban.
+# 1) Primer ut: runner staged modban (venv elobb, probe, fail-closed ha nincs yaml).
 if [[ -f scripts/veritas_gate.py ]]; then
   runner="scripts/veritas_gate.py"
-  if python3 "$runner" --verify-diff --verify-metadata --staged \
+  _veritas_py=""
+  for _cand in "${REPO_ROOT}/.venv/bin/python" python3; do
+    if [[ "$_cand" == "${REPO_ROOT}/.venv/bin/python" ]]; then
+      [[ -x "$_cand" ]] || continue
+    else
+      command -v "$_cand" >/dev/null 2>&1 || continue
+    fi
+    if "$_cand" -c 'import yaml' >/dev/null 2>&1; then
+      _veritas_py="$_cand"
+      break
+    fi
+  done
+  if [[ -z "$_veritas_py" ]]; then
+    echo "veritas pre-commit FAIL: no interpreter with the 'yaml' module found." >&2
+    echo "veritas pre-commit FAIL: tried: ${REPO_ROOT}/.venv/bin/python, python3" >&2
+    echo "veritas pre-commit FAIL: fix with: python3 -m venv .venv && .venv/bin/pip install pyyaml" >&2
+    echo "veritas pre-commit FAIL: refusing to run the gate under an interpreter it cannot import; run with" >&2
+    echo "veritas pre-commit FAIL: 'git commit --no-verify' ONLY if CI is your gate (see hook header)." >&2
+    exit 2
+  fi
+  if "$_veritas_py" "$runner" --verify-diff --verify-metadata --staged \
       --role "${VERITAS_ROLE:-auto}"; then
     echo "veritas pre-commit: PASS (runner staged diff + metadata)"
     exit 0
