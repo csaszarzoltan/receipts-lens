@@ -51,6 +51,18 @@ by the human, in their own words:
 Do NOT partial-commit: `app/product_service.py` alone ships dead code
 (claim methods with no caller).
 
-## Operational caveat (historical — superseded by the fix above)
-Two concurrent `subscription-alerts` runs WILL double-mail. Run it once
-at a time; do not add a second cron entry or an overlapping manual run.
+## Operational caveat — NO LONGER IN FORCE (was true before 77741a8)
+
+Before the fix, two concurrent `subscription-alerts` runs could each send the same alert.
+That is no longer the case: `subscription_alerts.py:948` now claims the send *before* the SMTP
+call, so the second run sees the claim and skips. **This paragraph is kept only as history; it
+is not an operational instruction.** The current rule is a different one and it is a real limit:
+
+- **Duplicate-safe, not exactly-once.** The claim is a pre-send marker, not a lock around the
+  send. A process killed between the claim INSERT and the SMTP call leaves the row claimed and
+  that household's alert unsent; nothing reaps it (no TTL, no expiry-on-conflict — deferred to
+  a spec of its own, `app/product_service.py:378`). So the guarantee bought by 77741a8 is
+  "no silent double-mail on the graceful path", not "every alert arrives exactly once".
+- **What this replaced:** the pre-fix text read "Two concurrent `subscription-alerts` runs WILL
+  double-mail. Run it once at a time." That was the reason for the single-run constraint; the
+  constraint is no longer the mitigation.
