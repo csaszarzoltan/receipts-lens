@@ -16,12 +16,24 @@ How the count is established from the raw output below:
     grep -c 'passed' /tmp/rl-suite.txt          -> 0   (no summary line: -q + -p no:warnings)
     exit code                                   -> 0   (zero failures)
 
+**Measure the RAW section, not this whole file.** This document's own prose adds dots of its own, so
+a naive count over the whole file is larger than the suite's. Measured both ways on this file:
+
+    whole file        -> reported by the naive count, and it is NOT the suite number
+    marked section    -> exactly 1755
+
+The markers below delimit the raw output; count only between them. **Stated here because a
+verification artifact that misleads its own reader is the same defect class it was written to fix** -
+and my first version of this file did exactly that.
+
 So the number was correct, and it was unverifiable for exactly one reason: it had been supplied by
 the layer that later scored the absence of evidence. The class-level rule is now in
 post-task-review PART 1c - never assert a measurement in a brief; ask for the command that produces
 it. This file closes the instance.
 
 ## Raw output (verbatim, dots = one test each; s = skipped)
+
+<<<RAW-SUITE-OUTPUT-START>>> (count dots from the line after this marker)
 
 ........................................................................ [  4%]
 ........................................................................ [  8%]
@@ -48,3 +60,5 @@ ss...................................................................... [ 89%]
 ........................................................................ [ 93%]
 ........................................................................ [ 97%]
 .....................................                                    [100%]
+
+<<<RAW-SUITE-OUTPUT-END>>>
