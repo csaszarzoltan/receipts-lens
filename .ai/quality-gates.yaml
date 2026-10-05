@@ -84,8 +84,8 @@ gates:
       runner_generated_traceability: present
       artifact_path: ".agent-pipeline/audit/traceability.json"
       artifact_generator: "scripts/traceability_runner.py"
-      # Measured by scripts/traceability_runner.py at 0992ccf. These are the
-      # runner's own numbers, not estimates: 474 of 1978 functions carry all
+      # Measured by scripts/traceability_runner.py at f74abf9. These are the
+      # runner's own numbers, not estimates: 480 of 1984 functions carry all
       # three markers (test_id, requirements, scenario).
       #
       # BOTH trees the runner scans are counted: tests/ AND
@@ -93,13 +93,13 @@ gates:
       # 4.8%) was computed by verify_test_metadata(), which scans a different
       # and smaller set — comparing the two was never meaningful.
       requirement_coverage:
-        compliant: 474
-        total: 1978
-        percent: "24.0"
-        measured_at_commit: 0992ccf
+        compliant: 480
+        total: 1984
+        percent: "24.2"
+        measured_at_commit: f74abf9
         measured_by: "scripts/traceability_runner.py --json"
         by_test_tree:
-          tests: {compliant: 474, total: 1562, percent: "30.3"}
+          tests: {compliant: 480, total: 1568, percent: "30.6"}
           e2e: {compliant: 0, total: 416, percent: "0.0"}
       # Synthetic self-referential ids (FEAT-RL-V02-REQ-*, AC-RL-V02-*) in 2
       # test files, not broken links to real specs. Reported every run;

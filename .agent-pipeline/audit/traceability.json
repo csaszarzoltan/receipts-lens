@@ -14,8 +14,10 @@
     "tests/test_insight_delivery_033b.py": 13,
     "tests/test_permissions_constitutional_protection.py": 4,
     "tests/test_precommit_gate_enforcement.py": 5,
+    "tests/test_price_alert_concurrency.py": 2,
     "tests/test_price_alert_delivery_proof.py": 4,
     "tests/test_price_alert_f2_5.py": 8,
+    "tests/test_price_alert_release_paths.py": 4,
     "tests/test_production_auth_gate.py": 4,
     "tests/test_profile_honesty.py": 9,
     "tests/test_quality_service.py": 13,
@@ -49,17 +51,17 @@
       "with_all_three_markers": 0
     },
     "tests": {
-      "compliant_percent": 30.3,
-      "test_functions": 1562,
-      "with_all_three_markers": 474
+      "compliant_percent": 30.6,
+      "test_functions": 1568,
+      "with_all_three_markers": 480
     }
   },
-  "commit": "0992ccf946f4e1d924ec7cf0f3777ff470b0c47b",
-  "compliant_percent": 24.0,
+  "commit": "f74abf96b9501120cd347fe9ca7ade31473b12f0",
+  "compliant_percent": 24.2,
   "enforcement_scope": "delta_only",
   "files_with_noncompliant_tests": 120,
-  "functions_with_all_three_markers": 474,
-  "generated_at": "2026-10-05T08:42:01.463387+00:00",
+  "functions_with_all_three_markers": 480,
+  "generated_at": "2026-10-05T12:56:17.872189+00:00",
   "generated_by": "scripts/traceability_runner.py",
   "ref": "HEAD",
   "schema_version": "1.0",
@@ -1309,6 +1311,26 @@
       },
       {
         "marker": "requirements",
+        "test": "tests/test_price_alert_concurrency.py::test_concurrent_runs_send_price_alert_exactly_once",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_concurrency.py::test_concurrent_runs_send_price_alert_exactly_once",
+        "value": "AC-F25-05: two concurrent daily_scheduler runs over the same price hike send the price-increase email EXACTLY ONCE. The claim into price_alert_sent is taken BEFORE the send (app/subscription_alerts.py:939), so the UNIQUE key now guards the decision to send rather than only the bookkeeping after it, and the loser returns False without reaching the transport."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_concurrency.py::test_sequential_rerun_sends_once_and_leaves_one_ledger_row",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_concurrency.py::test_sequential_rerun_sends_once_and_leaves_one_ledger_row",
+        "value": "AC-F25-06: two SEQUENTIAL daily_scheduler runs over the same price hike send the price-increase email exactly once and leave exactly one price_alert_sent row; the second run reports the alert suppressed rather than failed. Control case for TEST-PRICECONC-001 -- it passes, which is what shows the concurrent failure is a race and not a broken key."
+      },
+      {
+        "marker": "requirements",
         "test": "tests/test_price_alert_delivery_proof.py::test_cli_run_delivers_and_records_ledger_row",
         "value": "REQ-F2-5"
       },
@@ -1426,6 +1448,46 @@
         "marker": "scenario",
         "test": "tests/test_price_alert_f2_5.py::test_same_merchant_second_hike_rearms_the_key",
         "value": "AC-PRICE-9"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_release_paths.py::test_no_active_owner_releases_claim_and_is_not_a_failure",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_release_paths.py::test_no_active_owner_releases_claim_and_is_not_a_failure",
+        "value": "AC-F25-07: P1 -- a won claim with no active owner to address (recipient resolution returns None) is released rather than stranded: price_emails_sent, price_alerts_suppressed and price_alerts_failed all stay 0, send_email_notification is never called, no price_alert_sent row is left behind, and once an owner exists again the next run delivers the alert with one ledger row. The claim is taken before the recipient is resolved (app/subscription_alerts.py:916 vs :945), so the resolution None path releases a real row; a claim that is not released here would suppress the hike forever."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_release_paths.py::test_refused_send_releases_claim_and_next_run_delivers",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_release_paths.py::test_refused_send_releases_claim_and_next_run_delivers",
+        "value": "AC-F25-08: P2 -- when send_email_notification returns False after the claim was won, price_alerts_failed is 1 and no price_alert_sent row is left behind; the very next run with a working transport delivers the alert and writes one ledger row. Proves the claim was released rather than merely absent."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_release_paths.py::test_raising_send_releases_claim_and_next_run_delivers",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_release_paths.py::test_raising_send_releases_claim_and_next_run_delivers",
+        "value": "AC-F25-09: P3 -- when send_email_notification raises OSError after the claim was won, price_alerts_failed is 1 and no price_alert_sent row is left behind; the very next run with a working transport delivers the alert and writes one ledger row. An exception escaping the send path without a release is the same permanent suppression as a refused send."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_release_paths.py::test_resolution_exception_releases_claim_and_next_run_delivers",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_release_paths.py::test_resolution_exception_releases_claim_and_next_run_delivers",
+        "value": "AC-F25-10: P4 -- a sqlite3.OperationalError raised by _resolve_price_alert_recipient (a locked database) after the claim was won is caught: price_alerts_failed is 1, no price_alert_sent row is left behind, and the next run with the fault removed resolves the owner and delivers the alert with one ledger row. Recipient resolution reads the same SQLite file that holds the claim, so hoisting it out of the release scope strands every later run."
       },
       {
         "marker": "requirements",
@@ -3758,12 +3820,12 @@
         "value": "AC-RL-V02-15"
       }
     ],
-    "unresolved_count": 738
+    "unresolved_count": 750
   },
-  "test_files_total": 160,
-  "test_functions_total": 1978,
+  "test_files_total": 162,
+  "test_functions_total": 1984,
   "test_id_identity": {
-    "distinct_ids": 477,
+    "distinct_ids": 483,
     "duplicate_count": 0,
     "duplicates": {}
   },
