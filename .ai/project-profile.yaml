@@ -5,18 +5,54 @@ project:
   adoption:
     methodology_level: L2
     runner_level: R1
+    # A control belongs in achieved_controls ONLY when a deterministic,
+    # re-runnable runner artifact proves it. A documented intent, a CI key, or
+    # a test that could pass vacuously is NOT evidence. Method, measurements
+    # and the per-control verdict: .ai/traceability-gap.md (ZOO-18 audit).
     achieved_controls:
       - structured_specifications
-      - generated_traceability
       - role_separated_diffs
       - targeted_and_full_regression
       - context_fitness_enforcement
       - deterministic_runner_gates
+    # Controls that are NOT achieved. Each entry names the missing evidence,
+    # not merely the absence of a preference.
     declared_gaps:
+      # not implemented — nincs runner, amely traceability artifact-ot emitál.
+      # No code in tests/, scripts/ or .github/ writes a traceability artifact,
+      # so gate 10's require_runner_generated_traceability is unsatisfiable.
+      - generated_traceability
       - signed_policy
       - content_addressed_store
       - deterministic_replay
       - microvm_isolation
+    # Honest per-control verification status from the ZOO-18 audit.
+    # "unverified" means: no runner artifact was found proving or disproving
+    # it in this audit. It is NOT an accusation and NOT an achieved claim.
+    # Re-audit is tracked separately from the traceability gap.
+    control_evidence:
+      structured_specifications: verified_present
+      role_separated_diffs: verified_present
+      deterministic_runner_gates: verified_present
+      targeted_and_full_regression: unverified
+      context_fitness_enforcement: unverified
+      generated_traceability: not_implemented
+    # Facts measured at e4e9a82 by scripts/count_traceability_coverage.py.
+    # Kept adjacent to the claim so the two cannot drift apart silently.
+    # Re-measure after any test change; do not hand-edit these numbers:
+    #   python scripts/count_traceability_coverage.py --ref <commit> --json
+    # tests/test_profile_honesty.py re-derives these and fails on any drift.
+    # scope: committed_tree — NOT the working tree, so concurrent in-flight
+    # work cannot silently move a figure pinned here.
+    traceability_measurement:
+      measured_at_commit: e4e9a82
+      test_files_total: 85
+      test_functions_total: 1388
+      functions_with_all_three_markers: 31
+      compliant_percent: "2.2"
+      files_with_at_least_one_noncompliant_test: 82
+      scope: committed_tree
+      scope_of_enforcement: delta_only
   specification_status: reverse_engineered_proposed
   languages:
     python: "3.11+"
@@ -52,6 +88,40 @@ traceability_policy:
   filename_fallback_allowed_for_legacy_tests: true
   commit_message_only_allowed: false
   generate_at_final_safety_gate: true
+  # ZOO-21: the 100% expectation now has a real criterion, so gate 10 stops
+  # being a declaration and becomes a measurement. verify_traceability() in
+  # scripts/veritas_gate.py reads the runner-generated artifact
+  # (.agent-pipeline/audit/traceability.json) and compares it against these.
+  #
+  # target_percent is the GOAL. It is declared, measured against, and printed
+  # on every run, so the gap stays visible. It is NOT the threshold enforced
+  # today — see enforcement_floor_percent.
+  target_percent: 100
+  # The ratchet enforced today. Measured coverage is 4.8% across both test
+  # trees (89/1862) at 4b5b4d5.
+  #
+  # Why a ratchet and not fail-below-target: the goal is 100% and reality is
+  # 4.8%, so a hard target fails EVERY run of every agent in this repo until
+  # the 134-file migration finishes. A permanently-red gate stops being read —
+  # it would train everyone to ignore gate 10, reproducing exactly the blindness
+  # ZOO-18 documented. The ratchet instead fails the moment a marker is
+  # removed or the migration regresses, which is a real enforcement with a real
+  # failure mode, and becomes the hard target by flipping
+  # coverage_enforcement to fail_below_target when the migration completes.
+  #
+  # The percentage floor is a coarse backstop. The check that actually catches
+  # a removed marker is per-file and lives in verify_traceability(): removing
+  # one of 89 compliant tests moves the percentage by less than a tenth of a
+  # point, so a percentage floor alone would sail straight past it.
+  enforcement_floor_percent: 4
+  # ratchet          — FAIL only if a marker is lost or coverage drops below the floor
+  # fail_below_target — FAIL until measured coverage reaches target_percent
+  coverage_enforcement: ratchet
+  # Unresolved spec references are reported every run and enforced only under
+  # --strict-traceability. The 40 current refs are synthetic self-referential
+  # ids in 2 test files, not broken links to real specs; see
+  # .ai/traceability-gap.md.
+  spec_reference_enforcement: report_only_during_migration
 pull_request:
   auto_create: false
   auto_merge: false

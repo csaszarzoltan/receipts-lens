@@ -52,9 +52,58 @@ gates:
     require_build_pass: true
 
   10_traceability_gate:
+    # ZOO-21: the runner EXISTS and the gate READS it. The first `require_*`
+    # key below is now satisfied by a real artifact, and verify_traceability()
+    # in scripts/veritas_gate.py fails when the artifact is missing, stale, or
+    # shows a lost marker. Do not "simplify" this gate back into a declaration:
+    # that unsatisfiable state is exactly what ZOO-18 had to document.
+    #
+    # The SECOND `require_*` key is still a TARGET, not a measurement. Real
+    # marker coverage is 4.8% (89/1862) across both test trees at 4b5b4d5, not
+    # 100%. The 100% is the migration's end state; the migration itself is
+    # outstanding work on 134 files and is out of scope for this ticket.
+    #
+    # Why `enforcement_status` is still `not_enforced` even though a gate now
+    # runs: `enforced` here means "the 100% target is enforced", and it is not.
+    # What IS enforced is the ratchet — coverage cannot fall below
+    # enforcement_floor_percent and no marker can be removed. Both facts are
+    # recorded below rather than blurred into one word.
     require_runner_generated_traceability: true
     require_100_percent_requirement_coverage: true
     reject_missing_test_id: true
+    enforcement_status: not_enforced
+    enforced_now:
+      # What the gate actually fails on today. See traceability_policy in
+      # .ai/project-profile.yaml for the full rationale.
+      - traceability_artifact_present
+      - traceability_artifact_reproduces
+      - no_marker_lost_versus_recorded
+      - coverage_at_or_above_ratchet_floor
+      - test_ids_unique
+    measured:
+      runner_generated_traceability: present
+      artifact_path: ".agent-pipeline/audit/traceability.json"
+      artifact_generator: "scripts/traceability_runner.py"
+      # Across BOTH trees verify_test_metadata() scans: tests/ AND
+      # .agent-pipeline/03_e2e_suites/. The ZOO-18 figure counted tests/ only,
+      # so the 416 e2e functions were invisible to it.
+      requirement_coverage:
+        compliant: 89
+        total: 1862
+        percent: "4.8"
+        measured_at_commit: 4b5b4d5
+        by_test_tree:
+          tests: {compliant: 89, total: 1446, percent: "6.2"}
+          e2e: {compliant: 0, total: 416, percent: "0.0"}
+      # Synthetic self-referential ids (FEAT-RL-V02-REQ-*, AC-RL-V02-*) in 2
+      # test files, not broken links to real specs. Reported every run;
+      # enforced only under --strict-traceability.
+      unresolved_spec_references: 58
+      duplicate_test_ids: 0
+      # The marker gate is STILL delta-scoped; that is why the runner's
+      # recorded-vs-live count comparison is the check that catches losses.
+      enforcement_scope: delta_only_plus_artifact_ratchet
+    gap_reference: ".ai/traceability-gap.md"
 
   11_execution_equivalence_gate:
     allow_cache_only_with_identical_inputs: true
