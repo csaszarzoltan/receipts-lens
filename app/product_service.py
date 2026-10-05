@@ -57,8 +57,19 @@ def is_production() -> bool:
 class ProductService:
     """Tenant-safe workflow service backed by SQLite."""
 
+    # How long a writer waits for another process's write lock before
+    # sqlite3 reports "database is locked".  Without this, two CLI runs racing
+    # on the same file collide instantly and the loser dies with exit 2 instead
+    # of retrying.  5 s is well under the 15 s SMTP timeout in
+    # ``subscription_alerts.send_email_notification`` — the whole point of the
+    # claim-before-send ordering is to keep this window short.
+    _BUSY_TIMEOUT_MS = 5_000
+
     def __init__(self, database: str | Path = ":memory:") -> None:
         self._db = sqlite3.connect(str(database), check_same_thread=False)
+        # Wait briefly for a concurrent writer rather than failing instantly.
+        # Journal mode is left at sqlite's default, unchanged.
+        self._db.execute(f"PRAGMA busy_timeout = {self._BUSY_TIMEOUT_MS}")
         self._db.row_factory = sqlite3.Row
         self._lock = threading.RLock()
         self._create_schema()
@@ -296,6 +307,117 @@ class ProductService:
         except sqlite3.IntegrityError:
             return False
         return True
+
+    def claim_price_alert_sent(
+        self, tenant_id: str, merchant: str, amount_cents: int, period_ym: str
+    ) -> bool:
+        """Claim a price alert BEFORE the send; False if another run won it.
+
+        The INSERT is the mutual-exclusion token for the SMTP call: the
+        loser must not send, because the send cannot be rolled back.
+
+        A claim that is never followed by a successful send is PERMANENT.
+        ``notified_at`` is written here and read nowhere in ``app/`` — there
+        is no TTL, no expiry and no reaper — so a process killed between the
+        claim and the send blocks that (tenant, merchant, amount, period)
+        alert forever.  Every later run sees the row, takes the ``False``
+        branch and suppresses.  Recovery is a manual ``DELETE`` of the row,
+        which is why every failure path in the caller releases it
+        best-effort rather than letting it strand.
+
+        Two distinct failures, and they must not be confused:
+
+        * ``sqlite3.IntegrityError`` — the row already exists, so another
+          run genuinely won the claim.  Returns ``False``: a lost race, and
+          the caller's alert is suppressed.
+        * ``sqlite3.OperationalError`` (``database is locked``) — another
+          *process* holds the write lock.  This is NOT a won claim and NOT a
+          lost race; this run simply could not ask the question, so the
+          insert is re-raised.  Swallowing it into ``False`` would report
+          "someone else is delivering this" for a row nobody holds, which is
+          the same silent-suppression bug as a stranded claim.  With
+          ``_BUSY_TIMEOUT_MS`` set, this now needs a writer to hold the lock
+          past 5 s before it surfaces at all.
+
+        Callers that suppress on ``False`` must therefore also tolerate the
+        raise; the alert is retried on the next run either way.
+
+        A WIN IS PERMANENT AND UNEXPIRYING, AND THAT IS THE POINT.
+
+        This row is not a note that mail went out — it is the claim *that a
+        run owes the mail*.  Once it exists, every later run of every tenant
+        on this database suppresses the alert for this key, correctly, on the
+        strength of the row alone.  Nothing re-checks what the winning run
+        went on to do.
+
+        So if this process dies after the INSERT and before the send — a
+        crash, a kill, a power loss — that merchant's price hike is blocked
+        **forever**, and the household is never told about it.  There is no
+        TTL, no expiry, no age check and no reaper: ``notified_at`` is
+        written here and read **nowhere** in ``app/`` (the only other
+        mentions of it in this file are the schema and the INSERT itself), so
+        a stranded claim cannot be detected, aged out or cleaned up
+        automatically.  The suppression is also silent by design — see the
+        ``price_alerts_suppressed`` note in
+        ``app.subscription_alerts.daily_scheduler`` — so the block is not
+        visible in the run summary, on the console, or in the exit code.
+
+        RECOVERY IS A MANUAL ROW DELETE.  There is no supported command, flag
+        or code path that releases a claim that no live run holds.  An
+        operator who finds a stranded claim deletes that one row by hand:
+
+            DELETE FROM price_alert_sent
+            WHERE tenant_id=? AND merchant=? AND amount_cents=? AND period_ym=?;
+
+        and re-runs the scheduler, which will then re-detect the hike and
+        send it.  The rows of a *successfully* delivered alert look identical
+        in the table, so which one is stranded cannot be told from the row
+        alone — this is exactly why the delete has to be a decision made with
+        outside knowledge of what happened to the winning run.
+
+        Deliberately NOT solved here: a TTL on the claim, a reaper that ages
+        out unfulfilled claims, or recording which run holds the claim and
+        checking that it is still alive.  Those are behaviour changes to the
+        send path and belong to a spec of their own.  This docstring exists
+        so the hazard is written down where the INSERT happens.
+        """
+        try:
+            with self._lock, self._db:
+                self._db.execute(
+                    "INSERT INTO price_alert_sent"
+                    "(tenant_id,merchant,amount_cents,period_ym,notified_at) "
+                    "VALUES(?,?,?,?,?)",
+                    (tenant_id, merchant, int(amount_cents), period_ym, self._now()),
+                )
+        except sqlite3.IntegrityError:
+            return False
+        except sqlite3.OperationalError:
+            # Locked/controlled — surface it; never report a silent win.
+            raise
+        return True
+
+    def release_price_alert_sent(
+        self, tenant_id: str, merchant: str, amount_cents: int, period_ym: str
+    ) -> bool:
+        """Drop an unfulfilled claim so a later run may retry the alert.
+
+        Returns False when there was no claim to drop (another run already
+        removed it, or never took it).  A ``sqlite3.OperationalError`` from a
+        concurrent writer is re-raised for the same reason as in
+        :meth:`claim_price_alert_sent`: the caller cannot conclude the claim
+        was released, and reporting a clean release would strand it.
+        """
+        try:
+            with self._lock, self._db:
+                cur = self._db.execute(
+                    "DELETE FROM price_alert_sent "
+                    "WHERE tenant_id=? AND merchant=? AND amount_cents=? AND period_ym=?",
+                    (tenant_id, merchant, int(amount_cents), period_ym),
+                )
+        except sqlite3.OperationalError:
+            # Locked/controlled — the release did not happen; do not pretend it did.
+            raise
+        return cur.rowcount > 0
 
     def list_connections(self, actor: Actor) -> list[dict[str, Any]]:
         rows = self._db.execute(

@@ -294,7 +294,12 @@ def _cmd_subscription_alerts(args: argparse.Namespace) -> int:
     #   no prior row to suppress, so ``price_alerts_suppressed`` is 0 — the
     #   exact total failure this code exists to detect.
     #
-    # A suppressed alert is a SUCCESS: it was delivered on an earlier run.
+    #
+    # A suppressed alert is not a failure — this run sent nothing, so it
+    # owes the household no mail — but it is NOT a delivery receipt either.
+    # Suppression means only that another run holds the claim on this key.
+    # That run may still be mid-send, or may itself fail and release the
+    # claim, so nothing on this run proves the household was ever told.
     # --dry-run sends nothing *by design*, so it is exempt and must never
     # exit 1.
     if not args.dry_run and result.get("price_alerts_failed"):

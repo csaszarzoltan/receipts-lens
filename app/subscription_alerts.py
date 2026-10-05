@@ -29,6 +29,7 @@ import calendar
 import logging
 import os
 import smtplib
+import sqlite3
 from datetime import UTC, date, datetime
 from email.message import EmailMessage
 from enum import Enum
@@ -689,29 +690,73 @@ def _price_alert_store() -> Any | None:
     return service
 
 
-def _price_alert_already_sent(
+def _claim_price_alert_sent(
     tenant: str, merchant: str, amount_cents: int, period_ym: str
 ) -> bool:
-    """True when this exact (tenant, merchant, cents, month) was already sent.
+    """Claim the alert before sending; False means another run owns it."""
+    store = _price_alert_store()
+    if store is None:
+        return False
+    return bool(
+        store.claim_price_alert_sent(tenant, merchant, amount_cents, period_ym)
+    )
 
-    Fails open (False) when the product layer cannot be reached: the alert is
-    a notification, not accounting state, so an unavailable store must not
-    silently swallow it.
+
+def _release_price_alert_sent(
+    tenant: str, merchant: str, amount_cents: int, period_ym: str
+) -> None:
+    """Drop an unfulfilled claim so a later run can retry the alert.
+
+    Raises whatever the store raises -- see
+    :meth:`~app.product_service.ProductService.release_price_alert_sent`.
+    Callers in ``daily_scheduler`` must go through
+    :func:`_best_effort_release_price_alert_sent`, which swallows the raise.
     """
     store = _price_alert_store()
-    if store is None:
-        return False
-    return bool(store.has_price_alert_sent(tenant, merchant, amount_cents, period_ym))
+    if store is not None:
+        store.release_price_alert_sent(tenant, merchant, amount_cents, period_ym)
 
 
-def _record_price_alert_sent(
+def _best_effort_release_price_alert_sent(
     tenant: str, merchant: str, amount_cents: int, period_ym: str
-) -> bool:
-    """Write the idempotency row for a send that actually went out."""
-    store = _price_alert_store()
-    if store is None:
-        return False
-    return bool(store.record_price_alert_sent(tenant, merchant, amount_cents, period_ym))
+) -> None:
+    """Release a claim without ever propagating a failure to the caller.
+
+    ``release_price_alert_sent`` deliberately re-raises
+    ``sqlite3.OperationalError`` so a caller can never conclude a release
+    happened when it did not.  That is correct at the store boundary and
+    fatal at the scheduler boundary: every call site is inside the
+    ``for sub in subscriptions:`` loop, which has no outer ``try``, so a
+    locked database at the instant of release would kill the whole run --
+    stranding this claim AND silently dropping the alerts of every
+    subscription after it.
+
+    So the release is best-effort here and the raise is confined to this
+    frame.  The alert itself has already been counted as not delivered;
+    what is lost is only the ability of a later run to re-detect it.
+
+    OPERATOR ACTION for a claim that could not be released here: the
+    ``price_alert_sent`` row is stranded and every later run suppresses
+    that alert silently and permanently.  Recover it by deleting that one
+    row manually -- ``DELETE FROM price_alert_sent WHERE tenant_id=? AND
+    merchant=? AND amount_cents=? AND period_ym=?`` -- and re-running the
+    scheduler.  There is no reaper: nothing in ``app/`` reads
+    ``notified_at``, so a stranded claim is never detected, aged out or
+    cleaned up automatically.
+    """
+    try:
+        _release_price_alert_sent(tenant, merchant, amount_cents, period_ym)
+    except sqlite3.Error as exc:
+        logger.warning(
+            "Could not release the price-alert claim for %s (%s, %s) (%s: %s); "
+            "the alert is stranded and every later run will suppress it until "
+            "the row is deleted manually from price_alert_sent",
+            merchant,
+            amount_cents,
+            period_ym,
+            type(exc).__name__,
+            exc,
+        )
 
 
 def _resolve_price_alert_recipient(tenant: str) -> str | None:
@@ -824,10 +869,19 @@ def daily_scheduler(
     renewal_emails_sent = 0
     price_emails_sent = 0
     price_alerts_suppressed = 0
-    # Hikes that were DETECTED and NOT delivered — the send came back False or
-    # raised.  This is the only counter the caller may treat as a failure: a
-    # suppressed alert was delivered on an earlier run, so suppressing it is
-    # the feature working, not a lost mail.
+    # Hikes that were DETECTED and NOT delivered by this run — the send came
+    # back False or raised.  This is the only counter a caller may treat as a
+    # failure, because it counts only work this run actually owed and did not
+    # do.
+    #
+    # A suppressed alert is a different thing and is deliberately NOT counted
+    # here.  Suppression means only that another run holds the claim on this
+    # key; this run sent nothing, so it owes nothing.  It is equally not
+    # proof that the household was told: the winning run may still be
+    # mid-send, or may itself fail and release the claim.  So suppression is
+    # neither a delivery receipt nor a lost mail on this run's books — and a
+    # reader who wants to know whether the hike reached the household must
+    # not read this counter as the answer either way.
     price_alerts_failed = 0
 
     for sub in subscriptions:
@@ -888,80 +942,86 @@ def daily_scheduler(
             # alerts while a re-run of this one is suppressed.
             amount_cents = int(round(float(amount) * 100))
             period_ym = (renewal_str or anchor.isoformat())[:7]
-            already_sent = _price_alert_already_sent(
-                tenant, merchant, amount_cents, period_ym
-            )
-            if already_sent:
+            # Claim the alert BEFORE the send.  The INSERT is the
+            # mutual-exclusion token for the SMTP call: a losing run must not
+            # send, because a send cannot be rolled back.
+            if not _claim_price_alert_sent(tenant, merchant, amount_cents, period_ym):
+                price_alerts_suppressed += 1
+                # The claim row is the only thing observable here, and a row
+                # proves a claim — not a delivery.  The winning run may still
+                # be mid-send, or may itself fail and release it, so this
+                # message claims only what is known: another run holds the
+                # claim, so this run suppresses and does not send.
                 logger.info(
-                    "Price-hike alert for %s (%s, %s) already sent; suppressing",
+                    "Price-hike alert for %s (%s, %s) is claimed by another "
+                    "run, which is responsible for delivering it; suppressing "
+                    "this send",
                     merchant,
                     amount_cents,
                     period_ym,
                 )
-                price_alerts_suppressed += 1
                 continue
 
-            # AC-PRICE-12 gate — with no active owner there is no addressee,
-            # so nothing is sent and nothing is counted.  Resolved before the
-            # sender so the AC's "never called" claim is observable.
-            recipient = _resolve_price_alert_recipient(tenant)
-            if recipient is None:
-                continue
-
-            # AC-PRICE-10 gate — the owner always wins over the caller's
-            # ``to_addr``; the caller's dict is copied, never mutated.
-            alert_config: dict[str, Any] | None = None
-            if smtp_config is not None:
-                alert_config = {**smtp_config, "to_addr": recipient}
-            if smtp_config and smtp_config.get("to_addr") not in (None, recipient):
-                # Never log either address — a caller-supplied to_addr is still
-                # a member's email address (see :758: member addresses are PII
-                # and do not belong in logs at any level).  Say only THAT an
-                # override happened; the addresses are not the operator's
-                # business here and the run outcome does not depend on them.
-                logger.warning(
-                    "A caller-supplied to_addr was ignored; the alert is "
-                    "addressed to the active household owner instead"
-                )
-
+            # From here the claim is OURS and must be released on every
+            # non-delivery path, including the recipient resolution below.
             try:
+                # AC-PRICE-12 gate — with no active owner there is no
+                # addressee, so nothing is sent and nothing is counted.
+                # Resolved INSIDE this try: resolution reads the members
+                # table, so it can raise (a locked database surfaces as
+                # sqlite3.OperationalError, which is neither OSError nor
+                # RuntimeError).  Outside the try it would strand the claim
+                # and every later run would suppress this alert forever.  A
+                # None result is NOT an exception — it is a deliberate no-op
+                # (claim-then-release below, not counted as a failure).
+                recipient = _resolve_price_alert_recipient(tenant)
+                if recipient is None:
+                    # Drop the claim: no addressee means the alert was not
+                    # delivered, so a later run (with an owner) may still send
+                    # it.  Not a failure: nothing was owed to the household.
+                    _release_price_alert_sent(
+                        tenant, merchant, amount_cents, period_ym
+                    )
+                    continue
+
+                # AC-PRICE-10 gate — the owner always wins over the caller's
+                # ``to_addr``; the caller's dict is copied, never mutated.
+                alert_config: dict[str, Any] | None = None
+                if smtp_config is not None:
+                    alert_config = {**smtp_config, "to_addr": recipient}
+                if smtp_config and smtp_config.get("to_addr") not in (None, recipient):
+                    # Never log either address — a caller-supplied to_addr is still
+                    # a member's email address (see :758: member addresses are PII
+                    # and do not belong in logs at any level).  Say only THAT an
+                    # override happened; the addresses are not the operator's
+                    # business here and the run outcome does not depend on them.
+                    logger.warning(
+                        "A caller-supplied to_addr was ignored; the alert is "
+                        "addressed to the active household owner instead"
+                    )
+
                 sent = send_email_notification(
                     subject, body, smtp_config=alert_config
                 )
-                if sent:  # AC-PRICE-7 gate — the row is written only on a real send
+                if sent:  # AC-PRICE-7 gate — the claim stands for a real send
                     price_emails_sent += 1
-                    recorded = _record_price_alert_sent(
-                        tenant, merchant, amount_cents, period_ym
-                    )
-                    if not recorded:
-                        # KNOWN LIMITATION (not solved here, only reported):
-                        # the ``price_alert_sent`` table is concurrency-safe —
-                        # the UNIQUE key makes the second INSERT a no-op — but
-                        # the *email send* is not.  Two overlapping runs both
-                        # clear ``has_price_alert_sent`` and both mail the
-                        # household; only the bookkeeping is deduplicated.
-                        # Making the send atomic would need a transaction that
-                        # spans the SMTP call, which we deliberately do not
-                        # hold open.  We assume a single-instance scheduler.
-                        # ``price_emails_sent`` is deliberately NOT decremented:
-                        # the mail really did go out, so the counter must not
-                        # claim otherwise, and this is NOT counted as a failed
-                        # alert either — nothing was lost.
-                        logger.debug(
-                            "Duplicate price-hike send for %s (%s, %s): the "
-                            "bookkeeping row was already present and was NOT "
-                            "written again — the send itself went through and "
-                            "was not prevented",
-                            merchant,
-                            amount_cents,
-                            period_ym,
-                        )
                 else:
                     # The send was refused (SMTP host gate, opt-in gate, no
                     # addressee) — the hike is real and the household was not
-                    # told.  No row is written, so the next run re-detects it.
+                    # told.  Drop the claim so the next run re-detects it.
+                    _release_price_alert_sent(
+                        tenant, merchant, amount_cents, period_ym
+                    )
                     price_alerts_failed += 1
-            except (OSError, RuntimeError):
+            except (OSError, RuntimeError, sqlite3.Error):
+                # The send or the resolution raised before reaching the
+                # household, so the claim must not linger and block a later
+                # retry.  sqlite3.Error covers the locked-database case from
+                # _resolve_price_alert_recipient's read; treating it as a
+                # failure is correct — the alert is real and undelivered.
+                _release_price_alert_sent(
+                    tenant, merchant, amount_cents, period_ym
+                )
                 price_alerts_failed += 1
                 logger.warning(
                     "Failed to send price-hike email for %s", merchant
