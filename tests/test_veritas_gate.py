@@ -338,7 +338,7 @@ def test_empty_marker_value_blocked(tmp_path: Path) -> None:
                 "import pytest\n"
                 "\n"
                 "\n"
-                '@pytest.mark.test_id("TEST-RL-V02-010")\n'
+                '@pytest.mark.test_id("TEST-RL-V02-046")\n'
                 '@pytest.mark.requirements("FEAT-RL-V02-REQ-009")\n'
                 '@pytest.mark.scenario("")\n'
                 "def test_empty_scenario():\n"
@@ -484,7 +484,7 @@ def test_valued_markers_still_pass(tmp_path: Path) -> None:
                 "import pytest\n"
                 "\n"
                 "\n"
-                '@pytest.mark.test_id("TEST-RL-V02-011")\n'
+                '@pytest.mark.test_id("TEST-RL-V02-047")\n'
                 '@pytest.mark.requirements("FEAT-RL-V02-REQ-009")\n'
                 '@pytest.mark.scenario("AC-RL-V02-09")\n'
                 "def test_valued_metadata():\n"
@@ -561,7 +561,7 @@ def test_auto_role_stays_implementer_for_mixed_diff(tmp_path: Path) -> None:
     assert "Inferred role" not in out, "ambiguous diff must not infer any role"
 
 
-@pytest.mark.test_id("TEST-RL-V02-019")
+@pytest.mark.test_id("TEST-RL-V02-048")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-014")
 @pytest.mark.scenario("AC-RL-V02-14")
 def test_auto_role_without_git_context_fails_closed(tmp_path: Path) -> None:
@@ -587,7 +587,7 @@ def test_auto_role_without_git_context_fails_closed(tmp_path: Path) -> None:
     assert "FAIL" in (proc.stdout + proc.stderr).upper()
 
 
-@pytest.mark.test_id("TEST-RL-V02-020")
+@pytest.mark.test_id("TEST-RL-V02-049")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-015")
 @pytest.mark.scenario("AC-RL-V02-15")
 def test_auto_role_passes_hook_invocation_for_marked_test(tmp_path: Path) -> None:
@@ -605,7 +605,7 @@ def test_auto_role_passes_hook_invocation_for_marked_test(tmp_path: Path) -> Non
                 "import pytest\n"
                 "\n"
                 "\n"
-                '@pytest.mark.test_id("TEST-RL-V02-020")\n'
+                '@pytest.mark.test_id("TEST-RL-V02-050")\n'
                 '@pytest.mark.requirements("FEAT-RL-V02-REQ-015")\n'
                 '@pytest.mark.scenario("AC-RL-V02-15")\n'
                 "def test_author_probe():\n"

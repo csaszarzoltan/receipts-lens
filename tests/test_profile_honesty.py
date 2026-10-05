@@ -69,7 +69,7 @@ def _script_json(ref: str = "HEAD") -> dict:
 # --- 1. the false achievement claim ------------------------------------------
 
 
-@pytest.mark.test_id("TEST-RL-V02-020")
+@pytest.mark.test_id("TEST-RL-V02-051")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-020")
 @pytest.mark.scenario("AC-RL-V02-20")
 def test_generated_traceability_not_claimed_as_achieved() -> None:

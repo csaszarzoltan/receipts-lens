@@ -1,13 +1,46 @@
 {
   "by_file_compliant": {
+    "tests/test_analytics.py": 29,
+    "tests/test_async_confidence.py": 10,
+    "tests/test_async_nonblocking_fetch.py": 9,
+    "tests/test_batch_processing.py": 12,
+    "tests/test_bug001_confidence.py": 11,
     "tests/test_chat_query_049.py": 10,
+    "tests/test_consolidated_workspace.py": 11,
+    "tests/test_duplicate_detection.py": 26,
+    "tests/test_fetcher_wiring.py": 8,
+    "tests/test_homepage.py": 3,
+    "tests/test_inbound_email_034.py": 15,
     "tests/test_insight_delivery_033b.py": 13,
+    "tests/test_permissions_constitutional_protection.py": 4,
+    "tests/test_precommit_gate_enforcement.py": 5,
+    "tests/test_price_alert_delivery_proof.py": 4,
+    "tests/test_price_alert_f2_5.py": 8,
+    "tests/test_production_auth_gate.py": 4,
     "tests/test_profile_honesty.py": 9,
     "tests/test_quality_service.py": 13,
+    "tests/test_rate_limiting.py": 13,
+    "tests/test_red_dashboard_wiring.py": 5,
+    "tests/test_red_potential_saving_formula.py": 5,
+    "tests/test_red_recurring_contract.py": 6,
+    "tests/test_red_recurring_p0_contract.py": 4,
+    "tests/test_red_savings_p1.py": 5,
+    "tests/test_red_savings_store_fix.py": 4,
+    "tests/test_reports.py": 52,
+    "tests/test_security_gate_secret_scan.py": 9,
+    "tests/test_security_integration.py": 6,
     "tests/test_security_mime_contract.py": 15,
+    "tests/test_ssrf_guard_034b.py": 17,
     "tests/test_tenant_isolation.py": 9,
+    "tests/test_tenant_isolation_analytics.py": 5,
     "tests/test_traceability_gate.py": 9,
-    "tests/test_veritas_gate.py": 11
+    "tests/test_unprotected_routes.py": 2,
+    "tests/test_us_019_consumer_navigation.py": 5,
+    "tests/test_us_022_ocr_confidence_contract.py": 20,
+    "tests/test_us_023_consumer_dashboard_contract.py": 21,
+    "tests/test_us_024_auth_contract.py": 31,
+    "tests/test_us_onboarding_f15.py": 7,
+    "tests/test_veritas_gate.py": 20
   },
   "by_test_tree": {
     ".agent-pipeline": {
@@ -16,17 +49,17 @@
       "with_all_three_markers": 0
     },
     "tests": {
-      "compliant_percent": 6.2,
-      "test_functions": 1446,
-      "with_all_three_markers": 89
+      "compliant_percent": 30.3,
+      "test_functions": 1562,
+      "with_all_three_markers": 474
     }
   },
-  "commit": "c5e4ebfec5de23d9205679fd1fb70c02a605e8f7",
-  "compliant_percent": 4.8,
+  "commit": "3da3cd0864696a2889088a1d6b6688379503409f",
+  "compliant_percent": 24.0,
   "enforcement_scope": "delta_only",
-  "files_with_noncompliant_tests": 134,
-  "functions_with_all_three_markers": 89,
-  "generated_at": "2026-09-25T18:55:46.345289+00:00",
+  "files_with_noncompliant_tests": 120,
+  "functions_with_all_three_markers": 474,
+  "generated_at": "2026-10-05T08:13:13.248313+00:00",
   "generated_by": "scripts/traceability_runner.py",
   "ref": "HEAD",
   "schema_version": "1.0",
@@ -34,6 +67,1406 @@
   "spec_ids_indexed": 1155,
   "spec_references": {
     "unresolved": [
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_analytics_importable",
+        "value": "AC-ANL-001"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_group_importable",
+        "value": "AC-ANL-002"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_trend_point_importable",
+        "value": "AC-ANL-003"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_analytics_singleton_exists",
+        "value": "AC-ANL-004"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_overview_method_exists",
+        "value": "AC-ANL-005"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_overview_signature",
+        "value": "AC-ANL-006"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_by_category_method_exists",
+        "value": "AC-ANL-007"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_by_merchant_method_exists",
+        "value": "AC-ANL-008"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_by_day_method_exists",
+        "value": "AC-ANL-009"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_spending_endpoint_exists",
+        "value": "P0-4"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_endpoint_exists",
+        "value": "AC-ANL-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_analytics_importable",
+        "value": "AC-ANL-011"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_analytics_singleton_exists",
+        "value": "AC-ANL-012"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_overview_method_exists",
+        "value": "AC-ANL-013"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_overview_signature",
+        "value": "AC-ANL-014"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_endpoint_exists",
+        "value": "AC-ANL-015"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_spending_overview_returns_expected_structure",
+        "value": "AC3-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_overview_returns_expected_structure",
+        "value": "AC-ANL-016"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_spending_overview_by_category_groups_correctly",
+        "value": "AC3-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_overview_by_category_groups_correctly",
+        "value": "AC-ANL-017"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_spending_overview_date_from_gt_date_to_422",
+        "value": "AC3-4"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_overview_date_from_gt_date_to_422",
+        "value": "AC-ANL-018"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_spending_overview_invalid_group_by_422",
+        "value": "AC3-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_overview_invalid_group_by_422",
+        "value": "AC-ANL-019"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_spending_overview_trend_present",
+        "value": "AC3-6"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_overview_trend_present",
+        "value": "AC-ANL-020"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_spending_overview_empty_range",
+        "value": "AC3-7"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_overview_empty_range",
+        "value": "AC-ANL-021"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_spending_overview_filter_by_category",
+        "value": "AC3-8"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_spending_overview_filter_by_category",
+        "value": "AC-ANL-022"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_budget_overview_returns_expected_structure",
+        "value": "AC4-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_overview_returns_expected_structure",
+        "value": "AC-ANL-023"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_budget_overview_has_computed_fields",
+        "value": "AC4-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_overview_has_computed_fields",
+        "value": "AC-ANL-024"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_budget_overview_status_on_track",
+        "value": "AC4-3"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_overview_status_on_track",
+        "value": "AC-ANL-025"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_budget_overview_status_warning",
+        "value": "AC4-3"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_overview_status_warning",
+        "value": "AC-ANL-026"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_budget_overview_status_over_budget",
+        "value": "AC4-3"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_overview_status_over_budget",
+        "value": "AC-ANL-027"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_budget_overview_summary_aggregates",
+        "value": "AC4-4"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_overview_summary_aggregates",
+        "value": "AC-ANL-028"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_analytics.py::test_budget_overview_no_budgets",
+        "value": "AC4-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_analytics.py::test_budget_overview_no_budgets",
+        "value": "AC-ANL-029"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_confidence.py::test_app_version_bumped",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_confidence.py::test_app_version_bumped",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_confidence.py::test_parse_receipt_route_still_registered",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_confidence.py::test_parse_receipt_route_still_registered",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_confidence.py::test_async_parse_receipt_route_registered",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_confidence.py::test_async_parse_receipt_route_registered",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_confidence.py::test_jobs_route_registered",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_confidence.py::test_jobs_route_registered",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_confidence.py::test_async_endpoint_is_async",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_confidence.py::test_async_endpoint_is_async",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_confidence.py::test_parse_receipt_accepts_webhook_url",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_confidence.py::test_parse_receipt_accepts_webhook_url",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_confidence.py::test_async_returns_job_id_immediately",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_confidence.py::test_async_returns_job_id_immediately",
+        "value": "Async endpoint should return immediately with a job_id."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_confidence.py::test_parse_receipt_response_has_confidence",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_confidence.py::test_parse_receipt_response_has_confidence",
+        "value": "Sync endpoint must include confidence scores when result is non-empty."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_confidence.py::test_confidence_keys_match_schema",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_confidence.py::test_confidence_keys_match_schema",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_confidence.py::test_job_status_endpoint_returns_not_found",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_confidence.py::test_job_status_endpoint_returns_not_found",
+        "value": "Polling a non-existent job_id must return 404."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_nonblocking_fetch.py::test_async_single_route_registered",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_nonblocking_fetch.py::test_async_single_route_registered",
+        "value": "Async fetch contract: async single route registered"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_nonblocking_fetch.py::test_async_batch_route_registered",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_nonblocking_fetch.py::test_async_batch_route_registered",
+        "value": "Async fetch contract: async batch route registered"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_nonblocking_fetch.py::test_jobs_status_route_registered",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_nonblocking_fetch.py::test_jobs_status_route_registered",
+        "value": "Async fetch contract: jobs status route registered"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_nonblocking_fetch.py::test_async_single_route_is_async",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_nonblocking_fetch.py::test_async_single_route_is_async",
+        "value": "Async fetch contract: async single route is async"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_nonblocking_fetch.py::test_async_batch_route_has_image_urls_param",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_nonblocking_fetch.py::test_async_batch_route_has_image_urls_param",
+        "value": "Async fetch contract: async batch route has image urls param"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_nonblocking_fetch.py::test_single_async_returns_queued_immediately_for_valid_url",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_nonblocking_fetch.py::test_single_async_returns_queued_immediately_for_valid_url",
+        "value": "Async fetch contract: single async returns queued immediately for valid url"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_nonblocking_fetch.py::test_single_async_returns_queued_without_blocking_on_fetch",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_nonblocking_fetch.py::test_single_async_returns_queued_without_blocking_on_fetch",
+        "value": "Async fetch contract: single async returns queued without blocking on fetch"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_nonblocking_fetch.py::test_single_async_bad_url_polls_failed_with_error",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_nonblocking_fetch.py::test_single_async_bad_url_polls_failed_with_error",
+        "value": "Async fetch contract: single async bad url polls failed with error"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_async_nonblocking_fetch.py::test_batch_async_mixed_valid_and_private_host_queued",
+        "value": "REQ-OCR-ASYNC"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_async_nonblocking_fetch.py::test_batch_async_mixed_valid_and_private_host_queued",
+        "value": "Async fetch contract: batch async mixed valid and private host queued"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_batch_route_is_registered",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_batch_route_is_registered",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_batch_accepts_files_list",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_batch_accepts_files_list",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_batch_accepts_image_urls",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_batch_accepts_image_urls",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_batch_rejects_mixed_inputs",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_batch_rejects_mixed_inputs",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_batch_rejects_more_than_20_files",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_batch_rejects_more_than_20_files",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_empty_request_returns_422",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_empty_request_returns_422",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_single_file_batch_returns_result_list",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_single_file_batch_returns_result_list",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_empty_image_returns_successful_result",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_empty_image_returns_successful_result",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_url_batch_returns_result",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_url_batch_returns_result",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_mixed_input_returns_400",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_mixed_input_returns_400",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_failed_url_returns_error_field",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_failed_url_returns_error_field",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_batch_processing.py::test_summary_counts_are_correct",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_batch_processing.py::test_summary_counts_are_correct",
+        "value": "Batch feldolgozas: a route regisztralt, a payload-validacio es a feldolgozasi sorrend a szerzodes szerint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_low_quality_image_total_not_fabricated",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_low_quality_image_total_not_fabricated",
+        "value": "AC1: gyenge min\u0151s\u00e9g\u0171 k\u00e9pen a total SOHA nem a hamis 1.0 \u00e9rt\u00e9k."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_low_quality_image_is_uncertain_when_no_clean_total",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_low_quality_image_is_uncertain_when_no_clean_total",
+        "value": "AC1/AC2: ha nincs tiszta total, "
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_clean_image_control_still_parses_total",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_clean_image_control_still_parses_total",
+        "value": "Kontroll: tiszta k\u00e9p tov\u00e1bbra is val\u00f3s totalt ad (nincs t\u00falkorrekci\u00f3)."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_confidence_level_field_present",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_confidence_level_field_present",
+        "value": "AC2: a per-receipt konfidencia-szint (high/medium/low) ki van t\u00e9ve."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_confidence_level_matches_per_field_total",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_confidence_level_matches_per_field_total",
+        "value": "AC2: a total pontosan akkor jelenik meg, amikor a forr\u00e1s-mez\u0151i magabiztosak."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_api_response_carries_confidence_level",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_api_response_carries_confidence_level",
+        "value": "AC2: a renderelt API payload hordozza a konfidencia-szintet."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_review_ui_has_confirmation_requirement_marker",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_review_ui_has_confirmation_requirement_marker",
+        "value": "AC3: a review UI gyenge tal\u00e1lat elfogad\u00e1sa el\u0151tt meger\u0151s\u00edt\u00e9st k\u00e9r."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_review_ui_has_uncertain_total_notice",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_review_ui_has_uncertain_total_notice",
+        "value": "AC3: a review UI a review id\u0151pontban "
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_integration_low_quality_upload_never_returns_total_1_0",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_integration_low_quality_upload_never_returns_total_1_0",
+        "value": "AC4: val\u00f3s multipart upload gyenge min\u0151s\u00e9g\u0171 k\u00e9ppel sosem ad total=1.0-t."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_integration_clean_upload_returns_confidence_level",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_integration_clean_upload_returns_confidence_level",
+        "value": "AC2/AC4: a val\u00f3s felt\u00f6lt\u00e9si v\u00e1lasz hordozza a per-receipt konfidencia-szintet."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_parse_float_never_returns_one_from_garbage",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_parse_float_never_returns_one_from_garbage",
+        "value": "Unit guard: a float-parser soha nem gy\u00e1rt 1.0-t egy "
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_clean_text_empty",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_clean_text_empty",
+        "value": "Unit guard: az \u00fcres sz\u00f6vegtiszt\u00edt\u00e1s \u00fcres stringet ad."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_confidence_from_data_returns_all_keys",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_confidence_from_data_returns_all_keys",
+        "value": "Unit guard: a per-field konfidencia-dict tartalmazza mind a hat kulcsot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_bug001_confidence.py::test_parsed_receipt_is_dataclass",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_bug001_confidence.py::test_parsed_receipt_is_dataclass",
+        "value": "Unit guard: a parser ParsedReceipt dataclass-t ad vissza."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_consolidated_workspace.py::test_source_asset_is_tenant_scoped_and_preserves_boxes",
+        "value": "REQ-WS-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_consolidated_workspace.py::test_source_asset_is_tenant_scoped_and_preserves_boxes",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_consolidated_workspace.py::test_saved_views_validate_filter_contract_and_isolate_tenants",
+        "value": "REQ-WS-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_consolidated_workspace.py::test_saved_views_validate_filter_contract_and_isolate_tenants",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_consolidated_workspace.py::test_notifications_support_read_archive_and_read_all",
+        "value": "REQ-WS-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_consolidated_workspace.py::test_notifications_support_read_archive_and_read_all",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_consolidated_workspace.py::test_automation_preview_and_application",
+        "value": "REQ-WS-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_consolidated_workspace.py::test_automation_preview_and_application",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_consolidated_workspace.py::test_create_rule_rejects_unsupported_keys_with_specific_message",
+        "value": "REQ-WS-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_consolidated_workspace.py::test_create_rule_rejects_unsupported_keys_with_specific_message",
+        "value": "BUG-008: a 422  invalid rule  must name the offending key(s)."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_consolidated_workspace.py::test_duplicate_comparison_and_decision_removes_candidate",
+        "value": "REQ-WS-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_consolidated_workspace.py::test_duplicate_comparison_and_decision_removes_candidate",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_consolidated_workspace.py::test_history_preferences_and_export_runs",
+        "value": "REQ-WS-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_consolidated_workspace.py::test_history_preferences_and_export_runs",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_consolidated_workspace.py::test_advanced_gui_sections_and_pwa_assets_are_shipped",
+        "value": "REQ-WS-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_consolidated_workspace.py::test_advanced_gui_sections_and_pwa_assets_are_shipped",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_consolidated_workspace.py::test_new_api_routes_are_registered",
+        "value": "REQ-WS-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_consolidated_workspace.py::test_new_api_routes_are_registered",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_consolidated_workspace.py::test_asset_api_rejects_cross_tenant_access",
+        "value": "REQ-WS-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_consolidated_workspace.py::test_asset_api_rejects_cross_tenant_access",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_consolidated_workspace.py::test_workspace_javascript_contains_real_workflows",
+        "value": "REQ-WS-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_consolidated_workspace.py::test_workspace_javascript_contains_real_workflows",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_registered",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_registered",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_accepts_json",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_accepts_json",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_rejects_missing_receipts_key",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_rejects_missing_receipts_key",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_rejects_non_array_receipts",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_rejects_non_array_receipts",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_rejects_empty_receipts_list",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_rejects_empty_receipts_list",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_rejects_over_two_hundred_receipts",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_rejects_over_two_hundred_receipts",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_rejects_missing_total",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_rejects_missing_total",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_rejects_non_numeric_total",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_rejects_non_numeric_total",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_identical_receipts_one_group",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_identical_receipts_one_group",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_unique_receipts_no_groups",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_unique_receipts_no_groups",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_same_vendor_same_total_same_date_flagged",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_same_vendor_same_total_same_date_flagged",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_same_vendor_same_total_different_date_beyond_three_days_not_flagged",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_same_vendor_same_total_different_date_beyond_three_days_not_flagged",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_different_vendor_similarity_below_threshold_not_flagged",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_different_vendor_similarity_below_threshold_not_flagged",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_exact_total_mismatch_not_flagged",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_exact_total_mismatch_not_flagged",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_vendor_none_handled_gracefully",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_vendor_none_handled_gracefully",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_missing_date_still_flags_if_vendor_and_total_match",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_missing_date_still_flags_if_vendor_and_total_match",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_transitive_chain_grouped_together",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_transitive_chain_grouped_together",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_summary_counts_correct",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_summary_counts_correct",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_single_receipt_no_duplicates",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_single_receipt_no_duplicates",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_returns_duplicate_groups",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_returns_duplicate_groups",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_match_evidence_fields_present",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_match_evidence_fields_present",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_unique_receipts_summary",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_unique_receipts_summary",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_canonicalize_total_two_decimals",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_canonicalize_total_two_decimals",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_vendor_similarity_identical",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_vendor_similarity_identical",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_vendor_similarity_case_insensitive",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_vendor_similarity_case_insensitive",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_duplicate_detection.py::test_vendor_similarity_empty_strings",
+        "value": "REQ-DUP-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_duplicate_detection.py::test_vendor_similarity_empty_strings",
+        "value": "Duplikatum-detekcio: a match evidence mezok, a csoportok es az egyedi-osszesites."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_fetcher_wiring.py::test_old_bytes_from_url_is_gone_from_api_module",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_fetcher_wiring.py::test_old_bytes_from_url_is_gone_from_api_module",
+        "value": "A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_fetcher_wiring.py::test_fetch_image_bytes_is_wired_into_api_module",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_fetcher_wiring.py::test_fetch_image_bytes_is_wired_into_api_module",
+        "value": "A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_fetcher_wiring.py::test_four_entrypoints_registered",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_fetcher_wiring.py::test_four_entrypoints_registered",
+        "value": "A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_fetcher_wiring.py::test_parse_receipt_blocks_ssrf_metadata_ip",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_fetcher_wiring.py::test_parse_receipt_blocks_ssrf_metadata_ip",
+        "value": "A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_fetcher_wiring.py::test_parse_receipt_blocks_file_scheme",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_fetcher_wiring.py::test_parse_receipt_blocks_file_scheme",
+        "value": "A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_fetcher_wiring.py::test_parse_receipt_blocks_oversize_image",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_fetcher_wiring.py::test_parse_receipt_blocks_oversize_image",
+        "value": "A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_fetcher_wiring.py::test_parse_receipt_blocks_non_image_content_type",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_fetcher_wiring.py::test_parse_receipt_blocks_non_image_content_type",
+        "value": "A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_fetcher_wiring.py::test_batch_isolates_private_host_without_500",
+        "value": "REQ-OCR-BATCH"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_fetcher_wiring.py::test_batch_isolates_private_host_without_500",
+        "value": "A fetcher a hivason belul hibaizolalja a privat hosztot, nem 500-ozik."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_homepage.py::test_root_returns_self_contained_html_homepage",
+        "value": "REQ-HOMEPAGE-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_homepage.py::test_root_returns_self_contained_html_homepage",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_homepage.py::test_homepage_links_resolve",
+        "value": "REQ-HOMEPAGE-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_homepage.py::test_homepage_links_resolve",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_homepage.py::test_homepage_escapes_dynamic_application_metadata",
+        "value": "REQ-HOMEPAGE-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_homepage.py::test_homepage_escapes_dynamic_application_metadata",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_permissions_constitutional_protection.py::test_permissions_yaml_tamper_without_approval_blocked",
+        "value": "QA-REQ-PERMISSIONS-PROTECTED"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_permissions_constitutional_protection.py::test_permissions_yaml_tamper_without_approval_blocked",
+        "value": "AC-ZOO32-PERMISSIONS-TAMPER-BLOCKED"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_permissions_constitutional_protection.py::test_policy_lock_tamper_without_approval_blocked",
+        "value": "QA-REQ-PERMISSIONS-PROTECTED"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_permissions_constitutional_protection.py::test_policy_lock_tamper_without_approval_blocked",
+        "value": "AC-ZOO32-LOCK-TAMPER-BLOCKED"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_permissions_constitutional_protection.py::test_constitutional_policy_tamper_without_approval_blocked",
+        "value": "QA-REQ-PERMISSIONS-PROTECTED"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_permissions_constitutional_protection.py::test_constitutional_policy_tamper_without_approval_blocked",
+        "value": "AC-ZOO32-CONSTITUTIONAL-PATTERN-HOLDS"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_permissions_constitutional_protection.py::test_permissions_tamper_with_human_approval_passes",
+        "value": "QA-REQ-PERMISSIONS-PROTECTED"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_permissions_constitutional_protection.py::test_permissions_tamper_with_human_approval_passes",
+        "value": "AC-ZOO32-HUMAN-APPROVAL-EXEMPTS"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_precommit_gate_enforcement.py::test_docs_only_staged_change_commits",
+        "value": "QA-REQ-GATE-WIRES"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_precommit_gate_enforcement.py::test_docs_only_staged_change_commits",
+        "value": "AC-ZOO27-DOCS-COMMIT-ALLOWED"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_precommit_gate_enforcement.py::test_mixed_app_and_tests_staged_diff_is_blocked",
+        "value": "QA-REQ-GATE-ENFORCES"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_precommit_gate_enforcement.py::test_mixed_app_and_tests_staged_diff_is_blocked",
+        "value": "AC-ZOO27-MIXED-DIFF-BLOCKED"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_precommit_gate_enforcement.py::test_metadata_gate_inspects_staged_blob_not_working_tree",
+        "value": "QA-REQ-METADATA-ON-STAGED-BLOB"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_precommit_gate_enforcement.py::test_metadata_gate_inspects_staged_blob_not_working_tree",
+        "value": "AC-ZOO27-STAGED-BLOB-NOT-WORKTREE"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_precommit_gate_enforcement.py::test_diff_checks_are_not_vacuous_on_a_clean_checkout",
+        "value": "QA-REQ-CLEAN-CHECKOUT-NOT-VACUOUS-PASS"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_precommit_gate_enforcement.py::test_diff_checks_are_not_vacuous_on_a_clean_checkout",
+        "value": "AC-ZOO27-CLEAN-TREE-DIFF-CHECK"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_precommit_gate_enforcement.py::test_history_scan_does_not_flag_the_scanner_own_fixture",
+        "value": "QA-REQ-HISTORY-SCAN-NO-FALSE-POSITIVE"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_precommit_gate_enforcement.py::test_history_scan_does_not_flag_the_scanner_own_fixture",
+        "value": "AC-ZOO27-HISTORY-SCAN-FIXTURE"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_delivery_proof.py::test_cli_run_delivers_and_records_ledger_row",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_delivery_proof.py::test_cli_run_delivers_and_records_ledger_row",
+        "value": "AC-F25-01: a price hike runs the full path -- SMTP DATA accepted with 250 and a queue-id, exit code 0, and one price_alert_sent ledger row -- without a real email leaving the machine."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_delivery_proof.py::test_ledger_row_is_complete",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_delivery_proof.py::test_ledger_row_is_complete",
+        "value": "AC-F25-02: the price_alert_sent row the run wrote carries non-null alert_id, tenant_id, merchant, amount_cents and period_ym -- the ledger is a usable audit record, not a stub row."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_delivery_proof.py::test_live_database_is_untouched_by_probe_run",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_delivery_proof.py::test_live_database_is_untouched_by_probe_run",
+        "value": "AC-F25-03: the probe run leaves ./receiptlens-product.db untouched -- the price_alert_sent count is identical before and after -- while still recording exactly one row in its throwaway copy. Regression test for the defect where the first version wrote to the live DB."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_delivery_proof.py::test_captured_message_has_envelope_and_body",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_delivery_proof.py::test_captured_message_has_envelope_and_body",
+        "value": "AC-F25-04: the bytes captured from the SMTP DATA payload form a real message -- a non-blank envelope sender, at least one non-blank recipient, and a non-empty body."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_f2_5.py::test_price_alert_idempotency_key_records_exactly_once",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_f2_5.py::test_price_alert_idempotency_key_records_exactly_once",
+        "value": "AC-PRICE-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_f2_5.py::test_price_alert_table_creation_is_idempotent_across_instances",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_f2_5.py::test_price_alert_table_creation_is_idempotent_across_instances",
+        "value": "AC-PRICE-2"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_f2_5.py::test_price_alert_row_is_never_written_when_the_send_fails",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_f2_5.py::test_price_alert_row_is_never_written_when_the_send_fails",
+        "value": "AC-PRICE-7"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_f2_5.py::test_price_alert_live_send_counts_one_and_claims_the_key_once",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_f2_5.py::test_price_alert_live_send_counts_one_and_claims_the_key_once",
+        "value": "AC-PRICE-6"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_f2_5.py::test_price_alert_second_identical_run_is_suppressed",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_f2_5.py::test_price_alert_second_identical_run_is_suppressed",
+        "value": "AC-PRICE-8"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_f2_5.py::test_one_builder_imports_without_a_cycle",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_f2_5.py::test_one_builder_imports_without_a_cycle",
+        "value": "AC-PRICE-4"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_f2_5.py::test_cli_exposes_the_subscription_alerts_subcommand",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_f2_5.py::test_cli_exposes_the_subscription_alerts_subcommand",
+        "value": "AC-PRICE-13"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_f2_5.py::test_same_merchant_second_hike_rearms_the_key",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_f2_5.py::test_same_merchant_second_hike_rearms_the_key",
+        "value": "AC-PRICE-9"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_production_auth_gate.py::test_header_auth_rejected_in_production",
+        "value": "REQ-API-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_production_auth_gate.py::test_header_auth_rejected_in_production",
+        "value": "AC-API-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_production_auth_gate.py::test_header_auth_allowed_in_dev",
+        "value": "REQ-API-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_production_auth_gate.py::test_header_auth_allowed_in_dev",
+        "value": "AC-API-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_production_auth_gate.py::test_bearer_session_works_in_production",
+        "value": "REQ-API-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_production_auth_gate.py::test_bearer_session_works_in_production",
+        "value": "AC-API-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_production_auth_gate.py::test_job_status_requires_auth_and_tenant",
+        "value": "REQ-API2-6"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_production_auth_gate.py::test_job_status_requires_auth_and_tenant",
+        "value": "AC-API2-6"
+      },
       {
         "marker": "requirements",
         "test": "tests/test_profile_honesty.py::test_generated_traceability_not_claimed_as_achieved",
@@ -126,6 +1559,1056 @@
       },
       {
         "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_upload_exceeding_limit_returns_429_with_retry_after",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_upload_exceeding_limit_returns_429_with_retry_after",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_upload_success_carries_remaining_header",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_upload_success_carries_remaining_header",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_upload_retry_after_matches_window_boundary",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_upload_retry_after_matches_window_boundary",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_upload_limit_resets_across_tenants",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_upload_limit_resets_across_tenants",
+        "value": "Per-tenant isolation: a different tenant is NOT limited by tenant A s quota."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_upload_quota_is_per_ip_within_same_tenant",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_upload_quota_is_per_ip_within_same_tenant",
+        "value": "Same tenant, different client IP -> separate counters."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_inbound_emails_exceeding_limit_returns_429_with_retry_after",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_inbound_emails_exceeding_limit_returns_429_with_retry_after",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_parse_receipt_exceeding_limit_returns_429",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_parse_receipt_exceeding_limit_returns_429",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_unauthenticated_endpoint_keyed_by_ip",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_unauthenticated_endpoint_keyed_by_ip",
+        "value": "No tenant header -> the client IP is the key (per-IP limit)."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_health_and_readiness_never_limited",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_health_and_readiness_never_limited",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_unlisted_route_not_limited",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_unlisted_route_not_limited",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_options_preflight_not_limited",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_options_preflight_not_limited",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_fixed_window_rolls_over",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_fixed_window_rolls_over",
+        "value": "A new window bucket resets the counter (injectable clock)."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_rate_limiting.py::test_default_limits_cover_ticket_endpoints",
+        "value": "REQ-RL-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_rate_limiting.py::test_default_limits_cover_ticket_endpoints",
+        "value": "The production defaults must include the SEC-005 attack surface."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_dashboard_wiring.py::test_dashboard_savings_matches_the_savings_endpoint",
+        "value": "REQ-F2-2b"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_dashboard_wiring.py::test_dashboard_savings_matches_the_savings_endpoint",
+        "value": "AC-D2-2"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_dashboard_wiring.py::test_dashboard_key_sets_are_exactly_the_contracted_ones",
+        "value": "REQ-F2-2b"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_dashboard_wiring.py::test_dashboard_key_sets_are_exactly_the_contracted_ones",
+        "value": "AC-D2-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_dashboard_wiring.py::test_dashboard_potential_saving_is_windowed_by_the_period_param",
+        "value": "REQ-F2-2b"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_dashboard_wiring.py::test_dashboard_potential_saving_is_windowed_by_the_period_param",
+        "value": "AC-D2-3"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_dashboard_wiring.py::test_dashboard_rejects_invalid_period_with_no_payload",
+        "value": "REQ-F2-2b"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_dashboard_wiring.py::test_dashboard_rejects_invalid_period_with_no_payload",
+        "value": "AC-D2-4"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_dashboard_wiring.py::test_dashboard_auth_gate_empty_state_and_tenant_isolation",
+        "value": "REQ-F2-2b"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_dashboard_wiring.py::test_dashboard_auth_gate_empty_state_and_tenant_isolation",
+        "value": "AC-D2-5"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_potential_saving_formula.py::test_potential_saving_equal_means_across_halves",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_potential_saving_formula.py::test_potential_saving_equal_means_across_halves",
+        "value": "AC-PS-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_potential_saving_formula.py::test_potential_saving_late_minus_early_is_literal",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_potential_saving_formula.py::test_potential_saving_late_minus_early_is_literal",
+        "value": "AC-PS-2"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_potential_saving_formula.py::test_potential_saving_single_receipt_hits_count_guard",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_potential_saving_formula.py::test_potential_saving_single_receipt_hits_count_guard",
+        "value": "AC-PS-3"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_potential_saving_formula.py::test_potential_saving_empty_tenant_six_key_payload",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_potential_saving_formula.py::test_potential_saving_empty_tenant_six_key_payload",
+        "value": "AC-PS-4"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_potential_saving_formula.py::test_potential_saving_decrease_is_clamped_to_zero",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_potential_saving_formula.py::test_potential_saving_decrease_is_clamped_to_zero",
+        "value": "AC-PS-5"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_body_shape_has_currency_and_price_trend",
+        "value": "REQ-F2-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_body_shape_has_currency_and_price_trend",
+        "value": "AC-RC-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_price_trend_boundary_is_exact",
+        "value": "REQ-F2-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_price_trend_boundary_is_exact",
+        "value": "AC-RC-2"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_period_filters_instead_of_merely_echoing",
+        "value": "REQ-F2-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_period_filters_instead_of_merely_echoing",
+        "value": "AC-RC-3"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_rejects_unparseable_period",
+        "value": "REQ-F2-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_rejects_unparseable_period",
+        "value": "AC-RC-4"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_auth_and_empty_state_keep_new_keys",
+        "value": "REQ-F2-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_auth_and_empty_state_keep_new_keys",
+        "value": "AC-RC-5"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_change_does_not_regress_existing_contract",
+        "value": "REQ-F2-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_recurring_contract.py::test_recurring_change_does_not_regress_existing_contract",
+        "value": "AC-RC-6"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_recurring_p0_contract.py::test_recurring_requires_auth",
+        "value": "REQ-F2-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_recurring_p0_contract.py::test_recurring_requires_auth",
+        "value": "AC-F2-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_recurring_p0_contract.py::test_recurring_isolates_tenant",
+        "value": "REQ-F2-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_recurring_p0_contract.py::test_recurring_isolates_tenant",
+        "value": "AC-F2-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_recurring_p0_contract.py::test_recurring_empty_household",
+        "value": "REQ-F2-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_recurring_p0_contract.py::test_recurring_empty_household",
+        "value": "AC-F2-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_recurring_p0_contract.py::test_recurring_detects_weekly_merchant",
+        "value": "REQ-F2-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_recurring_p0_contract.py::test_recurring_detects_weekly_merchant",
+        "value": "AC-F2-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_savings_p1.py::test_savings_requires_auth",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_savings_p1.py::test_savings_requires_auth",
+        "value": "AC-P1-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_savings_p1.py::test_savings_isolates_tenant",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_savings_p1.py::test_savings_isolates_tenant",
+        "value": "AC-P1-2"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_savings_p1.py::test_savings_empty_household",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_savings_p1.py::test_savings_empty_household",
+        "value": "AC-P1-3"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_savings_p1.py::test_savings_clamped_per_category_delta",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_savings_p1.py::test_savings_clamped_per_category_delta",
+        "value": "AC-P1-4"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_savings_p1.py::test_savings_top_candidates_cap_and_sort",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_savings_p1.py::test_savings_top_candidates_cap_and_sort",
+        "value": "AC-P1-5"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_savings_store_fix.py::test_savings_reads_product_store_categories",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_savings_store_fix.py::test_savings_reads_product_store_categories",
+        "value": "AC-D1-1"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_savings_store_fix.py::test_savings_potential_saving_literal_arithmetic",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_savings_store_fix.py::test_savings_potential_saving_literal_arithmetic",
+        "value": "AC-D1-2"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_savings_store_fix.py::test_savings_isolates_tenants_across_stores",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_savings_store_fix.py::test_savings_isolates_tenants_across_stores",
+        "value": "AC-D1-3"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_red_savings_store_fix.py::test_savings_empty_tenant_payload_unchanged",
+        "value": "REQ-F2-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_red_savings_store_fix.py::test_savings_empty_tenant_payload_unchanged",
+        "value": "AC-D1-4"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_receipt_store_importable",
+        "value": "AC-RPT-001"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_receipt_store_singleton_exists",
+        "value": "AC-RPT-002"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_receipt_store_has_store_method",
+        "value": "AC-RPT-003"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_receipt_store_has_get_method",
+        "value": "AC-RPT-004"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_receipt_store_has_list_method",
+        "value": "AC-RPT-005"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_receipt_store_store_signature",
+        "value": "AC-RPT-006"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_receipt_store_get_signature",
+        "value": "AC-RPT-007"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_receipt_store_list_signature",
+        "value": "AC-RPT-008"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_pdf_importable",
+        "value": "AC-RPT-009"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_pdf_signature",
+        "value": "AC-RPT-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_csv_importable",
+        "value": "AC-RPT-011"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_csv_signature",
+        "value": "AC-RPT-012"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_post_receipts_route_registered",
+        "value": "AC-RPT-013"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_get_receipts_route_registered",
+        "value": "AC-RPT-014"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_get_receipt_by_id_route_registered",
+        "value": "AC-RPT-015"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_post_reports_route_registered",
+        "value": "AC-RPT-016"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_receipt_create_request_has_pydantic_model",
+        "value": "AC-RPT-017"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_report_request_has_pydantic_model",
+        "value": "AC-RPT-018"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_receipt_item_has_category_field",
+        "value": "AC-RPT-019"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_receipt_item_category_defaults_none",
+        "value": "AC-RPT-020"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_cors_middleware_registered",
+        "value": "AC-RPT-021"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_report_request_has_range_field",
+        "value": "AC-RPT-022"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_store_returns_uuid",
+        "value": "AC-RPT-023"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_get_returns_none_for_unknown",
+        "value": "AC-RPT-024"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_get_returns_stored_receipt",
+        "value": "AC-RPT-025"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_list_filters_by_date_range",
+        "value": "AC-RPT-026"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_list_merchant_filter_case_insensitive",
+        "value": "AC-RPT-027"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_list_no_matches_returns_empty",
+        "value": "AC-RPT-028"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_store_thread_safety",
+        "value": "AC-RPT-029"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_pdf_empty_list",
+        "value": "AC-RPT-030"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_pdf_with_receipts",
+        "value": "AC-RPT-031"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_pdf_contains_title",
+        "value": "AC-RPT-032"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_pdf_contains_total_row",
+        "value": "AC-RPT-033"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_pdf_empty_line_items_graceful",
+        "value": "AC-RPT-034"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_csv_empty_list",
+        "value": "AC-RPT-035"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_csv_with_receipts",
+        "value": "AC-RPT-036"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_csv_columns",
+        "value": "AC-RPT-037"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_csv_formula_injection",
+        "value": "AC-RPT-038"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_csv_normal_values_not_affected",
+        "value": "AC-RPT-039"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_post_reports_pdf_format",
+        "value": "AC-RPT-040"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_post_reports_csv_format",
+        "value": "AC-RPT-041"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_post_reports_content_disposition",
+        "value": "AC-RPT-042"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_post_reports_date_from_gt_date_to_returns_422",
+        "value": "AC-RPT-043"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_post_reports_invalid_date_format_returns_422",
+        "value": "AC-RPT-044"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_post_reports_unknown_format_returns_422",
+        "value": "AC-RPT-045"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_post_reports_no_matches_returns_404",
+        "value": "AC-RPT-046"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_pdf_with_categories_includes_summary",
+        "value": "AC-RPT-047"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_generate_csv_with_categories_includes_column",
+        "value": "AC-RPT-048"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_cors_on_post_reports",
+        "value": "AC-RPT-049"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_cors_options_request",
+        "value": "AC-RPT-050"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_report_with_range_this_month",
+        "value": "AC-RPT-051"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_reports.py::test_range_and_dates_mutually_exclusive",
+        "value": "AC-RPT-052"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_gate_secret_scan.py::test_local_gitignored_env_passes_with_warning",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_gate_secret_scan.py::test_local_gitignored_env_passes_with_warning",
+        "value": "AC-RL-V02-10"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_gate_secret_scan.py::test_tracked_env_still_fails_the_gate",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_gate_secret_scan.py::test_tracked_env_still_fails_the_gate",
+        "value": "AC-RL-V02-11"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_gate_secret_scan.py::test_tracked_pem_fails_the_gate",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_gate_secret_scan.py::test_tracked_pem_fails_the_gate",
+        "value": "AC-RL-V02-10"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_gate_secret_scan.py::test_tracked_secret_in_junk_named_dir_fails",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_gate_secret_scan.py::test_tracked_secret_in_junk_named_dir_fails",
+        "value": "AC-RL-V02-10"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_gate_secret_scan.py::test_clean_repo_passes_without_warnings",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_gate_secret_scan.py::test_clean_repo_passes_without_warnings",
+        "value": "AC-RL-V02-11"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_gate_secret_scan.py::test_untracked_secret_in_ignored_dir_is_not_enumerated",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_gate_secret_scan.py::test_untracked_secret_in_ignored_dir_is_not_enumerated",
+        "value": "AC-RL-V02-10"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_gate_secret_scan.py::test_missing_security_test_is_not_reported_as_a_scan_result",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_gate_secret_scan.py::test_missing_security_test_is_not_reported_as_a_scan_result",
+        "value": "AC-RL-V02-11"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_gate_secret_scan.py::test_gate_never_silently_falls_back_to_a_smaller_test_set",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_gate_secret_scan.py::test_gate_never_silently_falls_back_to_a_smaller_test_set",
+        "value": "AC-RL-V02-11"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_gate_secret_scan.py::test_missing_git_context_fails_closed",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_gate_secret_scan.py::test_missing_git_context_fails_closed",
+        "value": "AC-RL-V02-11"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_integration.py::test_security_module_exports_contract_symbols",
+        "value": "REQ-SEC-SSRF"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_integration.py::test_security_module_exports_contract_symbols",
+        "value": "Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_integration.py::test_validate_image_url_signature",
+        "value": "REQ-SEC-SSRF"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_integration.py::test_validate_image_url_signature",
+        "value": "Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_integration.py::test_fetch_image_bytes_signature",
+        "value": "REQ-SEC-SSRF"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_integration.py::test_fetch_image_bytes_signature",
+        "value": "Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_integration.py::test_endpoint_rejects_ssrf_metadata_url",
+        "value": "REQ-SEC-SSRF"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_integration.py::test_endpoint_rejects_ssrf_metadata_url",
+        "value": "Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_integration.py::test_endpoint_rejects_file_scheme",
+        "value": "REQ-SEC-SSRF"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_integration.py::test_endpoint_rejects_file_scheme",
+        "value": "Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_security_integration.py::test_batch_url_ssrf_blocked_returns_error_item",
+        "value": "REQ-SEC-SSRF"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_security_integration.py::test_batch_url_ssrf_blocked_returns_error_item",
+        "value": "Az SSRF-guard a batch URL-eket is blokkolja, hibas elemet ad vissza."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_ipv4_mapped_literal_host_is_blocked",
+        "value": "SSRF-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_ipv4_mapped_literal_host_is_blocked",
+        "value": "A SSRF-2 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_nat64_prefix_is_checked",
+        "value": "SSRF-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_nat64_prefix_is_checked",
+        "value": "A SSRF-2 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_reserved_ranges_are_blocked",
+        "value": "SSRF-3"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_reserved_ranges_are_blocked",
+        "value": "A SSRF-3 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_multicast_and_unspecified_are_blocked",
+        "value": "SSRF-3"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_multicast_and_unspecified_are_blocked",
+        "value": "A SSRF-3 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_hostname_canonicalisation_blocks_bypasses",
+        "value": "SSRF-4"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_hostname_canonicalisation_blocks_bypasses",
+        "value": "A SSRF-4 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_trailing_dot_hostname_is_normalised",
+        "value": "SSRF-4"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_trailing_dot_hostname_is_normalised",
+        "value": "A SSRF-4 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_public_peer_ip_is_accepted",
+        "value": "SSRF-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_public_peer_ip_is_accepted",
+        "value": "A SSRF-1 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_private_peer_ip_is_rejected",
+        "value": "SSRF-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_private_peer_ip_is_rejected",
+        "value": "A SSRF-1 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_unparseable_peer_ip_is_rejected",
+        "value": "SSRF-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_unparseable_peer_ip_is_rejected",
+        "value": "A SSRF-1 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_consumer_path_verifies_peer_ip",
+        "value": "SSRF-1"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_consumer_path_verifies_peer_ip",
+        "value": "A SSRF-1 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_redirect_depth_is_not_shared_between_instances",
+        "value": "SSRF-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_redirect_depth_is_not_shared_between_instances",
+        "value": "A SSRF-5 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_redirect_target_scheme_is_validated",
+        "value": "SSRF-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_redirect_target_scheme_is_validated",
+        "value": "A SSRF-5 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_total_timeout_budget_exists",
+        "value": "SSRF-6"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_total_timeout_budget_exists",
+        "value": "A SSRF-6 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_timeout_argument_is_honoured",
+        "value": "SSRF-6"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_timeout_argument_is_honoured",
+        "value": "A SSRF-6 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_dns_resolution_has_a_timeout",
+        "value": "SSRF-7"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_dns_resolution_has_a_timeout",
+        "value": "A SSRF-7 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_resolve_addresses_uses_the_deadline_wrapper",
+        "value": "SSRF-7"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_resolve_addresses_uses_the_deadline_wrapper",
+        "value": "A SSRF-7 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_ssrf_guard_034b.py::test_content_encoding_is_rejected_or_identity_requested",
+        "value": "SSRF-8"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_ssrf_guard_034b.py::test_content_encoding_is_rejected_or_identity_requested",
+        "value": "A SSRF-8 finding lez\u00e1r\u00e1sa bizony\u00edtva: az SSRF-guard elvesz\u00edti a felt\u00fcntetett megker\u00fcl\u00e9si m\u00f3dot."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_tenant_isolation_analytics.py::test_spending_analytics_requires_auth",
+        "value": "REQ-A2-02"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_tenant_isolation_analytics.py::test_spending_analytics_requires_auth",
+        "value": "AC-A2-02"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_tenant_isolation_analytics.py::test_spending_analytics_only_own_data",
+        "value": "REQ-A2-02"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_tenant_isolation_analytics.py::test_spending_analytics_only_own_data",
+        "value": "AC-A2-02"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_tenant_isolation_analytics.py::test_budget_analytics_requires_auth",
+        "value": "REQ-A2-03"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_tenant_isolation_analytics.py::test_budget_analytics_requires_auth",
+        "value": "AC-A2-03"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_tenant_isolation_analytics.py::test_alerts_requires_auth",
+        "value": "REQ-A2-04"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_tenant_isolation_analytics.py::test_alerts_requires_auth",
+        "value": "AC-A2-04"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_tenant_isolation_analytics.py::test_acknowledge_foreign_alert_404",
+        "value": "REQ-A2-05"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_tenant_isolation_analytics.py::test_acknowledge_foreign_alert_404",
+        "value": "AC-A2-05"
+      },
+      {
+        "marker": "requirements",
         "test": "tests/test_traceability_gate.py::test_runner_is_committed_and_writes_an_artifact",
         "value": "FEAT-RL-V02-REQ-030"
       },
@@ -213,6 +2696,866 @@
         "marker": "scenario",
         "test": "tests/test_traceability_gate.py::test_gate_runs_on_check_all",
         "value": "AC-RL-V02-38"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_unprotected_routes.py::test_parse_receipts_batch_requires_auth",
+        "value": "REQ-API-3"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_unprotected_routes.py::test_parse_receipts_batch_requires_auth",
+        "value": "AC-API-3"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_unprotected_routes.py::test_check_duplicates_requires_auth",
+        "value": "REQ-API-3"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_unprotected_routes.py::test_check_duplicates_requires_auth",
+        "value": "AC-API-3"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_019_consumer_navigation.py::test_us_019_consumer_nav_labels_match_plan",
+        "value": "REQ-US-019-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_019_consumer_navigation.py::test_us_019_consumer_nav_labels_match_plan",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_019_consumer_navigation.py::test_us_019_consumer_nav_has_no_business_terms",
+        "value": "REQ-US-019-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_019_consumer_navigation.py::test_us_019_consumer_nav_has_no_business_terms",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_019_consumer_navigation.py::test_us_019_business_features_hidden_in_separate_section",
+        "value": "REQ-US-019-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_019_consumer_navigation.py::test_us_019_business_features_hidden_in_separate_section",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_019_consumer_navigation.py::test_us_019_role_labels_are_household_names",
+        "value": "REQ-US-019-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_019_consumer_navigation.py::test_us_019_role_labels_are_household_names",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_019_consumer_navigation.py::test_us_019_sidebars_render_business_section_entry_point",
+        "value": "REQ-US-019-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_019_consumer_navigation.py::test_us_019_sidebars_render_business_section_entry_point",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_bug001_blurry_image_total_never_fabricated_one",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_bug001_blurry_image_total_never_fabricated_one",
+        "value": "AC1: gyenge k\u00e9p -> total SOHA nem a hamis 1.0 \u00e9rt\u00e9k. Regression pin: kor\u00e1bban a last-numeric-line fallback str"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_bug001_blurry_image_flagged_uncertain",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_bug001_blurry_image_flagged_uncertain",
+        "value": "AC1/AC2: ha nincs tiszta total,  uncertain  jelz\u00e9s kell \u2014 nem \u00e9rt\u00e9k."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_bug001_noisy_garbage_low_confidence",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_bug001_noisy_garbage_low_confidence",
+        "value": "AC1: zajos k\u00e9p ->  low  konfidencia-szint."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_bug001_clean_control_still_parses",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_bug001_clean_control_still_parses",
+        "value": "Kontroll: tiszta k\u00e9p tov\u00e1bbra is val\u00f3s totalt ad (nincs t\u00falkorrekci\u00f3)."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_confidence_level_field_in_parse_receipt_response",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_confidence_level_field_in_parse_receipt_response",
+        "value": "AC2: /v1/parse-receipt v\u00e1lasz hordozza a per-receipt szintet."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_confidence_level_valid_values",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_confidence_level_valid_values",
+        "value": "A szint a {high, medium, low} halmaz eleme."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_confidence_level_consistent_with_per_field_scores",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_confidence_level_consistent_with_per_field_scores",
+        "value": "A szint konzisztens a per-field konfidencia-\u00e1tlaggal. Threshold contract: >=0.85 high, >=0.60 medium, alatta l"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_ai_extraction_payload_contract_in_types",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_ai_extraction_payload_contract_in_types",
+        "value": "AC2 (frontend contract): AiExtraction hordozza a confidence_level-t."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_review_ui_asks_confirmation_on_weak_match",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_review_ui_asks_confirmation_on_weak_match",
+        "value": "AC3: gyenge tal\u00e1latn\u00e1l a review UI meger\u0151s\u00edt\u00e9st k\u00e9r (bizonytalan \u00f6sszeg)."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_review_ui_weak_gate_is_driven_by_confidence_level",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_review_ui_weak_gate_is_driven_by_confidence_level",
+        "value": "AC3 (kontraktus-\u00f6sszef\u00fcgg\u00e9s): a gate a confidence_level-t\u0151l f\u00fcgg. A review page isWeakMatch a confidence_level"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_integration_upload_blurry_total_not_one_via_product_flow",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_integration_upload_blurry_total_not_one_via_product_flow",
+        "value": "AC4: val\u00f3s multipart upload a product flow-n \u2014 BUG-001 sosem total=1.0."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_upload_response_carries_confidence_level",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_upload_response_carries_confidence_level",
+        "value": "RED: a /product/receipts/upload v\u00e1lasz receipt-objektuma hordozza a szintet. A /v1/parse-receipt v\u00e1lasz m\u00e1r ho"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_upload_persists_confidence_level",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_upload_persists_confidence_level",
+        "value": "RED: a mentett receipt hordozza a confidence_level-t. Jelenleg a service._receipt_payload kihagyja a confidenc"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_upload_blurry_persists_low_confidence",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_upload_blurry_persists_low_confidence",
+        "value": "RED: gyenge k\u00e9p mentett receipt-je  low  szintet hordoz."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_review_items_carry_confidence_level",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_review_items_carry_confidence_level",
+        "value": "RED: /product/review-items (a review UI adatforr\u00e1sa) hordozza a szintet. A meger\u0151s\u00edt\u00e9s-gate a review page.tsx-"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_ai_extraction_carries_confidence_level",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_ai_extraction_carries_confidence_level",
+        "value": "RED: az AiExtraction payload (ai_result/tesseract_result) is \u00e1tadja. A frontend lib/types.ts szerint az AiExtr"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_service_payload_maps_confidence_level",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_service_payload_maps_confidence_level",
+        "value": "RED (szerkezeti): a store-payload mapper \u00e1tadja a szintet. A _receipt_payload statikus met\u00f3dus dict-et \u00e9p\u00edt a "
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_ai_extraction_maps_confidence_level",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_red_ai_extraction_maps_confidence_level",
+        "value": "RED (szerkezeti): _ai_extraction \u00e1tadja a szintet."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_bug009_out_of_scope_guard",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_bug009_out_of_scope_guard",
+        "value": "BUG-009 (2\u00d7 Tesseract, 300s+ terhelten) marad nyitott \u2014 nincs tesztje. Ez a guard dokument\u00e1lja, hogy a hi\u00e1ny S"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_parsed_receipt_is_confidence_receipt",
+        "value": "REQ-US-022-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_022_ocr_confidence_contract.py::test_parsed_receipt_is_confidence_receipt",
+        "value": "A konfidencia-flow ConfidenceReceipt-et ad vissza (contract-t\u00edpus)."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_endpoint_registered",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_endpoint_registered",
+        "value": "AC-US023-001"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_auth_contract",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_auth_contract",
+        "value": "AC-US023-002"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_all_six_blocks_present",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_all_six_blocks_present",
+        "value": "AC-US023-003"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_blocks_are_live_not_placeholder",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_blocks_are_live_not_placeholder",
+        "value": "AC-US023-004"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_recent_receipts_from_product_store",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_recent_receipts_from_product_store",
+        "value": "AC-US023-005"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_daily_remaining_uses_budget_countdown",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_daily_remaining_uses_budget_countdown",
+        "value": "AC-US023-006"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_no_business_jargon_in_engine_labels",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_no_business_jargon_in_engine_labels",
+        "value": "AC-US023-007"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_dashboard_page_has_no_business_jargon",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_dashboard_page_has_no_business_jargon",
+        "value": "AC-US023-008"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_consumer_labels_used_in_blocks",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_consumer_labels_used_in_blocks",
+        "value": "AC-US023-009"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_no_budget_yields_null_daily_remaining",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_no_budget_yields_null_daily_remaining",
+        "value": "AC-US023-010"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_no_receipts_yields_empty_category_list",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_no_receipts_yields_empty_category_list",
+        "value": "AC-US023-011"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_frontend_has_empty_state_component_reference",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_frontend_has_empty_state_component_reference",
+        "value": "AC-US023-012"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_frontend_references_all_six_blocks",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_frontend_references_all_six_blocks",
+        "value": "AC-US023-013"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_frontend_links_onboarding_for_empty_state",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_frontend_links_onboarding_for_empty_state",
+        "value": "AC-US023-014"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_types_declare_consumer_dashboard",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_types_declare_consumer_dashboard",
+        "value": "AC-US023-015"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_api_client_has_consumer_dashboard_fn",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_api_client_has_consumer_dashboard_fn",
+        "value": "AC-US023-016"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_types_use_dark_mode_safe_tokens",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_types_use_dark_mode_safe_tokens",
+        "value": "AC-US023-017"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_full_round_trip_with_seeded_data",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_full_round_trip_with_seeded_data",
+        "value": "AC-US023-018"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_live_blocks_aggregate_receipts_created_via_real_path",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_live_blocks_aggregate_receipts_created_via_real_path",
+        "value": "AC-US023-019"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_cross_tenant_isolation_for_blocks_1_2_5",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_cross_tenant_isolation_for_blocks_1_2_5",
+        "value": "AC-US023-020"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_price_alerts_use_existing_motor",
+        "value": "REQ-F1-2"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_023_consumer_dashboard_contract.py::test_price_alerts_use_existing_motor",
+        "value": "AC-US023-021"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_request_returns_token_with_expiry",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_request_returns_token_with_expiry",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_verify_establishes_session_and_household",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_verify_establishes_session_and_household",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_is_single_use",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_is_single_use",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_unknown_token_rejected",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_unknown_token_rejected",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_expired_token_rejected",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_expired_token_rejected",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_session_me_resolves_identity",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_session_me_resolves_identity",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_session_me_rejects_garbage_token",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_session_me_rejects_garbage_token",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_owner_can_invite_member",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_owner_can_invite_member",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_list_shows_pending_invites",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_list_shows_pending_invites",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_accept_creates_membership_and_session",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_accept_creates_membership_and_session",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_token_is_single_use",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_token_is_single_use",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_non_owner_cannot_invite",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_non_owner_cannot_invite",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_rejects_unknown_role",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_rejects_unknown_role",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_view_only_cannot_edit_receipt",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_view_only_cannot_edit_receipt",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_child_cannot_edit_receipt_via_patch",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_child_cannot_edit_receipt_via_patch",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_owner_can_edit_receipt_via_patch",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_owner_can_edit_receipt_via_patch",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_view_only_member_cannot_invite_or_edit",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_view_only_member_cannot_invite_or_edit",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_legacy_header_auth_still_works_for_product_endpoints",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_legacy_header_auth_still_works_for_product_endpoints",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_legacy_header_admin_cannot_invite_without_session_membership",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_legacy_header_admin_cannot_invite_without_session_membership",
+        "value": "CRITICAL-2: the demo header auth must not grant owner-equivalent power. ``X-Role: admin`` maps to the RESTRICT"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_request_rejects_household_binding",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_request_rejects_household_binding",
+        "value": "CRITICAL-1: no owner session may be minted for a caller-supplied household. The request body no longer accepts"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_link_carries_household_and_invite_ids",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_link_carries_household_and_invite_ids",
+        "value": "HIGH-5: the invite email link must embed household+invite ids so the accept page (which requires ?household= a"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_accept_with_wrong_household_does_not_consume_token",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_accept_with_wrong_household_does_not_consume_token",
+        "value": "MED-6: path validation must happen BEFORE the token is consumed."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_adult_can_edit_workspace_child_cannot",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_adult_can_edit_workspace_child_cannot",
+        "value": "HIGH-4: owner/adult may edit the receipt workspace; child gets 403."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_child_view_only_blocked_from_all_mutating_product_endpoints",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_child_view_only_blocked_from_all_mutating_product_endpoints",
+        "value": "HIGH-3: every mutating /product endpoint rejects child/view_only with 403."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_add_member_accepts_household_roles_when_owner",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_add_member_accepts_household_roles_when_owner",
+        "value": "LOW-8: the stale second role check must not reject household roles."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_frontend_has_auth_api_client_functions",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_frontend_has_auth_api_client_functions",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_frontend_auth_module_supports_session_identity",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_frontend_auth_module_supports_session_identity",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_frontend_types_declare_auth_payloads",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_frontend_types_declare_auth_payloads",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_login_page_offers_magic_link_entry",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_login_page_offers_magic_link_entry",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_and_invite_pages_exist",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_magic_link_and_invite_pages_exist",
+        "value": "A szerz\u0151d\u00e9shez tartoz\u00f3 viselked\u00e9s."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_roles_match_household_vocabulary",
+        "value": "REQ-US-024-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_024_auth_contract.py::test_invite_roles_match_household_vocabulary",
+        "value": "The wire role set must match the \u00a73.2 household vocabulary."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_onboarding_page_exists",
+        "value": "REQ-US-F15-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_onboarding_page_exists",
+        "value": "The dedicated onboarding route exists (app/onboarding/page.tsx)."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_exactly_three_steps",
+        "value": "REQ-US-F15-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_exactly_three_steps",
+        "value": "Acceptance 1: the flow is 3 steps \u2014 value promise, camera/upload, first receipt \u2014 with a sticky indicator and "
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_step1_shows_positioning_promise",
+        "value": "REQ-US-F15-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_step1_shows_positioning_promise",
+        "value": "Acceptance 2: step 1 shows the one-sentence positioning promise (\u00a73.1)."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_finish_navigates_to_consumer_dashboard",
+        "value": "REQ-US-F15-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_finish_navigates_to_consumer_dashboard",
+        "value": "Acceptance 3: after the flow, the user lands on /dashboard."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_state_persistence_prevents_replay",
+        "value": "REQ-US-F15-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_state_persistence_prevents_replay",
+        "value": "Acceptance 4: onboarding_done gates the flow \u2014 completed users never see it again (persistence is the preferen"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_step2_offers_camera_and_upload_access",
+        "value": "REQ-US-F15-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_step2_offers_camera_and_upload_access",
+        "value": "Acceptance (step 2): camera capture + gallery upload access for the first receipt. The dedicated page owns the"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_step3_shows_first_receipt_result",
+        "value": "REQ-US-F15-01"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_us_onboarding_f15.py::test_f15_step3_shows_first_receipt_result",
+        "value": "Acceptance (step 3): the first receipt is submitted and the extracted result is presented (vendor + total + co"
       },
       {
         "marker": "requirements",
@@ -316,6 +3659,46 @@
       },
       {
         "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_staged_metadata_reads_index_not_worktree",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_staged_metadata_reads_index_not_worktree",
+        "value": "AC-RL-V02-10"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_staged_secret_scan_reads_index_not_worktree",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_staged_secret_scan_reads_index_not_worktree",
+        "value": "AC-RL-V02-10"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_diff_base_exposes_committed_violation_on_clean_tree",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_diff_base_exposes_committed_violation_on_clean_tree",
+        "value": "AC-RL-V02-10"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_staged_deletion_needs_no_markers",
+        "value": "FEAT-RL-V02-REQ-010"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_staged_deletion_needs_no_markers",
+        "value": "AC-RL-V02-10"
+      },
+      {
+        "marker": "requirements",
         "test": "tests/test_veritas_gate.py::test_valued_markers_still_pass",
         "value": "FEAT-RL-V02-REQ-009"
       },
@@ -323,16 +3706,76 @@
         "marker": "scenario",
         "test": "tests/test_veritas_gate.py::test_valued_markers_still_pass",
         "value": "AC-RL-V02-09"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_auto_role_infers_test_author_for_tests_only_diff",
+        "value": "FEAT-RL-V02-REQ-011"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_auto_role_infers_test_author_for_tests_only_diff",
+        "value": "AC-RL-V02-11"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_auto_role_infers_spec_author_for_specs_only_diff",
+        "value": "FEAT-RL-V02-REQ-012"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_auto_role_infers_spec_author_for_specs_only_diff",
+        "value": "AC-RL-V02-12"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_auto_role_stays_implementer_for_mixed_diff",
+        "value": "FEAT-RL-V02-REQ-013"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_auto_role_stays_implementer_for_mixed_diff",
+        "value": "AC-RL-V02-13"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_auto_role_without_git_context_fails_closed",
+        "value": "FEAT-RL-V02-REQ-014"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_auto_role_without_git_context_fails_closed",
+        "value": "AC-RL-V02-14"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_veritas_gate.py::test_auto_role_passes_hook_invocation_for_marked_test",
+        "value": "FEAT-RL-V02-REQ-015"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_veritas_gate.py::test_auto_role_passes_hook_invocation_for_marked_test",
+        "value": "AC-RL-V02-15"
       }
     ],
-    "unresolved_count": 58
+    "unresolved_count": 738
   },
-  "test_files_total": 142,
-  "test_functions_total": 1862,
+  "test_files_total": 160,
+  "test_functions_total": 1978,
   "test_id_identity": {
-    "distinct_ids": 89,
-    "duplicate_count": 0,
-    "duplicates": {}
+    "distinct_ids": 474,
+    "duplicate_count": 2,
+    "duplicates": {
+      "TEST-RL-V02-019": [
+        "tests/test_security_gate_secret_scan.py::test_missing_security_test_is_not_reported_as_a_scan_result",
+        "tests/test_veritas_gate.py::test_auto_role_without_git_context_fails_closed"
+      ],
+      "TEST-RL-V02-020": [
+        "tests/test_profile_honesty.py::test_generated_traceability_not_claimed_as_achieved",
+        "tests/test_security_gate_secret_scan.py::test_gate_never_silently_falls_back_to_a_smaller_test_set",
+        "tests/test_veritas_gate.py::test_auto_role_passes_hook_invocation_for_marked_test"
+      ]
+    }
   },
   "test_trees_scanned": [
     "tests",

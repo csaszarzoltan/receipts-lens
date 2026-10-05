@@ -265,7 +265,7 @@ def test_missing_security_test_is_not_reported_as_a_scan_result(tmp_path: Path) 
     )
 
 
-@pytest.mark.test_id("TEST-RL-V02-020")
+@pytest.mark.test_id("TEST-RL-V02-052")
 @pytest.mark.requirements("FEAT-RL-V02-REQ-010")
 @pytest.mark.scenario("AC-RL-V02-11")
 def test_gate_never_silently_falls_back_to_a_smaller_test_set(tmp_path: Path) -> None:

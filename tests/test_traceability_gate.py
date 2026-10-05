@@ -186,7 +186,7 @@ def test_gate_fails_when_a_marker_is_removed() -> None:
     """
     target = ROOT / "tests" / "test_profile_honesty.py"
     original = target.read_text(encoding="utf-8")
-    marker = '@pytest.mark.test_id("TEST-RL-V02-020")\n'
+    marker = '@pytest.mark.test_id("TEST-RL-V02-053")\n'
     assert marker in original, (
         "the fixture marker this test removes is gone; update the test rather "
         "than letting it pass vacuously"
