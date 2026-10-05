@@ -187,8 +187,8 @@ def _run_hook(repo: Path, path_python3: Path, **extra_env: str) -> subprocess.Co
     )
 
 
-@pytest.mark.test_id("TEST-RL-V02-010")
-@pytest.mark.requirements("FEAT-RL-V02-REQ-010")
+@pytest.mark.test_id("TEST-RL-V02-053")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-053")
 @pytest.mark.scenario("AC-RL-V02-10: with the repo venv present and a yaml-less python3 first on PATH, the hook exits 0 and prints PASS (pre-fix: exit 1, ModuleNotFoundError).")
 def test_hook_passes_using_repo_venv_when_path_python3_lacks_yaml(
     tmp_path: Path,
@@ -212,8 +212,8 @@ def test_hook_passes_using_repo_venv_when_path_python3_lacks_yaml(
     )
 
 
-@pytest.mark.test_id("TEST-RL-V02-011")
-@pytest.mark.requirements("FEAT-RL-V02-REQ-011")
+@pytest.mark.test_id("TEST-RL-V02-054")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-054")
 @pytest.mark.scenario("AC-RL-V02-11: with no interpreter able to import yaml, the hook exits 2 and names the candidates it tried (pre-fix: exit 1, no diagnostic).")
 def test_hook_fails_closed_and_names_candidates_when_no_interpreter_has_yaml(
     tmp_path: Path,
@@ -239,8 +239,8 @@ def test_hook_fails_closed_and_names_candidates_when_no_interpreter_has_yaml(
     assert "PASS" not in out, f"a blocked hook must never print PASS:\n{out}"
 
 
-@pytest.mark.test_id("TEST-RL-V02-012")
-@pytest.mark.requirements("FEAT-RL-V02-REQ-012")
+@pytest.mark.test_id("TEST-RL-V02-055")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-055")
 @pytest.mark.scenario("AC-RL-V02-12: the hook invokes the gate with --verify-diff --verify-metadata --staged --role ${VERITAS_ROLE:-auto}, unchanged by the interpreter fix.")
 def test_hook_passes_same_gate_flags_as_before(tmp_path: Path) -> None:
     """The interpreter fix changed only WHICH python runs the gate, never HOW."""
@@ -278,8 +278,8 @@ def test_hook_passes_same_gate_flags_as_before(tmp_path: Path) -> None:
     ], f"gate flags changed: {argv[1:]}"
 
 
-@pytest.mark.test_id("TEST-RL-V02-013")
-@pytest.mark.requirements("FEAT-RL-V02-REQ-013")
+@pytest.mark.test_id("TEST-RL-V02-056")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-056")
 @pytest.mark.scenario("AC-RL-V02-13: VERITAS_ROLE overrides the default role passed to the gate, as before the fix.")
 def test_veritas_role_env_overrides_default_role(tmp_path: Path) -> None:
     """VERITAS_ROLE is forwarded; the default is auto when unset."""
@@ -302,8 +302,8 @@ def test_veritas_role_env_overrides_default_role(tmp_path: Path) -> None:
     assert argv[-2:] == ["--role", "test_author"], f"VERITAS_ROLE not forwarded: {argv}"
 
 
-@pytest.mark.test_id("TEST-RL-V02-014")
-@pytest.mark.requirements("FEAT-RL-V02-REQ-014")
+@pytest.mark.test_id("TEST-RL-V02-057")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-057")
 @pytest.mark.scenario("AC-RL-V02-14: running these scenarios leaves the real repo .venv/bin/python in place and unmodified.")
 def test_venv_untouched(tmp_path: Path) -> None:
     """These tests copy a venv into tmp_path; the repo's own must survive intact."""
