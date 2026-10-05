@@ -1,8 +1,19 @@
-# BLOCKED: F2.5 price-alert claim-before-send (R3 sign-off pending)
+# RESOLVED (was: BLOCKED): F2.5 price-alert claim-before-send (R3 sign-off pending)
 
-Date: 2026-10-02T05:40:18.863108
-Status: verified fix, NOT committed — VERITAS R3 gate requires human
-approval because `app/subscription_alerts.py` is a sensitive path.
+Date filed: 2026-10-02T05:40:18.863108
+Resolved:   2026-10-05
+
+Status: fix COMMITTED and pushed. The R3 human approval was granted and recorded.
+This file is kept for the record, not as an open block.
+
+- fix:   77741a8  fix(alerts): claim the price alert before sending, and release it on failure
+- test:  f74abf9  test(alerts): prove the price-alert claim is taken before the send and released after
+- gate:  scripts/veritas_gate.py approval recorded in .agent-pipeline/audit/veritas_audit.jsonl
+         (`git show 2741628:...veritas_audit.jsonl | grep -c APPROVAL` -> 1)
+
+The operational caveat below NO LONGER APPLIES: the claim is taken before the send, so two concurrent
+`subscription-alerts` runs cannot both send. Leaving it stated as a live hazard was a defect in its own
+right - the next agent would have re-fixed shipped code.
 
 ## What the bug was
 `daily_scheduler` read `has_price_alert_sent` (False), sent the SMTP
@@ -29,7 +40,7 @@ locked DB can never look like a won claim.
 - the release tests exposed three `pass  # MUTANT:` lines left in
   production code by a mutation run; all restored, `grep -c MUTANT` = 0
 
-## How to unblock
+## How to unblock (historical — the block is lifted)
 The gate (scripts/veritas_gate.py:190-196) accepts a non-empty
 `VERITAS_APPROVAL` or `VERITAS_HUMAN_APPROVAL` env var. It is a bare
 string check with no signature and no actor identity, so it must be set
@@ -40,6 +51,6 @@ by the human, in their own words:
 Do NOT partial-commit: `app/product_service.py` alone ships dead code
 (claim methods with no caller).
 
-## Operational caveat until committed
+## Operational caveat (historical — superseded by the fix above)
 Two concurrent `subscription-alerts` runs WILL double-mail. Run it once
 at a time; do not add a second cron entry or an overlapping manual run.
