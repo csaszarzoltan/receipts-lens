@@ -187,12 +187,68 @@ def _mark_git_context_failed() -> None:
     _GIT_CONTEXT_FAILED = True
 
 
-def human_approval_present() -> bool:
-    """R3/R4 sign-off: VERITAS_APPROVAL (spec) or VERITAS_HUMAN_APPROVAL."""
+def human_approval_source() -> str | None:
+    """Name the variable that supplied the R3/R4 sign-off, or None.
+
+    Returns the VARIABLE NAME only, never its value: the value may carry the
+    owner's own words, and an append-only log is the wrong place for them.
+    """
     for var in ("VERITAS_APPROVAL", "VERITAS_HUMAN_APPROVAL"):
         if os.environ.get(var, "").strip():
-            return True
-    return False
+            return var
+    return None
+
+
+def human_approval_present() -> bool:
+    """R3/R4 sign-off: VERITAS_APPROVAL (spec) or VERITAS_HUMAN_APPROVAL."""
+    return human_approval_source() is not None
+
+
+def _head_sha() -> str | None:
+    """Current commit sha for the audit record, or None if it cannot be read.
+
+    Deliberately not `_run_git`: a gate-context failure must not be raised by an
+    additive logging path, and an unreadable sha must not turn a granted approval
+    into a violation.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def log_approval_event(files: list[str], scope: str) -> None:
+    """Record that a human approval authorised protected or R3 paths.
+
+    Additive evidence only: this never changes a gate verdict. Measured
+    2026-10-05 — the audit log held zero records naming an approval, so a commit
+    message claiming one was unverifiable from the repository. The variable NAME
+    is logged; its VALUE never is.
+    """
+    source = human_approval_source()
+    if source is None:
+        return
+    log_audit_event(
+        "APPROVAL",
+        {
+            "source_var": source,
+            "scope": scope,
+            "files": files,
+            "commit": _head_sha(),
+        },
+        "PASS",
+    )
 
 
 def log_audit_event(event_type: str, details: dict, verdict: str):
@@ -528,6 +584,11 @@ def verify_diff(role: str = DEFAULT_ROLE, staged_only: bool = False) -> bool:
             "FAIL",
         )
         return False
+    if protected_touched:
+        # The approval was GRANTED. Record it: a value that can be asserted but
+        # never audited is how a commit message came to claim a record that did
+        # not exist (measured 2026-10-05).
+        log_approval_event(protected_touched, "R4_constitutional_policy")
 
     # Detect touches
     touches_app = any(f.startswith(("app/", "frontend/app/")) for f in files)
@@ -571,6 +632,11 @@ def verify_diff(role: str = DEFAULT_ROLE, staged_only: bool = False) -> bool:
             "FAIL",
         )
         return False
+    if r3_touched:
+        # Granted R3 sign-off is recorded for the same reason as R4 above: the
+        # approval must be auditable from the repository, not only assertable
+        # from the environment.
+        log_approval_event(r3_touched, "R3_sensitive_paths")
 
     # Secret scanning
     try:

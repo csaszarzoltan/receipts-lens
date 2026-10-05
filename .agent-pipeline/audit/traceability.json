@@ -56,12 +56,12 @@
       "with_all_three_markers": 480
     }
   },
-  "commit": "f74abf96b9501120cd347fe9ca7ade31473b12f0",
+  "commit": "60e3c89dc2492aed055311551495cc0a38491f3f",
   "compliant_percent": 24.2,
   "enforcement_scope": "delta_only",
   "files_with_noncompliant_tests": 120,
   "functions_with_all_three_markers": 480,
-  "generated_at": "2026-10-05T12:56:17.872189+00:00",
+  "generated_at": "2026-10-05T13:28:21.787671+00:00",
   "generated_by": "scripts/traceability_runner.py",
   "ref": "HEAD",
   "schema_version": "1.0",

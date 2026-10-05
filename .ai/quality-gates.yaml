@@ -103,8 +103,11 @@ gates:
           e2e: {compliant: 0, total: 416, percent: "0.0"}
       # Synthetic self-referential ids (FEAT-RL-V02-REQ-*, AC-RL-V02-*) in 2
       # test files, not broken links to real specs. Reported every run;
-      # enforced only under --strict-traceability.
-      unresolved_spec_references: 58
+      # enforced only under --strict-traceability. This count (58) is NOT
+      # the runner's spec_references.unresolved_count (750) — the runner
+      # total is recorded as runner_spec_references_unresolved_count below.
+      unresolved_synthetic_self_refs_strict_only: 58
+      runner_spec_references_unresolved_count: 750
       duplicate_test_ids: 0
       # The marker gate is STILL delta-scoped; that is why the runner's
       # recorded-vs-live count comparison is the check that catches losses.
