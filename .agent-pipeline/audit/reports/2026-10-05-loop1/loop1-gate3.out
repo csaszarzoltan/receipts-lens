@@ -1,0 +1,55 @@
+APPROVE 5.0/5 — both fix commits verified by measurement; report at `/home/zoltan/.hermes/cache/scratch/dispatch-log/loop1-gate3.out` (4175 bytes, contains average + APPROVE).
+
+| Dimension | Score | Why |
+| Correctness | 5 | Approval logged only after grant; 58/750 split into named keys |
+| Evidence | 5 | APPROVAL/PASS @ 61b8b11 in audit log; greps paste-matched |
+| Honesty | 5 | Only var NAME logged, never VALUE |
+| Scope | 5 | Only 5 expected files touched |
+| Verification | 5 | Runner + staged-gate BLOCKED both re-run, outputs pasted |
+Average: 5.0/5 (threshold 4.0) → **APPROVE**
+
+`git log --oneline -1`: 61b8b11 chore(policy): re-pin after 2741628 recorded the approval event. Tree left clean. Note: my own runner invocation dirtied traceability.json/veritas_audit.jsonl; I restored both with `git checkout --` and confirmed clean status.
+  109: unresolved_synthetic_self_refs_strict_only: 58
+     110: runner_spec_references_unresolved_count: 750
+   - `python3 scripts/traceability_runner.py | grep unresolved` ->
+     "unresolved spec references:       750"
+     (full run: test files 162, test functions 1984, spec ids 1155, duplicates 0)
+   - The 58 vs 750 collision is now two named keys + comment. No ambiguity.
+   - Side-effect note: the runner rewrote .agent-pipeline/audit/traceability.json
+     and veritas_audit.jsonl in the worktree; I restored both with
+     `git checkout -- <paths>` and `git status --short` is clean. Those
+     modifications were caused by my own measurement, not another agent.
+2. APPROVAL event EXISTS, value never logged:
+   - `grep APPROVAL .agent-pipeline/audit/veritas_audit.jsonl | tail -1` ->
+     {"event_type":"APPROVAL","verdict":"PASS","details":{"source_var":"VERITAS_HUMAN_APPROVAL","scope":"R4_constitutional_policy","files":[".ai/policy-lock.json"],"commit":"61b8b113f33c1e2a412efeeb64e963a7394fe7d9"}}
+   - `log_approval_event` (scripts/veritas_gate.py:231-251) logs
+     `human_approval_source()` (= VARIABLE NAME via os.environ.get check at
+     :190-199, vars VERITAS_APPROVAL / VERITAS_HUMAN_APPROVAL) as `source_var`;
+     details keys are source_var/scope/files/commit — no VALUE anywhere.
+     Docstring states "The variable NAME is logged; its VALUE never is."
+   - Report written after this item per budget order; refined with items 3-4.
+3. Additive RE-RUN (cheap, done): staged `.ai/policy-lock.json` probe with
+   VERITAS_HUMAN_APPROVAL/R4_APPROVAL/HUMAN_APPROVAL unset ->
+   `python3 scripts/veritas_gate.py --verify-diff --verify-metadata --staged`
+   prints "[FAIL] Role 'implementer' deny-matrix violation" +
+   "[BLOCKED] VERITAS Gate Check FAILED. Execution blocked."
+   Gate still FAILs without the var; the approval record cannot grant anything.
+   (Note: `EXIT:$?` read 0 because of the `| tail` pipe — the verdict signal is
+   the BLOCKED/FAIL text, not that pipeline exit code. Probe reverted; staged
+   entry restored, worktree file restored, `git status --short` clean.)
+4. Verdict-closure measurement: check 2's `grep APPROVAL ... | tail -1` output
+   above (APPROVAL/PASS/R4_constitutional_policy @ 61b8b11) is the measurement
+   that closes the prior "approval claimed but not recorded" finding; check 3's
+   BLOCKED output closes the "record must stay additive" finding; check 1's two
+   greps (58 strict-only vs 750 runner total) close the collision finding.
+
+SCORES (1-5):
+| Dimension    | Score | Why (one line) |
+| Correctness  | 5 | Approval logged only after grant check passes (gate :591/:639 sit after `return False` paths); 58/750 split into named keys; no verdict logic altered |
+| Evidence     | 5 | APPROVAL/PASS event @ 61b8b11 in audit log; both greps paste-matched; re-pin commit follows the recording commit |
+| Honesty      | 5 | Only the var NAME is logged (source_var); value never read into details; docstring + code agree |
+| Scope        | 5 | Two commits touch only traceability.json, veritas_audit.jsonl, quality-gates.yaml, veritas_gate.py, policy-lock.json — nothing else |
+| Verification | 5 | Runner re-run (162 files / 1984 fns / 750 unresolved) + staged-gate BLOCKED re-run both executed, outputs pasted |
+Average: 5.0/5 (threshold 4.0)
+
+APPROVE

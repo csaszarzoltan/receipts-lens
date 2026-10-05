@@ -1,0 +1,60 @@
+dispatch: not established
+agent: developer
+repo: /home/zoltan/receipts-lens @ 61b8b11
+brief: not established
+verdict: none - first pass
+status: DONE - 11 answers written read-only, no edits, no commits, no suite run
+
+Q1 What was the acceptance criterion in the brief you are described as receiving, and was it met?
+not established
+
+Q2 Which command proves the YAML change is correct, and what was its actual output?
+Proven observation (presence, not correctness): .ai/quality-gates.yaml:109-110
+Command quoted: `grep -n "unresolved_synthetic_self_refs_strict_only\|runner_spec_references_unresolved_count\|unresolved_spec_references" .ai/quality-gates.yaml`
+Actual output quoted:
+```
+108:      # total is recorded as runner_spec_references_unresolved_count below.
+109:      unresolved_synthetic_self_refs_strict_only: 58
+110:      runner_spec_references_unresolved_count: 750
+```
+Whether that content is "correct" against the runner's numbers was not measured by this review: not established.
+
+Q3 What did that report NOT do that its brief asked for (three items were requested), and why?
+Proven partial: the 74-byte report text (via `cat $TMPDIR/dispatch-log/loop1-fix2.out`) is quoted:
+```
+Item 1 done; items 2–3 scoped. Applying the approval-event logging now.
+```
+(`wc -c` output quoted: `74 /home/zoltan/.hermes/cache/scratch/dispatch-log/loop1-fix2.out`.) It states items 2-3 were not done at report time. The reason why (budget, scope, or brief wording) is: not established.
+
+Q4 What did it change that was NOT in its Target Files allowlist?
+not established
+
+Q5 What did it assume without measuring?
+not established
+
+Q6 Did any other dispatch touch a file it wrote? Which file, and how would it know?
+not established
+
+Q7 Did the work it did commit? Which commit SHA is attributed to it?
+Proven observation: the report contains no commit SHA (full 74-byte text quoted under Q3). Command `git log --format='%h %an %s' -6` output quoted:
+```
+61b8b11 Zoltan Csaszar chore(policy): re-pin after 2741628 recorded the approval event
+2741628 Zoltan Csaszar fix(gate): record a granted R4/R3 approval in the audit log
+60e3c89 Zoltan Csaszar chore(policy): re-pin the policy set after the traceability measurement moved
+86de73b Zoltan Csaszar fix(policy): record the traceability measurement at f74abf9, not 0992ccf
+f74abf9 Zoltan Csaszar test(alerts): prove the price-alert claim is taken before the send and released after
+77741a8 Zoltan Csaszar fix(alerts): claim the price alert before sending, and release it on failure
+```
+Whether any listed SHA is attributable to this dispatch as its committer: not established.
+
+Q8 What would it do differently if it ran this again tomorrow?
+not established
+
+Q9 Which clause of the brief it received did it have to interpret, and what did it assume? Name the sentence.
+not established
+
+Q10 Was anything it did NOT do that the brief asked for? Answer with the reason - budget, scope, or the brief not asking.
+not established
+
+Q11 Would a reader of that 74-byte report alone know the whole brief was completed? If not, say what signals that.
+Proven: no. The report's own words signal incompleteness (quoted via `cat` under Q3): "items 2–3 scoped" and "Applying the approval-event logging now." The present-continuous "Applying ... now" plus "scoped" (not "done") tells a reader of the 74 bytes alone that work remained. Corroborating signal: its stderr sidecar `loop1-fix2.out.err` contains only `[claude-code:unrecognized_model] {"model":"hermes-default","query_source":"sdk"}` (81 bytes), i.e. no completion receipt.

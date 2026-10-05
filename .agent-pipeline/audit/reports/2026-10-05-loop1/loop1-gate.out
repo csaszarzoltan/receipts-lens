@@ -1,0 +1,251 @@
+`REQUEST-CHANGES 3.8/5 — failed: evidence, honesty`
+
+File written: `/home/zoltan/.hermes/cache/scratch/dispatch-log/loop1-gate.out` (15268 bytes, all 6 items with pasted output).
+
+| dimension | score | note |
+|---|---|---|
+| correctness | 4/5 | 480/1984 re-derived from runner, matches YAML; but same block still says 58 vs runner 750 |
+| evidence | 3/5 | runner+gate outputs reproduce; R4 “recorded in audit log” has 0 records |
+| honesty | 3/5 | relay admitted in one clause, hidden in another; env var unlogged; agent voice for commit agent never made |
+| scope | 5/5 | exactly claimed files, no policy value touched, no test loosened |
+| verification | 4/5 | re-derived not reasoned; “9 passed” unverified by me, stale 58 escaped |
+| **average** | **3.8/5** | below 4.0 → REQUEST-CHANGES |
+
+`git log --oneline -1` seen: `60e3c89 chore(policy): re-pin the policy set after the traceability measurement moved`
+
+Tests I ran:
+- `python3 scripts/traceability_runner.py` → exit 0: 1984 functions, 480 with markers (24.2%), tests 480/1568, e2e 0/416, unresolved 750, dups 0
+- `python3 scripts/veritas_gate.py --check-policies` → exit 0: `[PASS] Policy core, rule count, and pinned hashes are valid`
+- `pytest tests/test_traceability_gate.py` → not attempted (read-only + budget); “9 passed” is author’s claim
+
+Part B gap: `.ai/quality-gates.yaml` `unresolved_spec_references: 58` vs runner/artifact/audit-log `750` — command: `python3 -c` comparing YAML `measured.unresolved_spec_references` to artifact `spec_references.unresolved_count` (58 vs 750). Plus: R4 approval has no audit record (`grep -c VERITAS_HUMAN_APPROVAL` = 0, no approval event type in 500-line log).
+
+Uncommitted work named, not touched: `M .agent-pipeline/audit/traceability.json`, `M .agent-pipeline/audit/veritas_audit.jsonl`.
+the filter that produces it.
+     The commit says the block is "from the runner's own output"; one field in it is not.
+     [developer - a value edit; it must not be re-pinned by hand, see item 6]
+  2. The 60e3c89 message sentence "...carried in VERITAS_HUMAN_APPROVAL and recorded in
+     the audit log." Nothing records any approval. Say what is actually true: the env var
+     was set by the orchestrator from an earlier owner approval, and the audit log has no
+     approval event because human_approval_present() is never logged. [developer, as a
+     new commit that says so - never amend]
+  3. .agent-pipeline/audit/veritas_audit.jsonl - if an approval is meant to be auditable
+     for an R4 constitutional path, log_audit_event() needs an approval event carrying who
+     approved, for which commit, and on what scope. Today the R4 path's evidence is only
+     prose in a commit message. [developer]
+
+=====================================================================
+ITEM 1 - Is the 86de73b claim TRUE?  YES.
+=====================================================================
+$ python3 scripts/traceability_runner.py
+VERITAS traceability runner (ZOO-21)
+  scope:                            committed_tree @ HEAD
+  test trees:                       tests, .agent-pipeline/03_e2e_suites
+  test files:                       162
+  test functions:                   1984
+  with all three markers:           480 (24.2%)
+  spec ids indexed:                 1155
+  unresolved spec references:       750
+  duplicate test ids:               0
+    .agent-pipeline: 0/416 (0.0%)
+    tests: 480/1568 (30.6%)
+  artifact:                         .agent-pipeline/audit/traceability.json
+(exit 0)
+
+$ git show 86de73b -- .ai/quality-gates.yaml   (diff hunk, verbatim)
+-      # Measured by scripts/traceability_runner.py at 0992ccf. These are the
+-      # runner's own numbers, not estimates: 474 of 1978 functions carry all
++      # Measured by scripts/traceability_runner.py at f74abf9. These are the
++      # runner's own numbers, not estimates: 480 of 1984 functions carry all
+       # three markers (test_id, requirements, scenario).
+       requirement_coverage:
+-        compliant: 474
+-        total: 1978
+-        percent: "24.0"
+-        measured_at_commit: 0992ccf
++        compliant: 480
++        total: 1984
++        percent: "24.2"
++        measured_at_commit: f74abf9
+         by_test_tree:
+-          tests: {compliant: 474, total: 1562, percent: "30.3"}
++          tests: {compliant: 480, total: 1568, percent: "30.6"}
+           e2e: {compliant: 0, total: 416, percent: "0.0"}
+
+Current committed values on disk (read, not diff):
+  YAML   : compliant 480 / total 1984 / "24.2" / measured_at_commit f74abf9 /
+           tests {480, 1568, "30.6"} / e2e {0, 416, "0.0"}
+  runner : 1984 total, 480 markers, tests 480/1568, e2e 0/416
+  -> every number the commit changed matches the runner exactly.
+  -> the 100% target, enforcement_status: not_enforced and the 4.0% ratchet are NOT in
+     the diff; only measurement fields moved. Verified by the diff above.
+The claim "the test compared 1978 against the artifact's 1984" is consistent with the test
+body (tests/test_traceability_gate.py:271-275 asserts measured["total"] ==
+report["test_functions_total"]) and with the artifact diff (test_functions_total 1984,
+functions_with_all_three_markers 480, commit 0992ccf -> f74abf9).
+  Not established: that the suite was red before the fix. I did not check out the parent
+  commit and run the test (read-only review, 12-minute budget). The mechanism is
+  self-evident from the assertion, but "red on a clean HEAD" is the author's claim.
+
+=====================================================================
+ITEM 2 - Is the 60e3c89 claim TRUE?  YES, for both halves.
+=====================================================================
+$ python3 scripts/veritas_gate.py --check-policies
+>>> [VERITAS GATE] Checking policy integrity...
+[PASS] Policy core, rule count, and pinned hashes are valid.
+
+[OK] VERITAS Gate Check PASSED. Execution permitted.
+(exit 0)
+
+$ git show 60e3c89 --name-only --format=''
+.ai/policy-lock.json
+-> exactly one file, as claimed.
+
+$ git show 60e3c89 -- .ai/policy-lock.json | tail -6
+-    ".ai/quality-gates.yaml": "<old sha>",
++    ".ai/quality-gates.yaml": "42da2c04891024dcb02e5c57238718f4fd358514d5d2f28ab0c5ae1c89f0d5f4",
+-> one entry moved. --check-policies verifies 5 hashes and passed, which is itself the
+   proof that the other four are byte-identical to their pins: a mismatch on any of them
+   would have printed [FAIL] Policy hash mismatch. I did not additionally sha256sum the
+   other four by hand; the gate's own 5-hash verification is the stronger check and it
+   passed.
+
+=====================================================================
+ITEM 3 - Did 86de73b weaken an assertion or widen scope?  NO.
+=====================================================================
+$ git show 86de73b --stat
+ .agent-pipeline/audit/traceability.json | 84 ++++++++++++++++++++++++++++-----
+ .ai/quality-gates.yaml                  | 14 +++---
+ 2 files changed, 80 insertions(+), 18 deletions(-)
+
+$ git show 86de73b -- tests/test_traceability_gate.py
+(no output - the test file is not in the commit)
+
+The assertion the commit message names is unchanged and still strict
+(tests/test_traceability_gate.py:271-275):
+    assert measured["total"] == report["test_functions_total"], (
+        "gate 10's measured total disagrees with the committed artifact")
+    assert measured["compliant"] == report["functions_with_all_three_markers"]
+The fix moved the DATA the assertion compares, not the assertion. The test can still fail
+in exactly the same way - proven in the audit log, uncommitted, at 13:11:12:
+  {"event_type":"TRACEABILITY","verdict":"FAIL","details":{... "live_compliant": 479,
+   "recorded_compliant": 480, "failures":["markers LOST vs recorded commit -
+   tests/test_profile_honesty.py: 9 -> 8 compliant test(s)"]}}
+  ...and at 13:11:18 the same command PASSed with live 480 = recorded 480. So the check
+  discriminates; it is not vacuous.
+What I checked to establish NO weakening: the commit's file list, the empty diff for the
+test file, the assertion body, and a real FAIL in the audit log from the same mechanism.
+
+=====================================================================
+ITEM 4 - Is 24.2% honest?
+=====================================================================
+It counts: test functions in tests/ and .agent-pipeline/03_e2e_suites that carry all
+three markers (test_id, requirements, scenario) - 480 of 1984 discovered functions.
+It omits: (a) whether those markers point at anything real - the runner reports 750
+unresolved spec references, i.e. markers that exist but name an id in no spec file, so
+"compliant" means marker-presence, not traceability to a requirement; (b) 120 files with
+noncompliant tests; (c) the fact that enforcement_scope is delta_only_plus_artifact_ratchet,
+so the gate fails only when markers are LOST against the recorded commit - adding new
+unmarked tests raises the denominator and lowers 24.2% without failing anything.
+One line: 24.2% is an accurate count of marker presence but reads as "24.2% of
+requirements are traced and protected", which is not what it measures and not what the
+gate enforces. I did not run a mutation adding an unmarked test to prove (c) - not
+attempted, budget.
+
+=====================================================================
+ITEM 5 - THE CONCRETE GAP
+=====================================================================
+The commit 86de73b corrected two of the recorded measurements in gate 10's `measured`
+block and left the third one stale - and that stale one disagrees with the artifact and
+the runner by an order of magnitude (58 vs 750), in the block whose comment now reads
+"These are the runner's own numbers, not estimates".
+
+$ cd /home/zoltan/receipts-lens && python3 -c "import yaml,json; \
+  y=yaml.safe_load(open('.ai/quality-gates.yaml'))['gates']['10_traceability_gate']['measured']; \
+  a=json.load(open('.agent-pipeline/audit/traceability.json')); \
+  print('YAML unresolved_spec_references =', y['unresolved_spec_references']); \
+  print('artifact unresolved_count     =', a['spec_references']['unresolved_count'])"
+YAML unresolved_spec_references = 58
+artifact unresolved_count     = 750
+
+$ python3 scripts/traceability_runner.py | grep unresolved
+  unresolved spec references:       750
+
+$ grep unresolved_spec_refs .agent-pipeline/audit/veritas_audit.jsonl | tail -1 | cut -c1-260
+  {... "unresolved_spec_refs": 750, "duplicate_test_ids": 0 ...}
+(identical 750 at HEAD, at 86de73b, and in the working tree - I read all three with
+ `git show <rev>:.agent-pipeline/audit/traceability.json | python3 -c ...`)
+So the YAML understates by 692 and nothing defines what the 58 counts. If 58 is
+"synthetic self-referential ids excluded" (the adjacent comment mentions 2 files), that
+filter is not stated and does not reconcile with 750.
+
+SECOND, smaller, and it is the item-6 problem stated as data: the uncommitted
+.agent-pipeline/audit/veritas_audit.jsonl shows the tree is NOT at the recorded state in
+a way nobody wrote down - 13:11:12 FAIL (479 vs 480) then 13:11:18 PASS.
+
+NOT ATTEMPTED (budget, 12 min, and read-only role): pytest tests/test_traceability_gate.py
+("9 passed" is the author's claim, unverified by me), the CI run, and any mutation test.
+
+=====================================================================
+ITEM 6 - THE R4 APPROVAL PATH: YES, there is an open question.
+=====================================================================
+What the code does: scripts/veritas_gate.py:190-196
+    def human_approval_present() -> bool:
+        """R3/R4 sign-off: VERITAS_APPROVAL (spec) or VERITAS_HUMAN_APPROVAL."""
+        for var in ("VERITAS_APPROVAL", "VERITAS_HUMAN_APPROVAL"):
+            if os.environ.get(var, "").strip():
+                return True
+        return False
+It returns a boolean and is never passed to log_audit_event().
+
+Is the approval in the audit log?  NO.
+$ grep -c 'VERITAS_HUMAN_APPROVAL' .agent-pipeline/audit/veritas_audit.jsonl
+0
+$ grep -io 'approv[a-z]*|authoriz[a-z]*|R4|mehet|human' -> 6 hits, all 2026-09-29..10-03
+  VERIFY_DIFF / r3_approval_missing, none related to 60e3c89
+$ python3 -c "count event_type over the whole log"
+  {VERIFY_METADATA:75, VERIFY_DIFF:168, CHECK_POLICIES:37, FULL_SUITE:3,
+   HISTORY_SCAN:101, TRACEABILITY:116}
+There is no approval event type. The log cannot show who approved, what, or when.
+
+Is the commit message honest?  PARTLY, and it overstates in one specific sentence.
+  Honest parts: it names the R4 path and the reason ("the lock is an input to the gate
+  that verifies the lock"), it names the owner and the date ('Mehet mindegyik',
+  2026-10-05), and it states "The agent did not assert the approval; it relayed the
+  owner's." That candour is real and unusual - keep it.
+  NOT honest: (a) "...carried in VERITAS_HUMAN_APPROVAL and recorded in the audit log" -
+      the env var is not recorded anywhere, and the grep above is the disproof;
+      (b) it presents that approval as the authorization for THIS re-pin without saying
+      it was obtained earlier for something else and reused. You asked directly whether
+      the message is honest about the relay: it admits the relay in one clause and hides
+      it in the sentence right above, where it claims an audit record that does not exist.
+  Provenance, unstated in the log: the writing agent was killed by its own timeout before
+  committing and never reported; the orchestrator committed the tree. Both messages are
+  authored "Zoltan Csaszar" with a Claude co-author trailer, and 60e3c89 speaks about
+  "the agent" in the third person - so a reader of `git log` concludes the agent made this
+  commit. It did not. No file in the repo records the kill, the timeout, or the handoff.
+
+=====================================================================
+COORDINATION - uncommitted work in the tree that is NOT mine
+=====================================================================
+$ git status --short
+ M .agent-pipeline/audit/traceability.json
+ M .agent-pipeline/audit/veritas_audit.jsonl
+The 194-line audit-log append (TRACEABILITY FAIL/PASS at 13:11, CHECK_POLICIES PASS at
+13:24) and the artifact's commit-field bump to 60e3c89 belong to another dispatch. I did
+not stage, restore, or commit them, and I name them here per the coordination rule.
+
+MY OWN MEASUREMENT WAS INVASIVE - reporting it, not hiding it:
+`python3 scripts/traceability_runner.py` WRITES the artifact. My run of it (item 1)
+modified .agent-pipeline/audit/traceability.json in the working tree - commit field
+f74abf9 -> 60e3c89 and generated_at 2026-10-05T12:56:17 -> 13:24:11, with identical
+measurements (1984 / 480 / 24.2%). `--check-policies` appended one CHECK_POLICIES PASS
+line at 13:24:19. Numbers are unaffected; the tree is dirtier than when I started. I did
+not run the pytest suite (not attempted - read-only role plus budget), so the "9 passed"
+in 86de73b's message is unverified by me.
+
+VERDICT: REQUEST-CHANGES 3.8/5 - the two measurements these commits changed are correct
+and reproducible, and no assertion was loosened, but the R4 commit claims an audit record
+that does not exist (0 records) for an approval that was not obtained for this commit,
+and the block it claims to have taken from the runner still carries 58 where the runner
+says 750.

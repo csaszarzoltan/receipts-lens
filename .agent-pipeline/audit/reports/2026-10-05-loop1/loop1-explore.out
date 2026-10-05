@@ -1,0 +1,139 @@
+DONE — report written to `/home/zoltan/.hermes/cache/scratch/dispatch-log/loop1-explore.out` (8742 bytes, 6 numbered items, item 3 has pasted output).
+
+One change proposed: **TTL + expiry-on-conflict for the `price_alert_sent` claim** (`app/product_service.py` + `app/subscription_alerts.py` wrappers + one new test file). Live repro today: run 1 claim `True`, run 2 `False` → suppressed forever; `notified_at` is write-only (grep shows schema + INSERT + docstrings only), no TTL/reaper hits in either file.
+
+NOT committed: role instruction is read-only ("do NOT edit, commit"), which conflicts with the global commit rule — read-only wins here, file left uncommitted. Pre-existing dirty state not mine, untouched: `M .agent-pipeline/audit/traceability.json`, `M .agent-pipeline/audit/veritas_audit.jsonl`.
+utputs below in item 3):
+  git log --oneline --grep="claim" -i ; --grep="atomic" -i ; --grep="TTL\|reaper\|traceab" -i
+
+CANDIDATE DISPOSITION (the three known gaps, each checked, not restated):
+  a) claim/send not atomic -> REAL LIMIT but NOT the proposal. Documented in
+     app/product_service.py:311-360 and analysis/next-moves.md as R3-approved.
+     Closing it needs a real atomic op (single-process lock / transactional
+     send), which is bigger and riskier than what I propose.
+  b) 750 unresolved spec refs / 24.2% traceability / 0% e2e tree -> REAL but
+     NOT the proposal. Measured today: 480/1568 (30.6%) marker-complete,
+     up from the 24.0% pinned at f74abf9. It is a ~700-file mechanical grind
+     with no user-visible defect, and gate 10 already ratchets on the measured
+     value. Command: python3 scripts/count_traceability_coverage.py (output below).
+  c) claim whose send never completes is permanent (no TTL, no reaper) ->
+     REAL WORK and IS the proposal (item 1). Reproduced live today (output below).
+
+1. THE ONE CHANGE: give the price_alert_sent claim a TTL with expiry-on-conflict
+   (plus a startup reaper), so a process killed between the claim INSERT and the
+   SMTP send stops suppressing that household's price-hike alert forever.
+   If this is judged too big for one slice, the minimal sub-slice is
+   expiry-on-conflict alone (no reaper): on IntegrityError, read the existing
+   row's notified_at, and if older than N (e.g. 24h), DELETE + re-INSERT instead
+   of returning False. Nothing else.
+
+2. FILES IT TOUCHES (exact paths) and line-level shape:
+   - app/product_service.py:90-95 (price_alert_sent schema; notified_at already
+     exists, no schema change needed) ; :311-360 claim_price_alert_sent (on
+     IntegrityError, SELECT notified_at for the key; if now-age > TTL, DELETE
+     the stale row and retry the INSERT once, else return False) ; :399-420
+     release_price_alert_sent (unchanged, reused by the reaper path).
+   - app/subscription_alerts.py:693-730 _claim/_release wrappers (pass through
+     the new "stale-claim-stolen" outcome; no change to the send path
+     :1004-1030, which already releases on every caught failure).
+   - tests/test_price_alert_claim_ttl.py (NEW, one file): kill-between-claim-
+     and-send repro, stale-claim re-claimable after TTL, fresh-claim still
+     suppresses before TTL.
+   Shape: ~30 lines in product_service.py (SELECT-age-compare-DELETE-retry),
+   ~10 lines for a startup reaper (DELETE WHERE notified_at < now-TTL, called
+   once at subscription-alert run start), ~60 lines of tests. No signature
+   changes to public callers.
+
+3. EVIDENCE IT IS REAL TODAY (pasted command output, not description):
+   3a. Live stranded-claim reproduction (run just now, :memory: DB):
+   ```
+   run1 claim won: True
+   run2 claim won: False -> alert SUPPRESSED forever, no TTL, no reaper
+   ```
+   Command: python3 -c "from app.product_service import ProductService; s =
+   ProductService(':memory:'); s.claim_price_alert_sent('t1','Netflix',1999,
+   '2026-10'); print(...); s.claim_price_alert_sent('t1','Netflix',1999,
+   '2026-10')" -- run 1 returns True (claim taken, process 'dies' before send,
+   no release), run 2 returns False (next cron tick suppresses). There is no
+   third state and no path back except manual DELETE.
+   3b. notified_at is write-only -- nothing can age out a claim:
+   ```
+   ===notified_at readers===
+   app/product_service.py:94:              notified_at TEXT NOT NULL,
+   app/product_service.py:303:                    "(tenant_id,merchant,amount_cents,period_ym,notified_at) "
+   app/product_service.py:320:        ``notified_at`` is written here and read nowhere in ``app/`` — there
+   ```
+   (full grep -rn "notified_at" app/ --include="*.py" returns only the schema,
+   the INSERT, and docstring mentions at product_service.py:356 and
+   subscription_alerts.py:744 -- both docstrings SAYING there is no TTL.)
+   Command: grep -rn "notified_at" --include="*.py" app/
+   3c. No TTL/reaper anywhere near this feature:
+   ```
+   grep -rni "ttl\|reaper\|expire" --include="*.py" app/ src/
+   ```
+   returned only unrelated hits (insight_api session expiry, warranty EXPIRED
+   state, platform.py idempotency 24h expiry, connection_service OAuth STATE_TTL)
+   -- zero hits in product_service.py or subscription_alerts.py. The docstring
+   itself confesses it (app/product_service.py:320-360): "A claim that is never
+   followed by a successful send is PERMANENT... Recovery is a manual DELETE."
+   3d. The crash window is structural, not hypothetical: the claim INSERT
+   (subscription_alerts.py:948) precedes send_email_notification (:1004) with
+   release only on CAUGHT (OSError, RuntimeError, sqlite3.Error) paths
+   (:1016-1030). A kill -9 / crash / power loss between :948 and :1004 takes no
+   release path. Command: sed -n '1000,1040p' app/subscription_alerts.py
+   (pasted in working notes; the except clause covers only catchable errors).
+   3e. Traceability re-measured today for the item-4 comparison:
+   ```
+   VERITAS structured test-metadata coverage
+     scope:                            committed_tree @ HEAD
+     test files:                       110
+     test functions:                   1568
+     with all three markers:           480 (30.6%)
+     missing at least one marker:      1088
+   ```
+   Command: python3 scripts/count_traceability_coverage.py
+
+4. WHY IT BEATS THE OTHER TWO (one line each):
+   - Beats (a) atomic claim+send: atomicity needs a real cross-process atomic
+     primitive (bigger design, R3 already accepted the limit); TTL closes the
+     permanent-silence failure inside the CURRENT design for ~40 lines.
+   - Beats (b) traceability grind: traceability is measured, ratcheted, and
+     rising (24.0% -> 30.6%) with zero user impact per point; a stranded claim
+     is a household silently never told about a price hike, i.e. the feature
+     failing at its one job.
+
+5. HOW IT WOULD BE VERIFIED (paste-and-run commands):
+   ```
+   cd /home/zoltan/receipts-lens
+   python3 -c "
+   from app.product_service import ProductService
+   s = ProductService(':memory:')
+   assert s.claim_price_alert_sent('t','M',100,'2026-10') is True
+   # simulate stale claim: backdate notified_at past TTL, re-claim must win
+   s._db.execute(\"UPDATE price_alert_sent SET notified_at='2000-01-01T00:00:00'\")
+   assert s.claim_price_alert_sent('t','M',100,'2026-10') is True
+   print('TTL re-claim works; fresh-claim suppression covered by existing suite')
+   "
+   pytest tests/test_price_alert_concurrency.py tests/test_price_alert_release_paths.py tests/test_price_alert_f2_5.py -q
+   ```
+   Pass = re-claim-after-TTL wins, fresh claim still suppresses (existing
+   concurrency/release tests stay green), full suite afterwards per method.
+
+6. WHAT IT MUST NOT TOUCH (sprawl guard):
+   - app/subscription_alerts.py send path (:1004-1030) logic -- no new branches
+     there; only the _claim wrapper's return handling.
+   - The single-flight rule ("run one subscription-alerts process at a time",
+     next-moves.md:35) -- TTL narrows the stranded window but does NOT make
+     concurrent runs safe; the change must not claim to.
+   - .ai/ policy files, quality-gates.yaml, traceability runner, or any of the
+     68 non-compliant test files -- no marker-adding drive-by; new test file
+     only.
+   - Schema migrations beyond using the existing notified_at column -- no new
+     columns, no index changes unless the reaper's DELETE proves slow (measure
+     first; table holds one row per alert-month, tiny by construction).
+
+BUDGET: fit within budget (no item skipped; items 1-3 verified first).
+NO-COMMIT NOTE: per the role's explicit read-only instruction ("do NOT edit,
+commit") this report file is left uncommitted. Pre-existing dirty state NOT
+mine, left alone: M .agent-pipeline/audit/traceability.json,
+M .agent-pipeline/audit/veritas_audit.jsonl (seen in git status at start).

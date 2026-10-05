@@ -1,0 +1,100 @@
+dispatch: /home/zoltan/.hermes/cache/scratch/loop5-spec.md (via orchestrator brief)
+agent: developer
+repo: /home/zoltan/Veritas @ 8d39a33
+brief: sha256:not attempted (no separate brief file supplied; spec read at /home/zoltan/.hermes/cache/scratch/loop5-spec.md)
+verdict: none - first pass
+status: DONE — one convergence test appended; RED/GREEN/RESTORE demonstrated in place; full suite green
+
+Conventions: no AGENTS.md / CONTRIBUTING.md / METHODOLOGY.md in repo (checked, both ls
+failed). Recent messages are `loop:` / `test(runner):` / `test(ci):` style; using `test(runner): ...`.
+
+1. WHAT WAS ADDED (file:line + behavioural fact per assertion)
+File: runner/tests/test_quality_and_crash_injection.py, new function
+`test_recovery_quarantine_converges_on_second_recover` at :103-119 (inserted after
+`test_recovery_quarantines_malformed_operation_record` :93-100, before
+`test_lock_module_exposes_supported_platform_contract` :122). Diff is +17 lines, one file only.
+Conjunct -> behavioural fact it reads back:
+- `records1[0]["action"] == "QUARANTINED_MALFORMED_OPERATION"` — first recover() classifies
+  the malformed record (mirrors AC-CONVERGE preamble).
+- `second = recover(root); assert second == []` — THE convergence gate: after the quarantine
+  move there is nothing left to recover; second run is a no-op (kills the mutant, which
+  re-returns [QUARANTINED...]).
+- `list((root / "operations").glob("*.json")) == []` — broken.json actually left operations/
+  (mutant leaves it in place).
+- `(root / "quarantine" / "operations" / "broken.json").is_file()` — the file landed at the
+  quarantine path (path-trap: NOT recovery/).
+- `.read_text(...) == "{not json"` — the quarantined bytes are intact.
+- `(root / "recovery" / "broken.json").is_file()` — the recovery record exists (existence
+  only; no content/label assertion per stop-line).
+Existing test :93-100 left byte-identical (verified: diff shows only +17 insertion, no
+modification hunk on :93-100).
+
+2. RED RECEIPT (in-place mutant, real output, byte-exact restore)
+Exact edit applied in place to runner/src/veritas_runner/core/transaction.py:76:
+  -            shutil.move(path, quarantine)
+  +            pass  # MUTANT
+Pre-mutant hash check (both equal): b8f8ea25981507c5446c1afb43641e22a407e3be ==
+b8f8ea25981507c5446c1afb43641e22a407e3be (i.e. == HEAD before touching anything).
+RED command: cd /home/zoltan/Veritas/runner && python -m pytest
+tests/test_quality_and_crash_injection.py tests/test_stage0_completion.py
+Real RED output (pasted):
+  _____________ test_recovery_quarantine_converges_on_second_recover _____________
+      second = recover(root)
+  >       assert second == []
+  E       AssertionError: assert [{'action': '...d': 'broken'}] == []
+  E         Left contains one more item: {'action': 'QUARANTINED_MALFORMED_OPERATION',
+        'error_type': 'JSONDecodeError', 'operation_id': 'broken'}
+  FAILED tests/test_quality_and_crash_injection.py::test_recovery_quarantine_converges_on_second_recover
+  1 failed, 9 passed in 1.55s
+i.e. the NEW test fails on `second == []` while all 9 pre-existing tests still pass —
+exactly the expected survivor-kill.
+Restore proof (pasted):
+  git hash-object runner/src/veritas_runner/core/transaction.py -> b8f8ea25981507c5446c1afb43641e22a407e3be
+  git rev-parse HEAD:runner/src/veritas_runner/core/transaction.py -> b8f8ea25981507c5446c1afb43641e22a407e3be
+  git status --porcelain -- runner/src/veritas_runner/core/transaction.py -> (empty, clean)
+  git diff --stat -- runner/src/veritas_runner/core/transaction.py -> (empty, no diff)
+Byte-exact restore: ESTABLISHED (both hashes equal each other and the pre-mutant value).
+
+3. SUITE / LINT COUNTS (all measured, pasted)
+- Baseline before change (two-file): `9 passed in 1.44s`
+- After adding test, intact production: `10 passed in 1.53s`
+- Mutant run: `1 failed, 9 passed in 1.55s` (failure = new test only)
+- Restored tree (two-file): `10 passed in 1.55s`
+- Full runner suite on restored tree: `1545 passed, 3 skipped, 1 warning in 300.51s (0:05:00)`
+  (baseline per brief was 1544; +1 is the new test)
+- ruff (tests/test_quality_and_crash_injection.py): `All checks passed!`
+- ruff full (tests/ src/): `All checks passed!`
+- mypy transaction.py: `Success: no issues found in 1 source file`
+- mypy full src/: `Success: no issues found in 106 source files`
+
+4. WHAT WAS NOT DONE (that the spec asked for) AND WHY
+- Nothing omitted. All spec requirements met: one function appended; no label/content
+  assertions (no PRESERVED_STABLE_STATE, no recovery-file content); transaction.py untouched
+  (restored byte-exact); no existing test weakened/renamed; 43 dirty paths untouched
+  (git status --short -- runner/ shows only `M runner/tests/test_quality_and_crash_injection.py`;
+  production file clean). Stop-line command (§6) not run — it belongs to the RECORD step, not
+  the builder (brief §6 says "the RECORD step must run this instead of guessing further work").
+  Report written to /home/zoltan/.hermes/cache/scratch/loop5-dev.out (this file) per Output clause.
+
+5. INTERPRETATION
+- Sentence quoted: "Report each item, even if the answer is NO, and say what you checked to
+  establish NO." / brief clause "Budget: 30 minutes. If you run out, say so as a budget problem."
+  Assumption: none needed — budget was sufficient; all gates ran to completion in one session.
+- Sentence quoted: "Write the commit message in the project's own convention — and find it by
+  measurement" — AGENTS.md/CONTRIBUTING.md/METHODOLOGY.md all absent (ls failed), so convention
+  derived from `git log --format=%s -40`: dominant `test(runner): ...` / `loop: ...` pattern.
+  Used `test(runner): ...` for a test-only change.
+- `brief: sha256:...` header field: no separate brief file was supplied in this dispatch
+  (spec path was given inline), recorded honestly as `not attempted` rather than inventing a hash.
+
+Commit: 0ffd0e09179a1c4e065dcad80026e780bb225ce2
+  ("test(runner): pin recover() quarantine convergence on second run")
+  git show --name-status: exactly 1 file — M runner/tests/test_quality_and_crash_injection.py
+  (+17 insertions, no other paths).
+Working tree after commit: `git status --porcelain -- runner/tests/test_quality_and_crash_injection.py`
+  prints EMPTY (committed clean); unstaged and staged diffs both empty; HEAD is 0ffd0e0 on top
+  of 8d39a33. Production file runner/src/veritas_runner/core/transaction.py is clean
+  (byte-exact == HEAD, hashes b8f8ea25... both sides). Repo-wide `git status --short`
+  still lists the pre-existing dirty/deleted paths owned by another session (manifest.json,
+  AGENT.md, docs/*, untracked analysis/* etc.) — none touched by this run; explicit-path
+  staging only.
