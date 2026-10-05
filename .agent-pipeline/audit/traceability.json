@@ -14,6 +14,7 @@
     "tests/test_insight_delivery_033b.py": 13,
     "tests/test_permissions_constitutional_protection.py": 4,
     "tests/test_precommit_gate_enforcement.py": 5,
+    "tests/test_precommit_hook_interpreter.py": 5,
     "tests/test_price_alert_concurrency.py": 2,
     "tests/test_price_alert_delivery_proof.py": 4,
     "tests/test_price_alert_f2_5.py": 8,
@@ -51,17 +52,17 @@
       "with_all_three_markers": 0
     },
     "tests": {
-      "compliant_percent": 30.6,
-      "test_functions": 1568,
-      "with_all_three_markers": 480
+      "compliant_percent": 30.8,
+      "test_functions": 1573,
+      "with_all_three_markers": 485
     }
   },
-  "commit": "60e3c89dc2492aed055311551495cc0a38491f3f",
-  "compliant_percent": 24.2,
+  "commit": "5fb6b36589bb01c3cb578df4e7df39ad6668b7de",
+  "compliant_percent": 24.4,
   "enforcement_scope": "delta_only",
   "files_with_noncompliant_tests": 120,
-  "functions_with_all_three_markers": 480,
-  "generated_at": "2026-10-05T13:28:21.787671+00:00",
+  "functions_with_all_three_markers": 485,
+  "generated_at": "2026-10-05T23:53:00.031972+00:00",
   "generated_by": "scripts/traceability_runner.py",
   "ref": "HEAD",
   "schema_version": "1.0",
@@ -1308,6 +1309,56 @@
         "marker": "scenario",
         "test": "tests/test_precommit_gate_enforcement.py::test_history_scan_does_not_flag_the_scanner_own_fixture",
         "value": "AC-ZOO27-HISTORY-SCAN-FIXTURE"
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_precommit_hook_interpreter.py::test_hook_passes_using_repo_venv_when_path_python3_lacks_yaml",
+        "value": "FEAT-RL-V02-REQ-053"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_precommit_hook_interpreter.py::test_hook_passes_using_repo_venv_when_path_python3_lacks_yaml",
+        "value": "AC-RL-V02-10: with the repo venv present and a yaml-less python3 first on PATH, the hook exits 0 and prints PASS (pre-fix: exit 1, ModuleNotFoundError)."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_precommit_hook_interpreter.py::test_hook_fails_closed_and_names_candidates_when_no_interpreter_has_yaml",
+        "value": "FEAT-RL-V02-REQ-054"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_precommit_hook_interpreter.py::test_hook_fails_closed_and_names_candidates_when_no_interpreter_has_yaml",
+        "value": "AC-RL-V02-11: with no interpreter able to import yaml, the hook exits 2 and names the candidates it tried (pre-fix: exit 1, no diagnostic)."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_precommit_hook_interpreter.py::test_hook_passes_same_gate_flags_as_before",
+        "value": "FEAT-RL-V02-REQ-055"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_precommit_hook_interpreter.py::test_hook_passes_same_gate_flags_as_before",
+        "value": "AC-RL-V02-12: the hook invokes the gate with --verify-diff --verify-metadata --staged --role ${VERITAS_ROLE:-auto}, unchanged by the interpreter fix."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_precommit_hook_interpreter.py::test_veritas_role_env_overrides_default_role",
+        "value": "FEAT-RL-V02-REQ-056"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_precommit_hook_interpreter.py::test_veritas_role_env_overrides_default_role",
+        "value": "AC-RL-V02-13: VERITAS_ROLE overrides the default role passed to the gate, as before the fix."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_precommit_hook_interpreter.py::test_venv_untouched",
+        "value": "FEAT-RL-V02-REQ-057"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_precommit_hook_interpreter.py::test_venv_untouched",
+        "value": "AC-RL-V02-14: running these scenarios leaves the real repo .venv/bin/python in place and unmodified."
       },
       {
         "marker": "requirements",
@@ -3820,12 +3871,12 @@
         "value": "AC-RL-V02-15"
       }
     ],
-    "unresolved_count": 750
+    "unresolved_count": 760
   },
-  "test_files_total": 162,
-  "test_functions_total": 1984,
+  "test_files_total": 163,
+  "test_functions_total": 1989,
   "test_id_identity": {
-    "distinct_ids": 483,
+    "distinct_ids": 488,
     "duplicate_count": 0,
     "duplicates": {}
   },
