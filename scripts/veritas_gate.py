@@ -699,12 +699,20 @@ def _load_traceability_artifact() -> dict:
 
 
 def _artifact_reproduces(artifact: dict) -> tuple[bool, str]:
-    """Re-derive the artifact at the commit it claims, via the runner's --check.
+    """Re-derive the artifact's measurement at the commit the artifact records.
 
-    Checking against the artifact's OWN recorded commit (not HEAD) is what makes
-    this deterministic: it cannot change while this runs, and a concurrent
-    commit in a shared workspace cannot fail the gate for unrelated reasons.
+    The pin is real, and it is the runner that enforces it, not this function:
+    ``traceability_runner.py --check`` reads the artifact's own ``commit`` field
+    and re-measures THAT commit (``build_report(ref=recorded)``), never HEAD.
+    So the measurement cannot drift while the gate runs, and a commit made in a
+    shared workspace cannot fail this gate for unrelated reasons.
+
+    ``artifact`` is passed for the guard below — the runner reads the artifact
+    from disk itself, and if that file is missing or unparseable there is
+    nothing for ``--check`` to reproduce.
     """
+    if not isinstance(artifact, dict) or not artifact.get("commit"):
+        return False, "traceability artifact has no recorded commit to reproduce"
     runner = REPO_ROOT / "scripts" / "traceability_runner.py"
     if not runner.is_file():
         return False, f"traceability runner is missing: {runner}"

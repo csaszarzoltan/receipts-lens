@@ -54,12 +54,12 @@
       "with_all_three_markers": 474
     }
   },
-  "commit": "3da3cd0864696a2889088a1d6b6688379503409f",
+  "commit": "0992ccf946f4e1d924ec7cf0f3777ff470b0c47b",
   "compliant_percent": 24.0,
   "enforcement_scope": "delta_only",
   "files_with_noncompliant_tests": 120,
   "functions_with_all_three_markers": 474,
-  "generated_at": "2026-10-05T08:13:13.248313+00:00",
+  "generated_at": "2026-10-05T08:42:01.463387+00:00",
   "generated_by": "scripts/traceability_runner.py",
   "ref": "HEAD",
   "schema_version": "1.0",
@@ -3763,19 +3763,9 @@
   "test_files_total": 160,
   "test_functions_total": 1978,
   "test_id_identity": {
-    "distinct_ids": 474,
-    "duplicate_count": 2,
-    "duplicates": {
-      "TEST-RL-V02-019": [
-        "tests/test_security_gate_secret_scan.py::test_missing_security_test_is_not_reported_as_a_scan_result",
-        "tests/test_veritas_gate.py::test_auto_role_without_git_context_fails_closed"
-      ],
-      "TEST-RL-V02-020": [
-        "tests/test_profile_honesty.py::test_generated_traceability_not_claimed_as_achieved",
-        "tests/test_security_gate_secret_scan.py::test_gate_never_silently_falls_back_to_a_smaller_test_set",
-        "tests/test_veritas_gate.py::test_auto_role_passes_hook_invocation_for_marked_test"
-      ]
-    }
+    "distinct_ids": 477,
+    "duplicate_count": 0,
+    "duplicates": {}
   },
   "test_trees_scanned": [
     "tests",

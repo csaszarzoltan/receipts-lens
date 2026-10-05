@@ -186,7 +186,11 @@ def test_gate_fails_when_a_marker_is_removed() -> None:
     """
     target = ROOT / "tests" / "test_profile_honesty.py"
     original = target.read_text(encoding="utf-8")
-    marker = '@pytest.mark.test_id("TEST-RL-V02-053")\n'
+    # -051 is the id carried by test_profile_honesty.py::test_generated_
+    # traceability_not_claimed_as_achieved. It must be an id that exists in the
+    # CURRENT tree: the point of this test is that the gate bites on a marker
+    # that IS there, so a phantom id here would make it pass vacuously.
+    marker = '@pytest.mark.test_id("TEST-RL-V02-051")\n'
     assert marker in original, (
         "the fixture marker this test removes is gone; update the test rather "
         "than letting it pass vacuously"
