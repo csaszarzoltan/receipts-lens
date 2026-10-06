@@ -37,6 +37,12 @@ LEGACY_HEADER_ROLES = {"admin", "reviewer", "integrator"}
 MAGIC_LINK_TTL_SECONDS = 15 * 60
 INVITE_TTL_SECONDS = 7 * 24 * 60 * 60
 SESSION_TTL_SECONDS = 180 * 24 * 60 * 60
+# How long a price-alert claim suppresses a re-claim of the same key.  A run
+# killed between the claim INSERT and the send leaves a row nobody owns; past
+# this age the next claim steals it (expiry-on-conflict) instead of
+# suppressing forever.  24 h: far above the 5 s lock window and the SMTP
+# timeout, far below "forever".
+PRICE_ALERT_CLAIM_TTL_SECONDS = 24 * 60 * 60
 
 
 def _sha256(value: str) -> str:
@@ -270,6 +276,28 @@ class ProductService:
         ).fetchall()
         return [{**dict(row), "active": bool(row["active"])} for row in rows]
 
+    def _price_alert_claim_age_seconds(self, notified_at: str | None) -> float | None:
+        """Age of a ``notified_at`` stamp in seconds, or None on bad data.
+
+        ``notified_at`` is the ISO-8601 written by :meth:`_now`.  A None or
+        unparseable stamp is treated as "no expiry" — the claim stands — so
+        a bad row can never be stolen by accident.
+        """
+        if not notified_at:
+            return None
+        try:
+            ts = datetime.fromisoformat(notified_at)
+        except (ValueError, TypeError):
+            return None
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=UTC)
+        return (datetime.now(UTC) - ts).total_seconds()
+
+    def _price_alert_claim_expired(self, notified_at: str | None) -> bool:
+        """True when a ``notified_at`` stamp is older than the claim TTL."""
+        age = self._price_alert_claim_age_seconds(notified_at)
+        return age is not None and age > PRICE_ALERT_CLAIM_TTL_SECONDS
+
     def has_price_alert_sent(
         self, tenant_id: str, merchant: str, amount_cents: int, period_ym: str
     ) -> bool:
@@ -277,15 +305,21 @@ class ProductService:
 
         The key is (tenant, merchant, cents, billing month) so a second,
         different hike from the same merchant re-arms while a re-run of the
-        same hike in the same month stays suppressed.
+        same hike in the same month stays suppressed.  A row older than
+        ``PRICE_ALERT_CLAIM_TTL_SECONDS`` is expiry-on-conflict: it is treated
+        as NOT sent, so the next scheduler run re-detects the hike and sends
+        it instead of suppressing forever because a previous run died between
+        the claim INSERT and the send.
         """
         with self._lock:
             row = self._db.execute(
-                "SELECT 1 FROM price_alert_sent "
+                "SELECT notified_at FROM price_alert_sent "
                 "WHERE tenant_id=? AND merchant=? AND amount_cents=? AND period_ym=?",
                 (tenant_id, merchant, int(amount_cents), period_ym),
             ).fetchone()
-        return row is not None
+        if row is None:
+            return False
+        return not self._price_alert_claim_expired(row["notified_at"])
 
     def record_price_alert_sent(
         self, tenant_id: str, merchant: str, amount_cents: int, period_ym: str
@@ -316,70 +350,38 @@ class ProductService:
         The INSERT is the mutual-exclusion token for the SMTP call: the
         loser must not send, because the send cannot be rolled back.
 
-        A claim that is never followed by a successful send is PERMANENT.
-        ``notified_at`` is written here and read nowhere in ``app/`` — there
-        is no TTL, no expiry and no reaper — so a process killed between the
-        claim and the send blocks that (tenant, merchant, amount, period)
-        alert forever.  Every later run sees the row, takes the ``False``
-        branch and suppresses.  Recovery is a manual ``DELETE`` of the row,
-        which is why every failure path in the caller releases it
-        best-effort rather than letting it strand.
+        On ``UNIQUE`` conflict the existing row's ``notified_at`` is read
+        (SELECT ... WHERE notified_at) and aged against
+        ``PRICE_ALERT_CLAIM_TTL_SECONDS``.  A claim older than the TTL is
+        expiry-on-conflict: it is stolen from the dead holder with a
+        conditional ``UPDATE ... WHERE notified_at=?`` (rowcount-guarded, so
+        two concurrent stealers race on the old stamp and exactly one wins)
+        and this call returns ``True`` -- the next ``daily_scheduler`` run
+        re-sends the alert instead of counting ``price_alerts_suppressed``
+        forever.  A fresh row inside the TTL still returns ``False`` (the
+        mutex holds).  A row with a missing or unparseable ``notified_at``
+        is treated as NOT expired — the claim stands — so a bad row can
+        never be stolen by accident.
 
         Two distinct failures, and they must not be confused:
 
-        * ``sqlite3.IntegrityError`` — the row already exists, so another
-          run genuinely won the claim.  Returns ``False``: a lost race, and
-          the caller's alert is suppressed.
+        * ``sqlite3.IntegrityError`` — the row already exists.  The age
+          check above decides whether this is a live claim (return False)
+          or a stranded one (steal it, return True).
         * ``sqlite3.OperationalError`` (``database is locked``) — another
           *process* holds the write lock.  This is NOT a won claim and NOT a
           lost race; this run simply could not ask the question, so the
-          insert is re-raised.  Swallowing it into ``False`` would report
+          error is re-raised.  Swallowing it into ``False`` would report
           "someone else is delivering this" for a row nobody holds, which is
           the same silent-suppression bug as a stranded claim.  With
           ``_BUSY_TIMEOUT_MS`` set, this now needs a writer to hold the lock
           past 5 s before it surfaces at all.
 
         Callers that suppress on ``False`` must therefore also tolerate the
-        raise; the alert is retried on the next run either way.
-
-        A WIN IS PERMANENT AND UNEXPIRYING, AND THAT IS THE POINT.
-
-        This row is not a note that mail went out — it is the claim *that a
-        run owes the mail*.  Once it exists, every later run of every tenant
-        on this database suppresses the alert for this key, correctly, on the
-        strength of the row alone.  Nothing re-checks what the winning run
-        went on to do.
-
-        So if this process dies after the INSERT and before the send — a
-        crash, a kill, a power loss — that merchant's price hike is blocked
-        **forever**, and the household is never told about it.  There is no
-        TTL, no expiry, no age check and no reaper: ``notified_at`` is
-        written here and read **nowhere** in ``app/`` (the only other
-        mentions of it in this file are the schema and the INSERT itself), so
-        a stranded claim cannot be detected, aged out or cleaned up
-        automatically.  The suppression is also silent by design — see the
-        ``price_alerts_suppressed`` note in
-        ``app.subscription_alerts.daily_scheduler`` — so the block is not
-        visible in the run summary, on the console, or in the exit code.
-
-        RECOVERY IS A MANUAL ROW DELETE.  There is no supported command, flag
-        or code path that releases a claim that no live run holds.  An
-        operator who finds a stranded claim deletes that one row by hand:
-
-            DELETE FROM price_alert_sent
-            WHERE tenant_id=? AND merchant=? AND amount_cents=? AND period_ym=?;
-
-        and re-runs the scheduler, which will then re-detect the hike and
-        send it.  The rows of a *successfully* delivered alert look identical
-        in the table, so which one is stranded cannot be told from the row
-        alone — this is exactly why the delete has to be a decision made with
-        outside knowledge of what happened to the winning run.
-
-        Deliberately NOT solved here: a TTL on the claim, a reaper that ages
-        out unfulfilled claims, or recording which run holds the claim and
-        checking that it is still alive.  Those are behaviour changes to the
-        send path and belong to a spec of their own.  This docstring exists
-        so the hazard is written down where the INSERT happens.
+        raise; the alert is retried on the next run either way.  A delivered
+        alert's row looks identical to a stranded one's — the TTL is the only
+        thing that distinguishes them, and it is intentionally set at 24 h,
+        far above any real send window.
         """
         try:
             with self._lock, self._db:
@@ -390,7 +392,34 @@ class ProductService:
                     (tenant_id, merchant, int(amount_cents), period_ym, self._now()),
                 )
         except sqlite3.IntegrityError:
-            return False
+            # UNIQUE(hit) — the live read path (SELECT notified_at WHERE ...)
+            # and the age comparison that AC4 pins.
+            with self._lock:
+                row = self._db.execute(
+                    "SELECT notified_at FROM price_alert_sent "
+                    "WHERE tenant_id=? AND merchant=? AND amount_cents=? AND period_ym=?",
+                    (tenant_id, merchant, int(amount_cents), period_ym),
+                ).fetchone()
+            if row is None:
+                return False
+            old_stamp = row["notified_at"]
+            if not self._price_alert_claim_expired(old_stamp):
+                return False
+            # Stranded -- steal it iff nobody else already did.  The WHERE on
+            # the old stamp makes two concurrent stealers race on exactly the
+            # row they both read; the loser sees rowcount 0 and suppresses.
+            new_stamp = self._now()
+            try:
+                with self._lock, self._db:
+                    cur = self._db.execute(
+                        "UPDATE price_alert_sent SET notified_at=? "
+                        "WHERE tenant_id=? AND merchant=? AND amount_cents=? "
+                        "AND period_ym=? AND notified_at=?",
+                        (new_stamp, tenant_id, merchant, int(amount_cents), period_ym, old_stamp),
+                    )
+            except sqlite3.OperationalError:
+                raise
+            return cur.rowcount > 0
         except sqlite3.OperationalError:
             # Locked/controlled — surface it; never report a silent win.
             raise
