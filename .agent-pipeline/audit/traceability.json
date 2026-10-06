@@ -19,6 +19,7 @@
     "tests/test_price_alert_delivery_proof.py": 4,
     "tests/test_price_alert_f2_5.py": 8,
     "tests/test_price_alert_release_paths.py": 4,
+    "tests/test_price_alert_ttl.py": 3,
     "tests/test_production_auth_gate.py": 4,
     "tests/test_profile_honesty.py": 9,
     "tests/test_quality_service.py": 13,
@@ -52,17 +53,17 @@
       "with_all_three_markers": 0
     },
     "tests": {
-      "compliant_percent": 30.8,
-      "test_functions": 1573,
-      "with_all_three_markers": 485
+      "compliant_percent": 31.0,
+      "test_functions": 1576,
+      "with_all_three_markers": 488
     }
   },
-  "commit": "c0bfaf1557ce4bbf2004de7243747380e7820a5d",
-  "compliant_percent": 24.4,
+  "commit": "53a1f32feba006b5f6b1e88a2a4bb648ced167c5",
+  "compliant_percent": 24.5,
   "enforcement_scope": "delta_only",
   "files_with_noncompliant_tests": 120,
-  "functions_with_all_three_markers": 485,
-  "generated_at": "2026-10-06T14:33:36.176512+00:00",
+  "functions_with_all_three_markers": 488,
+  "generated_at": "2026-10-06T14:43:30.206111+00:00",
   "generated_by": "scripts/traceability_runner.py",
   "ref": "HEAD",
   "schema_version": "1.0",
@@ -1539,6 +1540,36 @@
         "marker": "scenario",
         "test": "tests/test_price_alert_release_paths.py::test_resolution_exception_releases_claim_and_next_run_delivers",
         "value": "AC-F25-10: P4 -- a sqlite3.OperationalError raised by _resolve_price_alert_recipient (a locked database) after the claim was won is caught: price_alerts_failed is 1, no price_alert_sent row is left behind, and the next run with the fault removed resolves the owner and delivers the alert with one ledger row. Recipient resolution reads the same SQLite file that holds the claim, so hoisting it out of the release scope strands every later run."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_ttl.py::test_expired_claim_can_be_reclaimed",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_ttl.py::test_expired_claim_can_be_reclaimed",
+        "value": "AC-F25-11: a price_alert_sent claim older than PRICE_ALERT_CLAIM_TTL_SECONDS no longer suppresses: claim -> backdate notified_at past the TTL via SQL UPDATE -> claim_price_alert_sent for the same key returns True again. The UPDATE simulates the stranded claim a run killed between INSERT and send leaves behind."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_ttl.py::test_fresh_claim_still_suppresses",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_ttl.py::test_fresh_claim_still_suppresses",
+        "value": "AC-F25-12: a fresh price_alert_sent claim still returns False on immediate re-claim -- expiry must not break the mutual exclusion the concurrency suite guards. Anti-regression half of the TTL gate."
+      },
+      {
+        "marker": "requirements",
+        "test": "tests/test_price_alert_ttl.py::test_stranded_claim_is_resent_by_daily_scheduler",
+        "value": "REQ-F2-5"
+      },
+      {
+        "marker": "scenario",
+        "test": "tests/test_price_alert_ttl.py::test_stranded_claim_is_resent_by_daily_scheduler",
+        "value": "AC-F25-13: a TTL-expired claim row does not suppress the next daily_scheduler run: with the send stubbed to succeed, the price-hike email goes out (price_emails_sent == 1, price_alerts_suppressed == 0 for the key). Drives the consumer line at app/subscription_alerts.py:948 -- a store-only gate would prove the sampler, not the send."
       },
       {
         "marker": "requirements",
@@ -3871,12 +3902,12 @@
         "value": "AC-RL-V02-15"
       }
     ],
-    "unresolved_count": 760
+    "unresolved_count": 766
   },
-  "test_files_total": 163,
-  "test_functions_total": 1989,
+  "test_files_total": 164,
+  "test_functions_total": 1992,
   "test_id_identity": {
-    "distinct_ids": 488,
+    "distinct_ids": 491,
     "duplicate_count": 0,
     "duplicates": {}
   },
