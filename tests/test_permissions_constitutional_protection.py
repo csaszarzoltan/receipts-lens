@@ -24,6 +24,7 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -104,7 +105,7 @@ def _run_gate(
     if extra_env:
         env.update(extra_env)
     return subprocess.run(  # noqa: PLW1510 - caller asserts on returncode
-        ["python3", str(repo / "scripts" / "veritas_gate.py"), *args],
+        [sys.executable, str(repo / "scripts" / "veritas_gate.py"), *args],
         cwd=repo,
         env=env,
         capture_output=True,

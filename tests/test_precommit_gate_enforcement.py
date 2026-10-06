@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -274,7 +275,7 @@ def test_diff_checks_are_not_vacuous_on_a_clean_checkout(tmp_path: Path) -> None
 
     result = subprocess.run(  # noqa: PLW1510 - caller asserts on returncode
         [
-            "python3",
+            sys.executable,
             str(repo / "scripts" / "veritas_gate.py"),
             "--verify-metadata",
             "--role",
@@ -307,7 +308,7 @@ def test_history_scan_does_not_flag_the_scanner_own_fixture() -> None:
     tiszta history ellenere is.
     """
     result = subprocess.run(  # noqa: PLW1510 - caller asserts on returncode
-        ["python3", str(GATE), "--history-scan"],
+        [sys.executable, str(GATE), "--history-scan"],
         cwd=ROOT,
         env=_env(),
         capture_output=True,

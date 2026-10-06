@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -132,7 +133,7 @@ def _run_gate(
     if extra_env:
         env.update(extra_env)
     return subprocess.run(  # noqa: PLW1510 - caller asserts on returncode
-        ["python3", str(repo / "scripts" / "veritas_gate.py"), *args],
+        [sys.executable, str(repo / "scripts" / "veritas_gate.py"), *args],
         cwd=repo,
         env=env,
         capture_output=True,
@@ -246,7 +247,7 @@ def test_git_context_failure_exits_2(tmp_path: Path) -> None:
     (scripts / "veritas_gate.py").write_bytes(GATE.read_bytes())
     env = {k: v for k, v in os.environ.items() if k not in SCRUB_VARS}
     proc = subprocess.run(  # noqa: PLW1510 - returncode asserted below
-        ["python3", str(scripts / "veritas_gate.py"), "--verify-diff"],
+        [sys.executable, str(scripts / "veritas_gate.py"), "--verify-diff"],
         cwd=plain,
         env=env,
         capture_output=True,
@@ -573,7 +574,7 @@ def test_auto_role_without_git_context_fails_closed(tmp_path: Path) -> None:
     (scripts / "veritas_gate.py").write_bytes(GATE.read_bytes())
     env = {k: v for k, v in os.environ.items() if k not in SCRUB_VARS}
     proc = subprocess.run(  # noqa: PLW1510 - returncode asserted below
-        ["python3", str(scripts / "veritas_gate.py"), "--verify-diff", "--role", "auto"],
+        [sys.executable, str(scripts / "veritas_gate.py"), "--verify-diff", "--role", "auto"],
         cwd=plain,
         env=env,
         capture_output=True,
