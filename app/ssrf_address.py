@@ -1,11 +1,13 @@
 """SSRF cim-ellenorzesi primitivek (DNS-fuggetlen resz)."""
 from __future__ import annotations
+
 import ipaddress
 import socket
 import time
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
+
 _BLOCKED_HOSTNAME_SUBSTRINGS = ("local", "internal", "localhost")
 _BLOCKED_HOSTNAME_EXACT = frozenset({"localhost", "local.host", "metadata.google.internal", "metadata.internal", "169.254.169.254", "metadata"})
 _RESERVED_NETWORKS = [ipaddress.ip_network("127.0.0.0/8"), ipaddress.ip_network("::1/128"), ipaddress.ip_network("10.0.0.0/8"), ipaddress.ip_network("172.16.0.0/12"), ipaddress.ip_network("192.168.0.0/16"), ipaddress.ip_network("169.254.0.0/16"), ipaddress.ip_network("fe80::/10"), ipaddress.ip_network("100.64.0.0/10"), ipaddress.ip_network("224.0.0.0/4"), ipaddress.ip_network("240.0.0.0/4"), ipaddress.ip_network("0.0.0.0/8"), ipaddress.ip_network("::/128"), ipaddress.ip_network("fc00::/7"), ipaddress.ip_network("192.0.0.0/24"), ipaddress.ip_network("192.0.2.0/24"), ipaddress.ip_network("198.51.100.0/24"), ipaddress.ip_network("203.0.113.0/24"), ipaddress.ip_network("255.255.255.255/32"), ipaddress.ip_network("2001:db8::/32"), ipaddress.ip_network("100::/64")]
@@ -23,9 +25,8 @@ def _is_reserved(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool
             if _is_reserved(ipaddress.IPv4Address(address.packed[12:])):
                 return True
         # 6to4 prefix, a 3-6. bajt a beagyazott IPv4
-        elif address.packed[:2] == b"\x20\x02":
-            if _is_reserved(ipaddress.IPv4Address(address.packed[2:6])):
-                return True
+        elif address.packed[:2] == b"\x20\x02" and _is_reserved(ipaddress.IPv4Address(address.packed[2:6])):
+            return True
     # Beepitett flag-ek, a fenti dekodolas utan (mapped eseten nem megbizhatok)
     if address.is_loopback or address.is_private or address.is_reserved or address.is_multicast or address.is_unspecified:
         return True
@@ -131,4 +132,4 @@ def _is_blocked_host(host: str) -> bool:
     except ValueError:
         pass
     return False
-__all__ = ["_is_reserved", "_deadline_expired", "_verify_peer_ip", "_resolve_with_deadline", "_reject_compressed_response", "_is_blocked_host"]
+__all__ = ["_deadline_expired", "_is_blocked_host", "_is_reserved", "_reject_compressed_response", "_resolve_with_deadline", "_verify_peer_ip"]

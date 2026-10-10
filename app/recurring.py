@@ -36,8 +36,7 @@ def parse_period_days(period: str) -> int:
     90-day answer under a ``period=7x`` label.
     """
     raw = period.strip().lower()
-    if raw.endswith("d"):
-        raw = raw[:-1]
+    raw = raw.removesuffix("d")
     days = int(raw)  # ValueError propagates on non-numeric input
     if not 1 <= days <= 3650:
         raise ValueError(f"Invalid period: {period!r}. Expected 1d..3650d.")

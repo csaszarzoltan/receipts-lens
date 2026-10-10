@@ -9,10 +9,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import secrets
 import sqlite3
 import threading
 import uuid
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -31,6 +33,7 @@ class Actor:
 
 
 # F1.3 — household auth vocabulary (docs/plans/consumer-pivot-2026-08-13.md §3.2).
+ZERO_DECIMAL_CURRENCIES = {"HUF", "JPY"}
 HOUSEHOLD_ROLES = {"owner", "adult", "child", "view_only"}
 WRITE_ROLES = {"owner", "adult"}
 LEGACY_HEADER_ROLES = {"admin", "reviewer", "integrator"}
@@ -165,6 +168,7 @@ class ProductService:
     def _receipt_payload(receipt: Any) -> dict[str, Any]:
         return {
             "vendor": receipt.merchant, "date": receipt.date, "total": receipt.total,
+            "total_candidate": getattr(receipt, "total_candidate", None),
             "tax": receipt.tax, "currency": receipt.currency,
             "line_items": [
                 {"name": i.name, "price": i.price, "category": getattr(i, "category", None)}
@@ -174,8 +178,65 @@ class ProductService:
             "confidence_level": getattr(receipt, "confidence_level", None),
         }
 
+    def _infer_currency(self, tenant_id: str, merchant: str | None,
+                        has_cents: bool = False) -> tuple[str, str] | None:
+        """Guess a missing currency from the tenant's explicit receipts.
+
+        Only receipts whose currency was printed (``marker``) or set by a user
+        (``user``) teach the guess; earlier guesses never reinforce themselves.
+        The same merchant wins over the tenant as a whole. A receipt with cents
+        cannot be a zero-decimal currency (HUF, JPY), so those are never inferred.
+        """
+        rows = self._db.execute(
+            "SELECT payload FROM receipts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 500",
+            (tenant_id,),
+        ).fetchall()
+        payloads = [json.loads(r["payload"]) for r in rows]
+        explicit = [p for p in payloads
+                    if p.get("currency_source") in {"marker", "user"} and p.get("currency")
+                    and not (has_cents and p["currency"] in ZERO_DECIMAL_CURRENCIES)]
+        if merchant:
+            same = [p["currency"] for p in explicit
+                    if str(p.get("vendor") or "").casefold() == merchant.casefold()]
+            if same:
+                return Counter(same).most_common(1)[0][0], "inferred_merchant"
+        if explicit:
+            return Counter(p["currency"] for p in explicit).most_common(1)[0][0], "inferred_tenant"
+        return None
+
+    @staticmethod
+    def _mark_currency_user(payload: dict[str, Any], changes: dict[str, Any]) -> None:
+        """A user-entered currency is no longer an assumption.
+
+        Must be called before the row is written: an invalid code raises
+        ValueError and the surrounding transaction rolls back.
+        """
+        if "currency" in changes:
+            raw = changes["currency"]
+            if raw is None or not str(raw).strip():
+                # Clearing the currency is allowed; export readiness then blocks
+                # until one is set.
+                code = None
+            else:
+                code = str(raw).strip().upper()
+                if not re.fullmatch(r"[A-Z]{3}", code):
+                    raise ValueError("currency must be a three-letter ISO 4217 code")
+            payload["currency"] = code
+            payload["currency_source"] = "user"
+            payload["currency_assumed"] = False
+
     def create_receipt(self, actor: Actor, parsed: Any, filename: str) -> dict[str, Any]:
         payload = self._receipt_payload(parsed)
+        # Callers that pass no provenance supplied the currency themselves.
+        source = getattr(parsed, "currency_source", None) or "marker"
+        payload["currency_source"] = source
+        payload["currency_assumed"] = source != "marker"
+        if source != "marker":
+            amounts = [payload.get("total"), *(i.get("price") for i in payload["line_items"])]
+            has_cents = any(isinstance(a, (int, float)) and a != round(a) for a in amounts)
+            inferred = self._infer_currency(actor.tenant_id, payload.get("vendor"), has_cents)
+            if inferred:
+                payload["currency"], payload["currency_source"] = inferred
         confidences = [v for v in payload["confidence"].values() if isinstance(v, (int, float))]
         status = "needs_review" if not confidences or min(confidences) < 0.7 else "completed"
         receipt_id, job_id, now = str(uuid.uuid4()), str(uuid.uuid4()), self._now()
@@ -236,6 +297,7 @@ class ProductService:
             allowed = {"vendor", "date", "total", "tax", "currency", "line_items"}
             if not changes or set(changes) - allowed: raise ValueError("unsupported or empty correction")
             payload = json.loads(row["payload"]); payload.update(changes)
+            self._mark_currency_user(payload, changes)
             status = "completed" if complete else "needs_review"; version = expected_version + 1
             self._db.execute("UPDATE receipts SET payload=?,status=?,version=? WHERE receipt_id=?", (json.dumps(payload, sort_keys=True), status, version, receipt_id))
             self._db.execute("UPDATE jobs SET status=? WHERE tenant_id=? AND receipt_id=?", (status, actor.tenant_id, receipt_id))
@@ -409,16 +471,13 @@ class ProductService:
             # the old stamp makes two concurrent stealers race on exactly the
             # row they both read; the loser sees rowcount 0 and suppresses.
             new_stamp = self._now()
-            try:
-                with self._lock, self._db:
-                    cur = self._db.execute(
-                        "UPDATE price_alert_sent SET notified_at=? "
-                        "WHERE tenant_id=? AND merchant=? AND amount_cents=? "
-                        "AND period_ym=? AND notified_at=?",
-                        (new_stamp, tenant_id, merchant, int(amount_cents), period_ym, old_stamp),
-                    )
-            except sqlite3.OperationalError:
-                raise
+            with self._lock, self._db:
+                cur = self._db.execute(
+                    "UPDATE price_alert_sent SET notified_at=? "
+                    "WHERE tenant_id=? AND merchant=? AND amount_cents=? "
+                    "AND period_ym=? AND notified_at=?",
+                    (new_stamp, tenant_id, merchant, int(amount_cents), period_ym, old_stamp),
+                )
             return cur.rowcount > 0
         except sqlite3.OperationalError:
             # Locked/controlled — surface it; never report a silent win.
@@ -436,16 +495,12 @@ class ProductService:
         :meth:`claim_price_alert_sent`: the caller cannot conclude the claim
         was released, and reporting a clean release would strand it.
         """
-        try:
-            with self._lock, self._db:
-                cur = self._db.execute(
-                    "DELETE FROM price_alert_sent "
-                    "WHERE tenant_id=? AND merchant=? AND amount_cents=? AND period_ym=?",
-                    (tenant_id, merchant, int(amount_cents), period_ym),
-                )
-        except sqlite3.OperationalError:
-            # Locked/controlled — the release did not happen; do not pretend it did.
-            raise
+        with self._lock, self._db:
+            cur = self._db.execute(
+                "DELETE FROM price_alert_sent "
+                "WHERE tenant_id=? AND merchant=? AND amount_cents=? AND period_ym=?",
+                (tenant_id, merchant, int(amount_cents), period_ym),
+            )
         return cur.rowcount > 0
 
     def list_connections(self, actor: Actor) -> list[dict[str, Any]]:
@@ -804,6 +859,7 @@ class ProductService:
             raise ProductConflict("stale receipt version")
         payload = json.loads(row["payload"])
         payload.update(fields)
+        self._mark_currency_user(payload, fields)
         if clean_items is not None:
             payload["line_items"] = clean_items
         status = "completed" if complete else row["status"]

@@ -63,11 +63,24 @@ export interface Receipt {
   date: string | null;
   tax: number | null;
   currency: string | null;
+  /** Where the currency came from; "user" once someone set it by hand. */
+  currency_source?: CurrencySource | null;
+  /** True when the currency was not printed on the receipt and was guessed. */
+  currency_assumed?: boolean;
+  /** The total OCR read while the confidence gate withholds `total`. */
+  total_candidate?: number | null;
   line_items: LineItem[];
   confidence: Record<string, number>;
   confidence_level?: ConfidenceLevel | null;
   category?: string;
 }
+
+export type CurrencySource =
+  | "marker"
+  | "default"
+  | "inferred_merchant"
+  | "inferred_tenant"
+  | "user";
 
 export type ReceiptStatus =
   | "needs_review"
@@ -184,7 +197,11 @@ export interface HouseholdStatus {
   remaining: number;
   currency: string;
   members: HouseholdMember[];
-  member_breakdown_note?: string;
+  member_breakdown_note?: string | null;
+  /** Spend in other currencies this month; not converted, so shown separately. */
+  spent_other_currencies?: Record<string, number>;
+  /** Receipts this month that could not be priced (no total or no currency). */
+  unpriced_receipts?: number;
 }
 
 export interface RecentReceipt {

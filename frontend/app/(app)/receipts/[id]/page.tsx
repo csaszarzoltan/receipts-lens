@@ -7,6 +7,7 @@ import type { HistoryEntry, LineItem, OCRBox, ReceiptItem } from "@/lib/types";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import StatusBadge from "@/components/StatusBadge";
 import Money from "@/components/Money";
+import CurrencyField from "@/components/CurrencyField";
 import { Skeleton, SkeletonCard } from "@/components/Skeleton";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
@@ -188,6 +189,16 @@ function ReceiptDetailContent({ id }: { id: string }) {
               <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">
                 {receipt.category ?? t("uncategorizedLabel")}
               </dd>
+            </div>
+                      <div className="col-span-2">
+              <CurrencyField
+                receiptId={id}
+                currency={receipt.currency}
+                source={receipt.currency_source}
+                assumed={receipt.currency_assumed}
+                version={item.version}
+                onSaved={() => mutate()}
+              />
             </div>
           </dl>
 

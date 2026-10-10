@@ -940,7 +940,7 @@ def daily_scheduler(
             # F2.5 idempotency key: billing month of the charge that caused the
             # hike, so a *second, different* hike from the same merchant still
             # alerts while a re-run of this one is suppressed.
-            amount_cents = int(round(float(amount) * 100))
+            amount_cents = round(float(amount) * 100)
             period_ym = (renewal_str or anchor.isoformat())[:7]
             # Claim the alert BEFORE the send.  The INSERT is the
             # mutual-exclusion token for the SMTP call: a losing run must not

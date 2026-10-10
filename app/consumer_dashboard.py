@@ -95,6 +95,38 @@ def _tenant_spent_this_month(
     )
 
 
+def _spend_by_currency(
+    payloads: list[dict[str, Any]], today: date
+) -> tuple[dict[str, float], int]:
+    """Sum this month's receipt totals per currency.
+
+    Returns the per-currency totals and how many receipts in the month could not
+    be priced (no total or no currency). Currencies are never converted here:
+    there is no exchange rate in the stored data, so they stay separate.
+    """
+    date_from, date_to = _month_bounds(today)
+    spend: dict[str, float] = {}
+    unpriced = 0
+    for payload in payloads:
+        if not (date_from <= str(payload.get("date") or "") <= date_to):
+            continue
+        code = str(payload.get("currency") or "")
+        if payload.get("total") is None or not code:
+            unpriced += 1
+            continue
+        spend[code] = round(spend.get(code, 0.0) + float(payload["total"]), 2)
+    return spend, unpriced
+
+
+def _primary_currency(spend: dict[str, float], preferred: str | None) -> str:
+    """The currency the dashboard reports in: the budget's, else the largest spend."""
+    if preferred:
+        return preferred
+    if spend:
+        return max(spend.items(), key=lambda kv: kv[1])[0]
+    return "USD"
+
+
 def _daily_remaining(today: date, tenant_id: str) -> dict[str, Any] | None:
     """Block 1 — „Mennyit költhetek még ma?" (budget countdown).
 
@@ -133,10 +165,14 @@ def _monthly_by_category(today: date, tenant_id: str) -> dict[str, Any]:
     """
     date_from, date_to = _month_bounds(today)
     payloads = _tenant_receipt_payloads(tenant_id)
+    spend, _ = _spend_by_currency(payloads, today)
+    currency = _primary_currency(spend, None)
     group_totals: dict[str, float] = {}
     group_counts: dict[str, int] = {}
     for payload in payloads:
         if not (date_from <= str(payload.get("date") or "") <= date_to):
+            continue
+        if str(payload.get("currency") or "") != currency:
             continue
         items = payload.get("line_items") or []
         if not items:
@@ -164,16 +200,12 @@ def _monthly_by_category(today: date, tenant_id: str) -> dict[str, Any]:
                 "pct": round((group_total / total * 100) if total > 0 else 0.0, 1),
             }
         )
-    currency = "USD"
-    for payload in payloads:
-        if str(payload.get("date") or "")[:7] == date_from[:7] and payload.get("currency"):
-            currency = str(payload["currency"])
-            break
     return {
         "month": date_from[:7],
         "total_spent": _money(total),
         "currency": currency,
         "categories": top,
+        "other_currency_totals": {c: _money(v) for c, v in spend.items() if c != currency},
     }
 
 
@@ -242,8 +274,9 @@ def _household(today: date, tenant_id: str) -> dict[str, Any]:
 
     budgets = _tenant_monthly_budgets(tenant_id)
     total_budget = sum(b.amount for b in budgets)
-    spent = _tenant_spent_this_month(tenant_id, today)
-    currency = budgets[0].currency if budgets else "USD"
+    spend, unpriced = _spend_by_currency(_tenant_receipt_payloads(tenant_id), today)
+    currency = _primary_currency(spend, budgets[0].currency if budgets else None)
+    spent = spend.get(currency, 0.0)
 
     members = []
     try:
@@ -265,11 +298,10 @@ def _household(today: date, tenant_id: str) -> dict[str, Any]:
         "spent": _money(spent),
         "remaining": _money(max(0.0, total_budget - spent)),
         "currency": currency,
+        "spent_other_currencies": {c: _money(v) for c, v in spend.items() if c != currency},
+        "unpriced_receipts": unpriced,
         "members": members,
-        "member_breakdown_note": (
-            "Per-member breakdown will be available with the new sign-in flow "
-            "(F1.3)."
-        ),
+        "member_breakdown_note": None,
     }
 
 

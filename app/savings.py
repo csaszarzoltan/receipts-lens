@@ -18,8 +18,7 @@ def _period_bounds(period: str) -> tuple[str, str]:
     days = 90
     try:
         raw = period.strip().lower()
-        if raw.endswith("d"):
-            raw = raw[:-1]
+        raw = raw.removesuffix("d")
         days = int(raw)
     except (ValueError, AttributeError):
         days = 90

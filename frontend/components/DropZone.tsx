@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { cx } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface DropZoneProps {
   onFiles: (files: File[]) => void;
@@ -14,7 +15,9 @@ interface DropZoneProps {
  * Camera capture uses navigator.mediaDevices.getUserMedia when available and
  * falls back to an `<input capture>` file picker otherwise.
  */
-export default function DropZone({ onFiles, disabled, label = "Drag & drop a receipt image here, or click to browse" }: DropZoneProps) {
+export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
+  const { t } = useTranslation();
+  const dropLabel = label ?? t("dropzoneLabel");
   const [dragging, setDragging] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -50,7 +53,7 @@ export default function DropZone({ onFiles, disabled, label = "Drag & drop a rec
         }
       });
     } catch {
-      setCameraError("Camera unavailable — you can still pick a photo from your device.");
+      setCameraError(t("dropCameraUnavailable"));
       cameraInput.current?.click();
     }
   }
@@ -80,7 +83,7 @@ export default function DropZone({ onFiles, disabled, label = "Drag & drop a rec
         <div
           role="button"
           tabIndex={0}
-          aria-label={label}
+          aria-label={dropLabel}
           onClick={() => fileInput.current?.click()}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
@@ -101,21 +104,21 @@ export default function DropZone({ onFiles, disabled, label = "Drag & drop a rec
           className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-xl px-6 py-10 text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
         >
           <span className="text-4xl" aria-hidden="true">🧾</span>
-          <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">{label}</p>
-          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">JPG, PNG or WebP — receipts are processed with OCR</p>
+          <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">{dropLabel}</p>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t("dropFormats")}</p>
         </div>
         {/* Camera capture is a sibling of the dropzone button (not nested) so
             screen readers see two distinct, non-nested interactive controls. */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 flex flex-wrap items-center justify-center gap-2">
-          <span className="pointer-events-auto inline-flex min-h-9 items-center rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white">
-            Choose file
+        <div className="flex flex-wrap items-center justify-center gap-2 px-6 pb-6">
+          <span className="inline-flex min-h-9 items-center rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white">
+            {t("dropChooseFile")}
           </span>
           <button
             type="button"
             onClick={openCamera}
-            className="pointer-events-auto inline-flex min-h-9 items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="inline-flex min-h-9 items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
           >
-            📷 Take a photo
+            📷 {t("dropTakePhoto")}
           </button>
         </div>
       </div>
@@ -153,7 +156,7 @@ export default function DropZone({ onFiles, disabled, label = "Drag & drop a rec
       ) : null}
 
       {cameraOpen ? (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 p-4" role="dialog" aria-modal="true" aria-label="Camera capture">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/95 p-4" role="dialog" aria-modal="true" aria-label={t("dropTakePhoto")}>
           <video
             ref={videoRef}
             className="max-h-[70vh] w-full max-w-lg rounded-xl bg-black"
@@ -167,14 +170,14 @@ export default function DropZone({ onFiles, disabled, label = "Drag & drop a rec
               onClick={capturePhoto}
               className="inline-flex min-h-12 items-center rounded-full bg-white px-6 font-medium text-slate-900"
             >
-              📸 Capture
+              📸 {t("dropCapture")}
             </button>
             <button
               type="button"
               onClick={stopCamera}
               className="inline-flex min-h-12 items-center rounded-full bg-slate-700 px-6 font-medium text-white"
             >
-              Cancel
+              {t("dropCancel")}
             </button>
           </div>
         </div>

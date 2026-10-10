@@ -92,13 +92,18 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
     };
   }, [item.receipt_id]);
 
+  // The gate withholds `total` when the merchant is unreadable; the value OCR
+  // read is offered for confirmation and only saved when the user confirms it.
+  const candidate = item.receipt.total == null ? item.receipt.total_candidate ?? null : null;
+
   async function complete() {
     setSaving(true);
     setMessage(null);
     try {
+      const changes = candidate != null ? { total: candidate } : {};
       await correctReceipt(
         item.receipt_id,
-        { changes: {}, action: "complete" },
+        { changes, action: "complete" },
         item.version,
       );
       setMessage(t("markedComplete"));
@@ -170,8 +175,11 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
             <div>
               <dt className="text-xs uppercase tracking-wide text-slate-400">Total</dt>
               <dd className="mt-0.5 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                {formatMoney(item.receipt.total, item.receipt.currency)}
+                {formatMoney(item.receipt.total ?? candidate, item.receipt.currency)}
               </dd>
+              {candidate != null ? (
+                <dd className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">{t("totalCandidateLabel")}</dd>
+              ) : null}
             </div>
             <div>
               <dt className="text-xs uppercase tracking-wide text-slate-400">Tax</dt>

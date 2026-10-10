@@ -1,14 +1,12 @@
 import { formatPercent } from "@/lib/utils";
 import { cx } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface ConfidenceBadgeProps {
   /** OCR confidence 0..1 (or 0..100, auto-detected). */
   value: number;
   label?: string;
 }
-
-const HU_WARNING = "Ellenőrzés szükséges — összeg bizonytalan";
-const RETRY_HINT = "Próbálja újra jobb megvilágítással / nagyobb felbontással";
 
 function tone(ratio: number): string {
   if (ratio >= 0.85) return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300";
@@ -18,6 +16,7 @@ function tone(ratio: number): string {
 
 /** OCR confidence indicator — green/amber/red by threshold. */
 export default function ConfidenceBadge({ value, label }: ConfidenceBadgeProps) {
+  const { t } = useTranslation();
   const ratio = value > 1 ? value / 100 : value;
   const isLow = ratio < 0.6;
   return (
@@ -34,8 +33,8 @@ export default function ConfidenceBadge({ value, label }: ConfidenceBadgeProps) 
       </span>
       {isLow && (
         <span className="text-xs text-rose-700 dark:text-rose-300">
-          {HU_WARNING}
-          <span className="block text-[11px] opacity-80">{RETRY_HINT}</span>
+          {t("lowConfidenceShort")}
+          <span className="block text-[11px] opacity-80">{t("retryCaptureHint")}</span>
         </span>
       )}
     </span>

@@ -5,25 +5,25 @@ from __future__ import annotations
 import ipaddress
 import logging
 import socket
+import time
 import urllib.parse
 from collections.abc import Iterable as IterableType
 from collections.abc import Iterator
 
 import httpx
 from fastapi import HTTPException
-import time
 
 from app.ssrf_address import (  # noqa: F401 - a publikus nevek re-exportja
-    _RESERVED_NETWORKS,
-    _DEFAULT_TOTAL_TIMEOUT,
-    _BLOCKED_HOSTNAME_SUBSTRINGS,
     _BLOCKED_HOSTNAME_EXACT,
-    _is_reserved,
+    _BLOCKED_HOSTNAME_SUBSTRINGS,
+    _DEFAULT_TOTAL_TIMEOUT,
+    _RESERVED_NETWORKS,
     _deadline_expired,
-    _verify_peer_ip,
-    _resolve_with_deadline,
-    _reject_compressed_response,
     _is_blocked_host,
+    _is_reserved,
+    _reject_compressed_response,
+    _resolve_with_deadline,
+    _verify_peer_ip,
 )
 
 logger = logging.getLogger(__name__)

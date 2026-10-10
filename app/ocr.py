@@ -4,8 +4,10 @@ Produces structured receipt data from raw image bytes via Tesseract.
 """
 from __future__ import annotations
 
+import logging
 import re
 from difflib import SequenceMatcher
+from functools import lru_cache
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any
@@ -15,7 +17,9 @@ import pytesseract
 from app.preprocessing import preprocess_image
 from app.exceptions import InvalidImageError
 
-SUPPORTED_LANGUAGES: tuple[str, ...] = ("eng", "deu", "fra", "spa", "ita", "por")
+SUPPORTED_LANGUAGES: tuple[str, ...] = ("eng", "deu", "fra", "spa", "ita", "por", "hun")
+
+logger = logging.getLogger(__name__)
 
 # AC3 gate marker: confidence_level gating total_score = 1.0 (see _group_duplicates)
 
@@ -27,6 +31,7 @@ _LOCALE_DECIMAL_MAP: dict[str, str] = {
     "spa": ".",
     "ita": ",",
     "por": ",",
+    "hun": ",",
 }
 
 # Confidence thresholds for the per-receipt confidence level.
@@ -71,12 +76,18 @@ class ParsedReceipt:
     tax: float | None
     currency: str | None
     raw_text: str
+    # Where the currency came from: "marker" (printed symbol/code), "default"
+    # (locale fallback, not read from the receipt), or None (no currency).
+    currency_source: str | None = None
 
 
 @dataclass
 class ConfidenceReceipt(ParsedReceipt):
     confidence: dict[str, float | None] = field(default_factory=dict)
     confidence_level: str | None = None
+    # The total OCR read, even when the BUG-001 gate withholds ``total``. Shown
+    # to the user for confirmation; never saved as the total without them.
+    total_candidate: float | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -86,10 +97,11 @@ class ConfidenceReceipt(ParsedReceipt):
 _CURRENCY_SYMBOLS = (
     r"(?:[\$€£¥₹₽]|USD|EUR|GBP|JPY|INR|RUB|CZK|CHF|HUF|RON|BGN|PLN|SEK|NOK|DKK)"
 )
-_AMOUNT = r"(?:\d{1,3}(?:[.,]\d{3})*[.,]\d{2}|\d+[.,]\d{2}|\d+)"
+# Thousands groups may be separated by ".", "," or a (non-breaking) space.
+_AMOUNT = r"(?:\d{1,3}(?:[.,\u00a0 ]\d{3})+(?:[.,]\d{2})?|\d+[.,]\d{2}|\d+)"
 
 _TOTAL_RE = re.compile(
-    rf"(?:total|amount\s*due|balance|sum|grand\s*total)\s*(?:due)?\s*[:=]?\s*{_CURRENCY_SYMBOLS}?\s*({_AMOUNT})",
+    rf"(?:total|amount\s*due|balance|sum|grand\s*total|összesen|végösszeg|fizetendő|osszesen|vegosszeg|fizetendo)\s*(?:due)?\s*[:=]?\s*{_CURRENCY_SYMBOLS}?\s*({_AMOUNT})",
     re.IGNORECASE,
 )
 _SUBTOTAL_RE = re.compile(
@@ -105,10 +117,25 @@ _DATE_RE = re.compile(
     r"(\d{1,2}[./\-]\d{1,2}[./\-]\d{2,4})",
     re.IGNORECASE,
 )
-_CURRENCY_RE = re.compile(_CURRENCY_SYMBOLS)
-_LINE_ITEM_RE = re.compile(
-    rf"^(.+?)\s+({_AMOUNT})\s*$"
+# Unlabelled dates: ISO "2024-03-05" or day-first "05.03.2024" on their own.
+_BARE_DATE_RE = re.compile(
+    r"\b(\d{4}[./\-]\d{1,2}[./\-]\d{1,2}|\d{1,2}[./\-]\d{1,2}[./\-]\d{4})\b"
 )
+_CURRENCY_RE = re.compile(_CURRENCY_SYMBOLS)
+# Currency may prefix or suffix the amount ("$2.50", "12 500 Ft", "1.20 EUR").
+# A leading minus marks a discount or refund line; it keeps its negative sign.
+_CURRENCY_SUFFIX = r"(?:Ft|HUF|EUR|USD|GBP|€|\$|£)"
+# Line items on receipts that print cents: a space is a quantity separator,
+# not a thousands separator ("Coffee 3 500" = quantity 3, price 500).
+_AMOUNT_NO_SPACE = r"(?:\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?|\d+[.,]\d{2}|\d+)"
+_LINE_ITEM_PATTERN = r"^(.+?)\s+((?:{cur}\s?)?-?{amount}(?:\s?{suffix})?)\s*$"
+_LINE_ITEM_RE = re.compile(
+    _LINE_ITEM_PATTERN.format(cur=_CURRENCY_SYMBOLS, amount=_AMOUNT, suffix=_CURRENCY_SUFFIX)
+)
+_LINE_ITEM_CENTS_RE = re.compile(
+    _LINE_ITEM_PATTERN.format(cur=_CURRENCY_SYMBOLS, amount=_AMOUNT_NO_SPACE, suffix=_CURRENCY_SUFFIX)
+)
+_CENTS_RE = re.compile(r"\d[.,]\d{2}(?!\d)")
 
 # Headers that indicate a store name are typically at the top of the text.
 _MERCHANT_RE = re.compile(
@@ -133,6 +160,10 @@ def _parse_float(raw: str | None) -> float | None:
     cleaned = re.sub(r"[^\d.,]", "", raw)
     if not cleaned:
         return None
+    # Whole-unit thousands grouping ("1,000", "1.250", "1,000,000"): every
+    # separator is a thousands separator, not a decimal point.
+    if re.fullmatch(r"\d{1,3}(?:[.,]\d{3})+", cleaned):
+        return float(re.sub(r"[.,]", "", cleaned))
     # Detect decimal separator: last separator wins.
     last_comma = cleaned.rfind(",")
     last_dot = cleaned.rfind(".")
@@ -223,6 +254,15 @@ def _parse_float_locale(raw: str | None, lang: str = "eng") -> float | None:
         return None
 
 
+def _has_currency_marker(text: str) -> bool:
+    """True when the receipt itself prints a currency symbol, code or forint."""
+    return bool(
+        re.search(r"\b(USD|EUR|GBP|JPY|INR|RUB|CZK|CHF|HUF|RON|BGN|PLN|SEK|NOK|DKK)\b", text)
+        or re.search(r"\d\s?(?:Ft|Forint)\b", text)
+        or _CURRENCY_RE.search(text)
+    )
+
+
 def _extract_currency(text: str, lang: str = "eng") -> str | None:
     """Extract currency from receipt text with locale-aware fallback.
     
@@ -233,6 +273,9 @@ def _extract_currency(text: str, lang: str = "eng") -> str | None:
     iso = re.search(r"\b(USD|EUR|GBP|JPY|INR|RUB|CZK|CHF|HUF|RON|BGN|PLN|SEK|NOK|DKK)\b", text)
     if iso:
         return iso.group(1)
+    # Hungarian forint is written after the amount ("4 400 Ft").
+    if re.search(r"\d\s?(?:Ft|Forint)\b", text):
+        return "HUF"
     m = _CURRENCY_RE.search(text)
     if not m:
         return _CURRENCY_LOCALE_HINTS.get(lang)
@@ -259,21 +302,31 @@ def _extract_currency(text: str, lang: str = "eng") -> str | None:
     return code
 
 
+_NON_ITEM_KEYWORDS = (
+    "total", "tax", "vat", "subtotal", "cash", "change", "balance",
+    "összesen", "osszesen", "végösszeg", "vegosszeg", "fizetendő", "fizetendo",
+)
+
+
 def _parse_line_items(text: str) -> list[ReceiptItem]:
     items: list[ReceiptItem] = []
+    # Dates ("2024.03.05") contain digit.digit pairs; they are not cents amounts.
+    line_re = _LINE_ITEM_CENTS_RE if _CENTS_RE.search(_BARE_DATE_RE.sub(" ", text)) else _LINE_ITEM_RE
     for line in text.splitlines():
-        m = _LINE_ITEM_RE.match(line.strip())
+        m = line_re.match(line.strip())
         if not m:
             continue
         name = m.group(1).strip()
         price_raw = m.group(2).strip()
         # Eliminate lines that look like totals/tax headers.
         lowered = name.lower()
-        if any(k in lowered for k in ["total", "tax", "vat", "subtotal", "cash", "change", "balance"]):
+        if any(k in lowered for k in _NON_ITEM_KEYWORDS):
             continue
         price = _parse_float(price_raw)
-        if price is None or price <= 0:
+        if price is None or price == 0:
             continue
+        if "-" in price_raw:
+            price = -price
         if len(name) < 2:
             continue
         items.append(ReceiptItem(name=name, price=price))
@@ -328,7 +381,7 @@ def _confidence_from_data(image_bytes: bytes) -> dict[str, float | None]:
     # Per-field confidence: check if the field value was actually found.
     total_val = _find_first(_TOTAL_RE, clean_text)
     tax_val = _find_first(_TAX_RE, clean_text)
-    date_val = _find_first(_DATE_RE, clean_text)
+    date_val = _extract_date_raw(clean_text)
     currency_val = _extract_currency(clean_text)
     merchant_val = _extract_merchant(clean_text)
     items = _parse_line_items(clean_text)
@@ -541,6 +594,26 @@ def check_duplicates(receipts: list[dict], *, receipt_batch_size: int = 200) -> 
 # ---------------------------------------------------------------------------
 
 
+@lru_cache(maxsize=1)
+def _installed_languages() -> set[str]:
+    """Tesseract language packs present on this host; empty if unknown."""
+    try:
+        return set(pytesseract.get_languages(config=""))
+    except Exception:
+        return set()
+
+
+def resolve_ocr_language(requested: str) -> str:
+    """Return ``requested`` if usable, else fall back to "eng" (never raises)."""
+    if requested == "eng" or requested in _installed_languages():
+        return requested
+    logger.warning(
+        "Tesseract language pack %r is not installed; falling back to 'eng'",
+        requested,
+    )
+    return "eng"
+
+
 def extract_text(image_bytes: bytes, *, lang: str = "eng") -> str:
     """Run OCR on image bytes with specified language."""
     if not image_bytes:
@@ -550,7 +623,8 @@ def extract_text(image_bytes: bytes, *, lang: str = "eng") -> str:
     invalid_codes = [c for c in lang_codes if c not in SUPPORTED_LANGUAGES]
     if invalid_codes:
         raise ValueError(f"Unsupported language code(s): {', '.join(invalid_codes)}")
-    effective_lang = "+".join(lang_codes)
+    # A requested pack that is not installed falls back to English (never fails the request).
+    effective_lang = "+".join(resolve_ocr_language(code) for code in lang_codes)
     try:
         image = preprocess_image(image_bytes)
     except ValueError as exc:
@@ -578,12 +652,15 @@ def parse_receipt(image_bytes: bytes, *, lang: str | None = None) -> ParsedRecei
 
     merchant = _extract_merchant(text)
 
-    date_raw = _find_first(_DATE_RE, text)
+    date_raw = _extract_date_raw(text)
     date_str = _normalize_date(date_raw) if date_raw else None
 
     items = _parse_line_items(text)
 
     currency = _extract_currency(text)
+    currency_source = None
+    if currency is not None:
+        currency_source = "marker" if _has_currency_marker(text) else "default"
 
     return ParsedReceipt(
         merchant=merchant,
@@ -593,6 +670,7 @@ def parse_receipt(image_bytes: bytes, *, lang: str | None = None) -> ParsedRecei
         tax=tax,
         currency=currency,
         raw_text=text,
+        currency_source=currency_source,
     )
 
 
@@ -621,8 +699,10 @@ def parse_receipt_with_confidence(image_bytes: bytes, *, lang: str | None = None
         tax=parsed.tax,
         currency=parsed.currency,
         raw_text=parsed.raw_text,
+        currency_source=parsed.currency_source,
         confidence=confidence,
         confidence_level=level,
+        total_candidate=parsed.total,
     )
 
 
@@ -644,8 +724,17 @@ def _confidence_level(confidence: dict[str, float | None]) -> str:
     return "low"
 
 
+def _extract_date_raw(text: str) -> str | None:
+    """Return the labelled date if present, otherwise the first bare date."""
+    labelled = _find_first(_DATE_RE, text)
+    if labelled:
+        return labelled
+    m = _BARE_DATE_RE.search(text)
+    return m.group(1) if m else None
+
+
 def _normalize_date(raw: str) -> str | None:
-    for fmt in ("%d.%m.%Y", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%y", "%d/%m/%y"):
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%Y.%m.%d", "%d.%m.%Y", "%d/%m/%Y", "%d-%m-%Y", "%d.%m.%y", "%d/%m/%y"):
         try:
             d = datetime.strptime(raw, fmt)
             return d.date().isoformat()

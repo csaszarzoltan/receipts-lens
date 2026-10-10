@@ -305,6 +305,14 @@ function HouseholdBlock({ household }: { household: HouseholdStatus }) {
           <p className="text-xs text-slate-500 dark:text-slate-400">{t("remaining")}</p>
         </div>
       </div>
+      {household.spent_other_currencies && Object.keys(household.spent_other_currencies).length > 0 ? (
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400" data-testid="other-currency-spend">
+          {t("alsoSpentOtherCurrencies")}{" "}
+          {Object.entries(household.spent_other_currencies)
+            .map(([code, amount]) => formatMoney(amount, code))
+            .join(" · ")}
+        </p>
+      ) : null}
       {household.members.length > 0 ? (
         <ul className="mt-4 space-y-2">
           {household.members.map((member) => (
@@ -323,7 +331,7 @@ function HouseholdBlock({ household }: { household: HouseholdStatus }) {
         </ul>
       ) : (
         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-          {household.member_breakdown_note ?? t("overviewSubtitle")}
+          {t("noMembersHint")}
         </p>
       )}
     </div>

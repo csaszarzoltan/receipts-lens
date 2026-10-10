@@ -4,10 +4,12 @@ from __future__ import annotations
 import json
 import logging
 import os
+import urllib.parse
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, date, datetime
-from typing import Any, Callable
+from typing import Any
 
 import httpx
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
@@ -19,7 +21,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.alerts import alert_store
 from app.analytics import budget_analytics, spending_analytics
-from app.recurring import RecurringAnalytics, parse_period_days
 from app.api_v2 import batch_router
 from app.auth_api import router as auth_router
 from app.budgets import budget_store
@@ -35,11 +36,12 @@ from app.product_api import Actor, service
 from app.product_api import router as product_router
 from app.quota_api import router as quota_router
 from app.rate_limits import RateLimitMiddleware
+from app.recurring import RecurringAnalytics, parse_period_days
 from app.report_generator import generate_csv, generate_pdf
 from app.reports import receipt_store
 from app.savings import savings_analytics
 from app.security import fetch_image_bytes
-from app.ssrf_guard import validate_scheme_and_host
+from app.ssrf_guard import validate_resolved_ips, validate_scheme_and_host
 from app.subscriptions_api import router as subscriptions_router
 from app.sync_api import router as sync_router
 from app.tax_api import router as tax_router
@@ -635,15 +637,37 @@ async def _process_batch_job(
 
 
 async def _deliver_webhook(url: str, payload: dict) -> None:
-    """POST payload to a webhook URL after SSRF validation."""
+    """POST payload to a webhook URL after SSRF validation.
+
+    The URL is caller-supplied, so the scheme, the hostname and every resolved
+    address are checked, and the request connects to the address that was
+    validated (not to the hostname again). A DNS answer that changes between
+    the check and the connect therefore cannot redirect the payload to an
+    internal host. TLS still verifies the certificate against the hostname
+    via the SNI extension.
+    """
     try:
-        validate_scheme_and_host(url)
-    except ValueError as exc:
+        parsed = validate_scheme_and_host(url)
+        addresses = validate_resolved_ips(parsed.hostname)
+    except (ValueError, OSError) as exc:
         logger.warning("Webhook URL blocked by SSRF guard: %s", exc)
         return
+    host = parsed.hostname
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    ip = addresses[0]
+    ip_netloc = f"[{ip}]" if ":" in ip else ip
+    pinned_url = urllib.parse.urlunparse(parsed._replace(netloc=f"{ip_netloc}:{port}"))
+    host_header = host if parsed.port is None else f"{host}:{parsed.port}"
     try:
+        request = httpx.Request(
+            "POST",
+            pinned_url,
+            json=payload,
+            headers={"Host": host_header},
+            extensions={"sni_hostname": host},
+        )
         async with httpx.AsyncClient(timeout=httpx.Timeout(connect=5.0, read=10.0, write=None, pool=None)) as client:
-            resp = await client.post(url, json=payload)
+            resp = await client.send(request)
             resp.raise_for_status()
     except Exception:
         logger.warning("Webhook delivery failed to %s", url)
