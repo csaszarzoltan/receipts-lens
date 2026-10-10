@@ -9,15 +9,16 @@ Covers External Dogfood Pilot §6 AC1-3:
 """
 from __future__ import annotations
 
-import io
 import inspect
+import io
 import pathlib
 
+import pytest
 from PIL import Image
 
-from app.preprocessing import preprocess_image
 import app.ocr as ocr_module
 import app.preprocessing as pre_module
+from app.preprocessing import preprocess_image
 
 HU_WARNING = "Ellenőrzés szükséges — összeg bizonytalan"
 RETRY_HINT = "Próbálja újra jobb megvilágítással / nagyobb felbontással"
@@ -27,7 +28,7 @@ def _make_low_dpi_bytes(w: int = 320, h: int = 200) -> bytes:
     """Synthetic low-DPI receipt-like image (short edge < 1000, no DPI meta)."""
     img = Image.new("RGB", (w, h), color="white")
     for x in range(w):
-        for y in range(0, 8):
+        for y in range(8):
             img.putpixel((x, y), (240, 240, 240))
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -43,6 +44,9 @@ def _make_large_bytes(w: int = 4000, h: int = 2800) -> bytes:
 
 # --- AC1: low-DPI flagged + GIGO gated + HU badge + border -----------------------
 
+@pytest.mark.test_id("TEST-RL-V02-198")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-064")
+@pytest.mark.scenario("AC-RL-V02-45")
 def test_ac1_low_dpi_flagged_gigo_and_hu_warning():
     """AC1 [happy] — low-DPI synthetic must be flagged low, total None, badge HU + border."""
     low_bytes = _make_low_dpi_bytes(320, 200)
@@ -66,12 +70,18 @@ def test_ac1_low_dpi_flagged_gigo_and_hu_warning():
     # Badge must render HU warning verbatim + retry hint when low
     badge_path = pathlib.Path(__file__).parent.parent / "frontend" / "components" / "ConfidenceBadge.tsx"
     text = badge_path.read_text(encoding="utf-8")
-    assert HU_WARNING in text, f"AC1 RED: HU warning {HU_WARNING!r} missing from ConfidenceBadge.tsx"
-    assert RETRY_HINT in text, f"AC1 RED: retry hint {RETRY_HINT!r} missing from ConfidenceBadge.tsx"
+    # The text lives in the Hungarian catalog now; the badge reads it through t().
+    catalog = (pathlib.Path(__file__).parent.parent / "frontend" / "lib" / "i18n.ts").read_text(encoding="utf-8")
+    assert "lowConfidenceShort" in text and "retryCaptureHint" in text, "badge must read the catalog keys"
+    assert f'lowConfidenceShort: "{HU_WARNING}"' in catalog, f"hu warning {HU_WARNING!r} missing from the catalog"
+    assert f'retryCaptureHint: "{RETRY_HINT}"' in catalog, f"hu retry hint {RETRY_HINT!r} missing from the catalog"
 
 
 # --- AC2: threshold param + DPI-aware upscale to ~300 DPI ------------------------
 
+@pytest.mark.test_id("TEST-RL-V02-199")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-064")
+@pytest.mark.scenario("AC-RL-V02-45")
 def test_ac2_preprocess_threshold_and_dpi_upscale():
     """AC2 [recovery] — preprocess must expose threshold param and upscale to ~300 DPI."""
     sig = inspect.signature(pre_module.preprocess_image)
@@ -96,6 +106,9 @@ def test_ac2_preprocess_threshold_and_dpi_upscale():
 
 # --- AC3: 3000px cap before LANCZOS + GIGO gated -------------------------------
 
+@pytest.mark.test_id("TEST-RL-V02-200")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-064")
+@pytest.mark.scenario("AC-RL-V02-45")
 def test_ac3_3000px_cap_and_gigo_gated():
     """AC3 [negative] — 4000px image capped at 3000px before LANCZOS and GIGO gated."""
     pre_src = pathlib.Path(inspect.getfile(pre_module)).read_text(encoding="utf-8")

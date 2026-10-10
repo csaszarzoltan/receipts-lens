@@ -167,7 +167,7 @@ def test_ledger_row_is_complete(_run_probe: dict) -> None:
         )
     )
     missing = [column for column in LEDGER_COLUMNS if row.get(column) is None]
-    assert not missing, "ledger row has null column(s): {} (row={!r})".format(missing, row)
+    assert not missing, f"ledger row has null column(s): {missing} (row={row!r})"
 
 
 # ---------------------------------------------------------------------------
@@ -212,11 +212,11 @@ def test_captured_message_has_envelope_and_body(_run_probe: dict) -> None:
     )
     recipients = message.get("rcpt_to")
     assert isinstance(recipients, list) and recipients, (
-        "rcpt_to missing or empty: {!r}".format(recipients)
+        f"rcpt_to missing or empty: {recipients!r}"
     )
     assert all(isinstance(r, str) and r.strip() for r in recipients), (
-        "rcpt_to contains a blank address: {!r}".format(recipients)
+        f"rcpt_to contains a blank address: {recipients!r}"
     )
     data = message.get("data")
-    assert isinstance(data, bytes), "DATA payload is not bytes: {}".format(type(data))
+    assert isinstance(data, bytes), f"DATA payload is not bytes: {type(data)}"
     assert data.strip(), "DATA payload is empty"

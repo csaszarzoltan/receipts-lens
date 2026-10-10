@@ -9,8 +9,7 @@ from __future__ import annotations
 
 import io
 
-from PIL import Image, ImageDraw, ImageFilter
-from PIL import ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 
 def _render(text: str, *, size=(700, 380), bg=(255, 255, 255), fg=(0, 0, 0)) -> bytes:

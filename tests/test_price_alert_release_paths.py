@@ -90,7 +90,7 @@ from typing import Any
 
 import pytest
 
-import app.subscription_alerts as subscription_alerts
+from app import subscription_alerts
 from app.product_service import ProductService
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -138,7 +138,7 @@ SMTP_CONFIG: dict[str, Any] = {
 ALERT_KEY = (TENANT, MERCHANT, 1599, RENEWAL_DATE[:7])
 
 #: The subject every successful price-hike delivery is expected to carry.
-ALERT_SUBJECT = "Price Increase: {}".format(MERCHANT)
+ALERT_SUBJECT = f"Price Increase: {MERCHANT}"
 
 #: Guards only the per-store construction, so a fixture teardown can never
 #: race a ``CREATE TABLE IF NOT EXISTS`` script.  It is not held across a run
@@ -174,7 +174,7 @@ def _build_store(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> str
 
     resolved = str(db_path.resolve())
     assert os.path.realpath(resolved) != os.path.realpath(LIVE_DB), (
-        "test DB resolved to the live product database: {}".format(resolved)
+        f"test DB resolved to the live product database: {resolved}"
     )
 
     # The alert store is the ``ProductService`` singleton resolved at
@@ -367,7 +367,7 @@ def _patch_send(monkeypatch: pytest.MonkeyPatch, fake: Any) -> None:
 def _assert_not_live(store_db: str) -> None:
     """Fail loudly if the alert store ever resolved to the live product DB."""
     assert os.path.realpath(store_db) != os.path.realpath(LIVE_DB), (
-        "the alert store pointed at the live product database: {}".format(store_db)
+        f"the alert store pointed at the live product database: {store_db}"
     )
 
 
@@ -419,20 +419,16 @@ def _assert_delivered(summary: dict, rows: list[tuple[Any, ...]], subjects: list
     )
     assert summary["price_alerts_suppressed"] == 0, (
         "the second run suppressed the alert instead of sending it -- the "
-        "claim from the first run was never released: {}".format(summary)
+        f"claim from the first run was never released: {summary}"
     )
     assert summary["price_alerts_failed"] == 0, (
-        "the second run reported a failure on a healthy transport: {}".format(summary)
+        f"the second run reported a failure on a healthy transport: {summary}"
     )
     assert rows == [ALERT_KEY], (
-        "expected exactly one price_alert_sent row {} for the key, got {}".format(
-            ALERT_KEY, rows
-        )
+        f"expected exactly one price_alert_sent row {ALERT_KEY} for the key, got {rows}"
     )
     assert subjects == [ALERT_SUBJECT], (
-        "expected exactly one delivered alert {!r}, got {!r}".format(
-            ALERT_SUBJECT, subjects
-        )
+        f"expected exactly one delivered alert {ALERT_SUBJECT!r}, got {subjects!r}"
     )
 
 
@@ -461,13 +457,13 @@ def test_no_active_owner_releases_claim_and_is_not_a_failure(
         "the live product database was written to by this test"
     )
     assert first["price_emails_sent"] == 0, (
-        "nothing may be sent when there is no active owner: {}".format(first)
+        f"nothing may be sent when there is no active owner: {first}"
     )
     assert first["price_alerts_suppressed"] == 0, (
-        "no other run holds this alert, so nothing was suppressed: {}".format(first)
+        f"no other run holds this alert, so nothing was suppressed: {first}"
     )
     assert first["price_alerts_failed"] == 0, (
-        "a no-owner resolution is a deliberate no-op, never a failure: {}".format(first)
+        f"a no-owner resolution is a deliberate no-op, never a failure: {first}"
     )
     assert send_recorder["subjects"] == [], (
         "send_email_notification was called with no active owner: {!r}".format(
@@ -479,7 +475,7 @@ def test_no_active_owner_releases_claim_and_is_not_a_failure(
     # earlier draft of this test wrongly replaced with a bare no-op check.
     _assert_released(release_recorder)
     assert rows_after_first == [], (
-        "the claim was stranded after a None recipient: {}".format(rows_after_first)
+        f"the claim was stranded after a None recipient: {rows_after_first}"
     )
 
     # The assertion that makes this real: an owner exists again, and the
@@ -531,18 +527,18 @@ def test_refused_send_releases_claim_and_next_run_delivers(
         )
     )
     assert first["price_emails_sent"] == 0, (
-        "a refused send must not count as delivered: {}".format(first)
+        f"a refused send must not count as delivered: {first}"
     )
     assert first["price_alerts_suppressed"] == 0, (
-        "no other run holds this alert: {}".format(first)
+        f"no other run holds this alert: {first}"
     )
     assert attempted == [ALERT_SUBJECT], (
-        "the refused send was not the price-hike alert: {!r}".format(attempted)
+        f"the refused send was not the price-hike alert: {attempted!r}"
     )
     _assert_released(release_recorder)
     assert rows_after_first == [], (
         "a refused send left a claim row behind, which would suppress the "
-        "hike forever: {}".format(rows_after_first)
+        f"hike forever: {rows_after_first}"
     )
 
     # Fault removed: the next run must deliver.  This is the assertion that
@@ -601,18 +597,18 @@ def test_raising_send_releases_claim_and_next_run_delivers(
         )
     )
     assert first["price_emails_sent"] == 0, (
-        "a raising send must not count as delivered: {}".format(first)
+        f"a raising send must not count as delivered: {first}"
     )
     assert first["price_alerts_suppressed"] == 0, (
-        "no other run holds this alert: {}".format(first)
+        f"no other run holds this alert: {first}"
     )
     assert attempted == [ALERT_SUBJECT], (
-        "the raising send was not the price-hike alert: {!r}".format(attempted)
+        f"the raising send was not the price-hike alert: {attempted!r}"
     )
     _assert_released(release_recorder)
     assert rows_after_first == [], (
         "an OSError from the send left a claim row behind, which would "
-        "suppress the hike forever: {}".format(rows_after_first)
+        f"suppress the hike forever: {rows_after_first}"
     )
 
     # Fault removed: the next run delivers.
@@ -674,19 +670,19 @@ def test_resolution_exception_releases_claim_and_next_run_delivers(
         "got {}".format(first["price_alerts_failed"])
     )
     assert first["price_emails_sent"] == 0, (
-        "nothing was delivered, so nothing may count as sent: {}".format(first)
+        f"nothing was delivered, so nothing may count as sent: {first}"
     )
     assert first["price_alerts_suppressed"] == 0, (
-        "no other run holds this alert: {}".format(first)
+        f"no other run holds this alert: {first}"
     )
     assert resolver_calls == [TENANT], (
         "the price-hike path must resolve a recipient exactly once per run: "
-        "{!r}".format(resolver_calls)
+        f"{resolver_calls!r}"
     )
     _assert_released(release_recorder)
     assert rows_after_first == [], (
         "the claim was stranded when recipient resolution raised, which would "
-        "suppress the hike forever: {}".format(rows_after_first)
+        f"suppress the hike forever: {rows_after_first}"
     )
 
     # The patch now delegates to the real resolver; the next run delivers.
@@ -694,8 +690,6 @@ def test_resolution_exception_releases_claim_and_next_run_delivers(
 
     assert len(resolver_calls) == 2, (
         "the second run did not reach recipient resolution -- it suppressed "
-        "the alert because the first run stranded its claim: {!r}".format(
-            resolver_calls
-        )
+        f"the alert because the first run stranded its claim: {resolver_calls!r}"
     )
     _assert_delivered(second, _ledger_rows(store_db), send_recorder["subjects"])

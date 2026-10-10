@@ -874,7 +874,7 @@ class TestDatePresetsBehavioral:
         receipt_store.store(
             ocr.ConfidenceReceipt(
                 merchant="Seed Store",
-                date=datetime.date.today().isoformat(),
+                date=datetime.datetime.now(datetime.UTC).date().isoformat(),
                 items=[ocr.ReceiptItem(name="Seed item", price=5.0)],
                 total=5.0, tax=0.4, currency="USD", raw_text="",
             ),

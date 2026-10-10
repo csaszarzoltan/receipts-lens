@@ -1,11 +1,10 @@
 """Acceptance tests for the human-friendly ReceiptLens landing page."""
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.api import app
-
-import pytest
 
 client = TestClient(app)
 

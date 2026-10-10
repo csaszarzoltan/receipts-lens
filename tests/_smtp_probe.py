@@ -246,7 +246,7 @@ class _MockSMTPServer:
         while not self._stop.is_set():
             try:
                 conn, _ = self._socket.accept()
-            except socket.timeout:
+            except TimeoutError:
                 continue
             except OSError:
                 break
@@ -419,13 +419,14 @@ def run_cli_against_mock(tenant: str) -> dict:
         # value become the process exit code.
         code = (
             "from app.cli import main;"
-            "raise SystemExit(main(['subscription-alerts','--tenant',%r]))" % tenant
+            f"raise SystemExit(main(['subscription-alerts','--tenant',{tenant!r}]))"
         )
         completed = subprocess.run(
             [sys.executable, "-c", code],
             cwd=str(REPO_ROOT),
             env=_child_env(server.port, db_value),
             capture_output=True,
+            check=False,
             text=True,
             timeout=180,
         )

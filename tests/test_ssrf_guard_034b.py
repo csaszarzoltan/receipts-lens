@@ -15,6 +15,7 @@ nem a jelenlegi viselkedést tesztelik.
 """
 from __future__ import annotations
 
+import contextlib
 import ipaddress
 import socket
 from unittest.mock import patch
@@ -47,9 +48,8 @@ def test_ipv4_mapped_literal_host_is_blocked(host: str) -> None:
     """
     with patch.object(
         socket, "getaddrinfo", return_value=[(2, 1, 6, "", (host, 0, 0, 0))]
-    ):
-        with pytest.raises(ValueError):
-            validate_resolved_ips(host)
+    ), pytest.raises(ValueError):
+        validate_resolved_ips(host)
 
 
 @pytest.mark.test_id("test_nat64_prefix_is_checked")
@@ -140,9 +140,8 @@ def test_trailing_dot_hostname_is_normalised() -> None:
     """SSRF-4: a trailing dot ne tegye lehetővé a blocklist megkerülését."""
     with patch.object(
         socket, "getaddrinfo", return_value=[(2, 1, 6, "", ("127.0.0.1", 0, 0, 0))]
-    ):
-        with pytest.raises(ValueError):
-            validate_image_url("http://metadata.google.internal./latest/")
+    ), pytest.raises(ValueError):
+        validate_image_url("http://metadata.google.internal./latest/")
 
 
 # ---------------------------------------------------------------------------
@@ -266,12 +265,10 @@ def test_timeout_argument_is_honoured() -> None:
     """
     with patch.object(ssrf_guard, "_SSRFGuardClient") as guard_cls:
         guard_cls.return_value._send.return_value = b"x"
-        try:
+        with contextlib.suppress(Exception):
             ssrf_guard.fetch_image_bytes(
                 "http://example.com/x.jpg", timeout=3.0
             )
-        except Exception:
-            pass
     assert guard_cls.called, "a guard nem volt példányosítva"
     # a timeout-ot vagy a konstruktorban, vagy a _send-ben át kell adni
     call_args = guard_cls.call_args

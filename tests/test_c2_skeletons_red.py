@@ -1,4 +1,5 @@
-"""RED tests for C2 skeletons (AC1-2) — expect loading.tsx, FAIL before impl.
+"""Gate tests for C2 skeletons (AC1-2). Originally RED before implementation;
+now GREEN against the shipped commit C2_COMMIT.
 
 Target Files: frontend/app/(app)/upload/loading.tsx, frontend/app/(app)/receipts/loading.tsx
 AC1: skeletons exist, export default Loading, import from @/components/Skeleton, no "use client"
@@ -9,10 +10,14 @@ from __future__ import annotations
 import pathlib
 import subprocess
 
+import pytest
+
 ROOT = pathlib.Path(__file__).parent.parent
 UPLOAD_LOADING = ROOT / "frontend" / "app" / "(app)" / "upload" / "loading.tsx"
 RECEIPTS_LOADING = ROOT / "frontend" / "app" / "(app)" / "receipts" / "loading.tsx"
 LAYOUT = ROOT / "frontend" / "app" / "layout.tsx"
+# Shipped C2 implementation (feat(c2): instant loading skeletons).
+C2_COMMIT = "b92ecd0"
 C3_ALLOWLIST = [
     ROOT / "app" / "preprocessing.py",
     ROOT / "app" / "ocr.py",
@@ -20,6 +25,9 @@ C3_ALLOWLIST = [
 ]
 
 
+@pytest.mark.test_id("TEST-RL-V02-201")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-065")
+@pytest.mark.scenario("AC-RL-V02-46")
 def test_ac1_loading_skeletons_exist():
     """AC1 — both loading.tsx must exist, export default Loading, import Skeleton primitives."""
     assert UPLOAD_LOADING.exists(), f"AC1 RED: missing {UPLOAD_LOADING} — C2 not implemented yet"
@@ -36,6 +44,9 @@ def test_ac1_loading_skeletons_exist():
         assert '"use client"' not in text and "'use client'" not in text, f"AC1 RED: {path.name} must not contain 'use client' (server component)"
 
 
+@pytest.mark.test_id("TEST-RL-V02-202")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-065")
+@pytest.mark.scenario("AC-RL-V02-46")
 def test_ac2_no_layout_break_and_disjoint():
     """AC2 — layout FOUC guard intact + loading files present + no Suspense + C3 file-disjoint.
 
@@ -60,23 +71,19 @@ def test_ac2_no_layout_break_and_disjoint():
         assert "useSearchParams" not in text, f"AC2 RED: {path.name} must not import useSearchParams"
         assert "useSWR" not in text and "swr" not in text.lower().split("skeleton")[0], f"AC2 RED: {path.name} must not import useSWR"
 
-    # File-disjoint with C3 — C2 diff must not touch C3 allowlist
-    # Check git diff --name-only against C3 allowlist (untracked docs/plans excluded)
+    # File-disjoint with C3 — the C2 change itself must not touch the C3
+    # allowlist. Measured on the shipped C2 commit, not the working tree: the
+    # working tree also holds unrelated work (e.g. OCR bug fixes in app/ocr.py)
+    # that would otherwise be attributed to C2.
     result = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD"],
+        ["git", "show", "--name-only", "--format=", C2_COMMIT],
         cwd=str(ROOT),
         capture_output=True,
         text=True,
+        check=True,
     )
     changed = set(result.stdout.splitlines())
-    # Also include staged changes
-    result2 = subprocess.run(
-        ["git", "diff", "--cached", "--name-only"],
-        cwd=str(ROOT),
-        capture_output=True,
-        text=True,
-    )
-    changed |= set(result2.stdout.splitlines())
+    assert changed, f"C2 commit {C2_COMMIT} lists no files; cannot check disjointness"
     for c3_path in C3_ALLOWLIST:
         rel = str(c3_path.relative_to(ROOT))
-        assert rel not in changed, f"AC2 RED: C3 file {rel} must not be in C2 diff (file-disjoint)"
+        assert rel not in changed, f"AC2: C3 file {rel} is in the C2 commit (file-disjoint)"

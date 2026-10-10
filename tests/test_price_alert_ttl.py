@@ -50,7 +50,7 @@ from typing import Any
 
 import pytest
 
-import app.subscription_alerts as subscription_alerts
+from app import subscription_alerts
 from app.product_service import (
     PRICE_ALERT_CLAIM_TTL_SECONDS,
     ProductService,
@@ -90,7 +90,7 @@ SMTP_CONFIG: dict[str, Any] = {
 #: (tenant, merchant, amount_cents, period_ym) -- the F2.5 idempotency key.
 ALERT_KEY = (TENANT, MERCHANT, 1599, RENEWAL_DATE[:7])
 
-ALERT_SUBJECT = "Price Increase: {}".format(MERCHANT)
+ALERT_SUBJECT = f"Price Increase: {MERCHANT}"
 
 _STORE_INIT_LOCK = threading.Lock()
 
@@ -111,9 +111,7 @@ def _backdate(store: ProductService, age: timedelta) -> str:
             (stamp, *ALERT_KEY),
         )
     assert cur.rowcount == 1, (
-        "expected to age exactly the claimed row for {}, updated {}".format(
-            ALERT_KEY, cur.rowcount
-        )
+        f"expected to age exactly the claimed row for {ALERT_KEY}, updated {cur.rowcount}"
     )
     return stamp
 
@@ -139,7 +137,7 @@ def _build_store(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> str
 
     resolved = str(db_path.resolve())
     assert os.path.realpath(resolved) != os.path.realpath(LIVE_DB), (
-        "test DB resolved to the live product database: {}".format(resolved)
+        f"test DB resolved to the live product database: {resolved}"
     )
 
     local = threading.local()
@@ -186,9 +184,9 @@ def test_expired_claim_can_be_reclaimed() -> None:
         assert store.claim_price_alert_sent(*ALERT_KEY) is True
         _backdate(store, timedelta(seconds=PRICE_ALERT_CLAIM_TTL_SECONDS + 3600))
         assert store.claim_price_alert_sent(*ALERT_KEY) is True, (
-            "a claim older than PRICE_ALERT_CLAIM_TTL_SECONDS ({!r}s) must be "
+            f"a claim older than PRICE_ALERT_CLAIM_TTL_SECONDS ({PRICE_ALERT_CLAIM_TTL_SECONDS!r}s) must be "
             "re-claimable -- otherwise a stranded claim suppresses the alert "
-            "forever".format(PRICE_ALERT_CLAIM_TTL_SECONDS)
+            "forever"
         )
     finally:
         store._db.close()
@@ -267,18 +265,16 @@ def test_stranded_claim_is_resent_by_daily_scheduler(
 
     assert summary["price_emails_sent"] == 1, (
         "the stranded (TTL-expired) claim suppressed the alert instead of "
-        "re-sending it: {}".format(summary)
+        f"re-sending it: {summary}"
     )
     assert summary["price_alerts_suppressed"] == 0, (
-        "the expired claim counted as a suppression: {}".format(summary)
+        f"the expired claim counted as a suppression: {summary}"
     )
     assert summary["price_alerts_failed"] == 0, (
-        "a healthy transport must not report a failure: {}".format(summary)
+        f"a healthy transport must not report a failure: {summary}"
     )
     assert sent_subjects == [ALERT_SUBJECT], (
-        "expected exactly one delivered alert {!r}, got {!r}".format(
-            ALERT_SUBJECT, sent_subjects
-        )
+        f"expected exactly one delivered alert {ALERT_SUBJECT!r}, got {sent_subjects!r}"
     )
     assert _count_live_ledger_rows() == live_before, (
         "the run touched the live product database"

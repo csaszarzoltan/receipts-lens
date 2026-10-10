@@ -79,7 +79,7 @@ from typing import Any
 
 import pytest
 
-import app.subscription_alerts as subscription_alerts
+from app import subscription_alerts
 from app.product_service import ProductService
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -166,7 +166,7 @@ def _build_store(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> str
 
     resolved = str(db_path.resolve())
     assert pathlib.Path(resolved).resolve() != LIVE_DB.resolve(), (
-        "test DB resolved to the live product database: {}".format(resolved)
+        f"test DB resolved to the live product database: {resolved}"
     )
 
     # The alert store is the ``ProductService`` singleton resolved at
@@ -307,7 +307,7 @@ def _run_in_threads(count: int) -> list[dict[str, Any]]:
             results[index] = outcome
 
     threads = [
-        threading.Thread(target=_worker, args=(i,), name="sched-{}".format(i), daemon=True)
+        threading.Thread(target=_worker, args=(i,), name=f"sched-{i}", daemon=True)
         for i in range(count)
     ]
     start = threading.Barrier(count, timeout=TIMEOUT)
@@ -324,8 +324,8 @@ def _run_in_threads(count: int) -> list[dict[str, Any]]:
 
     still_running = [t.name for t in threads if t.is_alive()]
     assert not still_running, (
-        "daily_scheduler threads did not finish within {}s: {} -- the run is "
-        "wedged, not slow".format(TIMEOUT, still_running)
+        f"daily_scheduler threads did not finish within {TIMEOUT}s: {still_running} -- the run is "
+        "wedged, not slow"
     )
     if errors:
         raise errors[0]
@@ -355,20 +355,18 @@ def test_concurrent_runs_send_price_alert_exactly_once(
         "the live product database was written to by this test"
     )
 
-    assert len(results) == 2, "expected two scheduler results, got {}".format(len(results))
+    assert len(results) == 2, f"expected two scheduler results, got {len(results)}"
     assert len(subjects) == 1, (
-        "the household was mailed {} times for one price hike: {}. "
+        f"the household was mailed {len(subjects)} times for one price hike: {subjects}. "
         "the send is now protected by claim_price_alert_sent -- the loser "
-        "never reaches send_email_notification.".format(len(subjects), subjects)
+        "never reaches send_email_notification."
     )
-    assert subjects[0] == "Price Increase: {}".format(MERCHANT), (
-        "the single send was not the price-hike alert: {!r}".format(subjects[0])
+    assert subjects[0] == f"Price Increase: {MERCHANT}", (
+        f"the single send was not the price-hike alert: {subjects[0]!r}"
     )
 
     assert rows == [ALERT_KEY], (
-        "expected exactly one price_alert_sent row {} for the key, got {}".format(
-            ALERT_KEY, rows
-        )
+        f"expected exactly one price_alert_sent row {ALERT_KEY} for the key, got {rows}"
     )
     # The losing run suppressed the alert; the winning run sent it.
     sorts = sorted(r["price_emails_sent"] for r in results)
@@ -379,9 +377,7 @@ def test_concurrent_runs_send_price_alert_exactly_once(
     )
     suppressed = sum(r["price_alerts_suppressed"] for r in results)
     assert suppressed == 1, (
-        "expected exactly one suppressed alert across two concurrent runs, got {}: {}".format(
-            suppressed, results
-        )
+        f"expected exactly one suppressed alert across two concurrent runs, got {suppressed}: {results}"
     )
 
 
@@ -409,26 +405,22 @@ def test_sequential_rerun_sends_once_and_leaves_one_ledger_row(
         "the live product database was written to by this test"
     )
     assert len(subjects) == 1, (
-        "two sequential runs sent {} emails, expected 1: {!r}".format(
-            len(subjects), subjects
-        )
+        f"two sequential runs sent {len(subjects)} emails, expected 1: {subjects!r}"
     )
-    assert subjects[0] == "Price Increase: {}".format(MERCHANT), (
-        "the single send was not the price-hike alert: {!r}".format(subjects[0])
+    assert subjects[0] == f"Price Increase: {MERCHANT}", (
+        f"the single send was not the price-hike alert: {subjects[0]!r}"
     )
     assert rows == [ALERT_KEY], (
-        "expected exactly one price_alert_sent row {} for the key, got {}".format(
-            ALERT_KEY, rows
-        )
+        f"expected exactly one price_alert_sent row {ALERT_KEY} for the key, got {rows}"
     )
     assert first["price_emails_sent"] == 1, (
-        "first run should have delivered the alert, got {}".format(first)
+        f"first run should have delivered the alert, got {first}"
     )
     assert second["price_emails_sent"] == 0 and second["price_alerts_suppressed"] == 1, (
-        "second run should suppress, not send or fail: {}".format(second)
+        f"second run should suppress, not send or fail: {second}"
     )
     assert second["price_alerts_failed"] == 0, (
-        "a suppressed alert is a success, never a failure: {}".format(second)
+        f"a suppressed alert is a success, never a failure: {second}"
     )
     assert os.path.realpath(store_db) != os.path.realpath(LIVE_DB), (
         "the alert store pointed at the live product database"

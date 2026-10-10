@@ -438,8 +438,8 @@ def test_one_builder_imports_without_a_cycle():
     the builder lives in subscription_alerts and the API projects it.
     Both imports must succeed in one process, in this order.
     """
-    from app.subscription_alerts import build_subscriptions
     import app.subscriptions_api
+    from app.subscription_alerts import build_subscriptions
 
     assert callable(build_subscriptions)
     assert callable(app.subscriptions_api._build_subscriptions)

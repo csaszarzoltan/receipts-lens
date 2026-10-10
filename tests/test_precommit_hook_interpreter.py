@@ -76,7 +76,7 @@ def _yaml_site_packages() -> Path:
     Building the temp venv from sys.executable keeps the CPython ABI identical, so
     the compiled ``_yaml`` extension copied alongside the pure-python package loads.
     """
-    import yaml  # noqa: PLC0415 - imported here so the failure names the real cause
+    import yaml
 
     return Path(yaml.__file__).resolve().parent.parent
 
