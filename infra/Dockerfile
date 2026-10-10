@@ -50,11 +50,12 @@ RUN pip install --no-cache-dir .
 # ─── Runtime stage: slim image with only what's needed ─────────────────────────
 FROM python:3.11-slim
 
-# Runtime system deps — tesseract binary + English trained data
+# Runtime system deps — tesseract binary + English and Hungarian trained data
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         tesseract-ocr \
         tesseract-ocr-eng \
+        tesseract-ocr-hun \
         libgl1 \
         libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
