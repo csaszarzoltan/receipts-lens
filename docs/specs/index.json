@@ -3,7 +3,7 @@
   "generated_at": "2026-09-12",
   "methodology": "METHODOLOGY.md sections 3.3 and 4; VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md section 4.5",
   "brief_count": 48,
-  "spec_count": 50,
+  "spec_count": 51,
   "coverage_percent": 100,
   "specifications": [
     {
@@ -676,6 +676,19 @@
       "requirements": 8,
       "acceptance_scenarios": 8,
       "test_mappings": 8
+    },
+    {
+      "spec_id": "SPEC-050",
+      "feature_id": "FEAT-050",
+      "brief_id": null,
+      "title": "OCR amounts, currency provenance and totals (retroactive)",
+      "status": "SHIPPED_RETROACTIVE",
+      "version": 1,
+      "risk": "high",
+      "path": "docs/specs/SPEC-050-ocr-amounts-currency-and-totals.md",
+      "requirements": 8,
+      "acceptance_scenarios": 8,
+      "test_mappings": 142
     }
   ]
 }
