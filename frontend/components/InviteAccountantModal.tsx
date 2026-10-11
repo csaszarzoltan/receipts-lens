@@ -63,7 +63,7 @@ export default function InviteAccountantModal({ open, onClose }: InviteAccountan
             </button>
           </div>
           {expiresAt ? <p className="text-xs text-slate-500">{expiresAt}</p> : null}
-          {copied ? <p className="text-xs font-medium text-emerald-600">{t("inviteCopied")}</p> : null}
+          {copied ? <p className="text-xs font-medium text-emerald-700">{t("inviteCopied")}</p> : null}
         </div>
       )}
     </Modal>

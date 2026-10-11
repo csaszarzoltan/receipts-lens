@@ -80,7 +80,7 @@ export default function AccountingPage() {
                 {t("selectReceiptHint")}
               </p>
             ) : validationLoading ? (
-              <p className="mt-4 text-sm text-slate-400">{t("loadingValidation")}</p>
+              <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">{t("loadingValidation")}</p>
             ) : validation ? (
               <div className="mt-4 space-y-4">
                 <StatusBadge status={validation.readiness} />
@@ -96,16 +96,16 @@ export default function AccountingPage() {
                 ) : null}
                 {validation.warnings.length > 0 ? (
                   <div>
-                    <h3 className="text-sm font-semibold text-amber-600 dark:text-amber-400">{t("warningsHeader")}</h3>
+                    <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-400">{t("warningsHeader")}</h3>
                     <ul className="mt-1 space-y-1">
                       {validation.warnings.map((warn, index) => (
-                        <li key={index} className="text-sm text-amber-600 dark:text-amber-400">• {warn.message}</li>
+                        <li key={index} className="text-sm text-amber-700 dark:text-amber-400">• {warn.message}</li>
                       ))}
                     </ul>
                   </div>
                 ) : null}
                 {validation.errors.length === 0 && validation.warnings.length === 0 ? (
-                  <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400">
                     ✓ {t("readyForExport")}
                   </p>
                 ) : null}

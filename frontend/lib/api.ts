@@ -751,6 +751,11 @@ export async function purgeExpired(): Promise<{ purged: number }> {
   });
 }
 
+/** Everything stored for the account (GDPR-style portability export). */
+export async function getPortabilityExport(): Promise<Record<string, unknown>> {
+  return tenantRequest<Record<string, unknown>>("/product/privacy/export");
+}
+
 // ---------------------------------------------------------------------------
 // Preferences
 // ---------------------------------------------------------------------------
@@ -1169,4 +1174,22 @@ export async function setInsightPreferences(
     "/api/v1/insights/preferences",
     { method: "POST", body: JSON.stringify({ unsubscribed }) },
   );
+}
+
+// ---------------------------------------------------------------------------
+// Budgets
+// ---------------------------------------------------------------------------
+
+export interface CreateBudgetBody {
+  category: string;
+  amount: number;
+  currency: string;
+  period?: "weekly" | "monthly" | "yearly";
+}
+
+export async function createBudget(body: CreateBudgetBody): Promise<{ budget_id: string }> {
+  return tenantRequest<{ budget_id: string }>("/api/v1/budgets", {
+    method: "POST",
+    body: JSON.stringify({ period: "monthly", ...body }),
+  });
 }

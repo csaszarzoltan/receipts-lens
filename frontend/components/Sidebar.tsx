@@ -33,7 +33,7 @@ export default function Sidebar() {
           {NAV_SECTIONS.map((section) => (
             <div key={section.group} className="mb-2">
               {section.labelKey ? (
-                <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                   {t(section.labelKey)}
                 </p>
               ) : null}
@@ -68,7 +68,7 @@ export default function Sidebar() {
               type="button"
               onClick={() => setBusinessOpen((open) => !open)}
               aria-expanded={businessOpen}
-              className="flex min-h-9 w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              className="flex min-h-9 w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             >
               <span>Business</span>
               <span aria-hidden="true">{businessOpen ? "▾" : "▸"}</span>
@@ -99,7 +99,7 @@ export default function Sidebar() {
             ) : null}
           </div>
         </nav>
-        <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
+        <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-600 dark:text-slate-400 dark:border-slate-800">
           ReceiptLens v1.4.0
         </div>
       </div>

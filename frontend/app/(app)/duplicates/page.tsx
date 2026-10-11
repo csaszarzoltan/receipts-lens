@@ -72,7 +72,7 @@ export default function DuplicatesPage() {
                       {candidate.left.date ?? t("noDateShort")} ·{" "}
                       {formatMoney(candidate.left.total, candidate.left.currency)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">{candidate.left_id}</p>
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{candidate.left_id}</p>
                   </div>
                   <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
                     <p className="font-medium text-slate-900 dark:text-slate-100">
@@ -82,7 +82,7 @@ export default function DuplicatesPage() {
                       {candidate.right.date ?? t("noDateShort")} ·{" "}
                       {formatMoney(candidate.right.total, candidate.right.currency)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">{candidate.right_id}</p>
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{candidate.right_id}</p>
                   </div>
                 </div>
                 <div className="mt-4 flex gap-2">

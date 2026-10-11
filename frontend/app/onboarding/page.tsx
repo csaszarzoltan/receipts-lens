@@ -172,7 +172,7 @@ export default function OnboardingPage() {
           <h1 className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{current.title}</h1>
           <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">{current.body}</p>
           {current.hint ? (
-            <p className="mt-2 text-xs leading-relaxed text-slate-400 dark:text-slate-500">{current.hint}</p>
+            <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{current.hint}</p>
           ) : null}
         </div>
 
@@ -274,7 +274,7 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
+        <p className="mt-6 text-center text-xs text-slate-600 dark:text-slate-400">
           <Link href="/dashboard" className="underline-offset-2 hover:underline">
             {t("onboardingAlreadyHaveAccount")}
           </Link>

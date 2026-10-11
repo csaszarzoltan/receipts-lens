@@ -63,7 +63,8 @@ export default function TaxPage() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("taxTitle")}</h1>
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950">
             <p className="font-medium text-amber-800 dark:text-amber-200">{t("upgradeToPro")}</p>
-            <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">{t("taxDeduction")}</p>
+            <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">{t("taxProWhy")}</p>
+            <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">{t("taxProHint")}</p>
           </div>
         </div>
       );
@@ -86,7 +87,11 @@ export default function TaxPage() {
             {t("auditPdf")}
           </button>
         </div>
-        {proRequired ? <p className="text-sm font-medium text-amber-700">{t("upgradeToPro")}</p> : null}
+        {proRequired ? (
+          <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+            {t("upgradeToPro")} {t("taxProWhy")}
+          </p>
+        ) : null}
         <EmptyState icon="📄" title={t("taxDeduction")} description="No categorized receipts yet." />
       </div>
     );

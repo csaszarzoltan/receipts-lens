@@ -486,13 +486,17 @@ class BudgetVarianceProjector:
                     "category": budget.category,
                     "period": budget_period,
                     "budgeted": budget.amount,
+                    "currency": budget.currency,
                     "projected_spend": projected_spend,
                     "expected_overage": round(projected_spend - budget.amount, 2),
                     "status": self._compute_status(pct_used, budget.alert_threshold),
                 }
             )
 
-        return {"currency": "USD", "projections": projections}
+        # The reporting currency is the budgets' own currency (the first one when
+        # they differ; each projection carries its own), not a hard-coded USD.
+        currency = projections[0]["currency"] if projections else "USD"
+        return {"currency": currency, "projections": projections}
 
     @staticmethod
     def _compute_status(pct_used: float, alert_threshold: float) -> str:

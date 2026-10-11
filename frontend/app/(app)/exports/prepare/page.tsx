@@ -83,7 +83,7 @@ export default function ExportPreparePage() {
               {busy ? t("validatingLabel") : `${t("validateReceiptsLabel")} ${selected.size}`}
             </button>
             {selected.size === 0 ? (
-              <span className="text-sm text-slate-400">{t("selectAtLeastOne")}</span>
+              <span className="text-sm text-slate-600 dark:text-slate-400">{t("selectAtLeastOne")}</span>
             ) : null}
           </div>
 
@@ -108,7 +108,7 @@ export default function ExportPreparePage() {
               {preparation.warnings.length > 0 ? (
                 <ul className="mt-2 space-y-1">
                   {preparation.warnings.map((warning) => (
-                    <li key={warning.receipt_id} className="text-sm text-amber-600 dark:text-amber-400">
+                    <li key={warning.receipt_id} className="text-sm text-amber-700 dark:text-amber-400">
                       • {warning.receipt_id}: {warning.reason}
                     </li>
                   ))}

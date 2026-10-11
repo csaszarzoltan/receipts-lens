@@ -26,7 +26,7 @@ function tone(category: string): string {
 export default function TaxBadge({ category }: TaxBadgeProps) {
   if (!category) {
     return (
-      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-400 dark:bg-slate-800">
+      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-400 dark:bg-slate-800">
         —
       </span>
     );

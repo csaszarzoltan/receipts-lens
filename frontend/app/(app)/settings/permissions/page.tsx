@@ -74,7 +74,7 @@ export default function PermissionsSettingsPage() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-600 dark:text-slate-400">
         {t("changesSavedNote")}
       </p>
     </div>

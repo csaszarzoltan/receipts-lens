@@ -161,6 +161,8 @@ export interface MonthlyByCategory {
   total_spent: number;
   currency: string;
   categories: CategorySpend[];
+  other_currency_totals?: Record<string, number>;
+  unpriced_receipts?: number;
 }
 
 export interface PriceAlert {

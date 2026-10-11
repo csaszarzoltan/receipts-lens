@@ -83,7 +83,7 @@ function InviteInner() {
         </div>
 
         {info ? (
-          <p className="mt-6 text-center text-sm text-emerald-600 dark:text-emerald-400">
+          <p className="mt-6 text-center text-sm text-emerald-700 dark:text-emerald-400">
             {info.household} ({householdRoleLabel(info.role, getLocale())})
           </p>
         ) : (

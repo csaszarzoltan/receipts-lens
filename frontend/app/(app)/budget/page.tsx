@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import BudgetForm from "@/components/BudgetForm";
 import { getBudgetVariance } from "@/lib/api";
 import type { BudgetVarianceResult } from "@/lib/types";
 import { VarianceChart, type VariancePoint } from "@/components/Charts";
@@ -16,7 +17,7 @@ import { useTranslation } from "@/lib/i18n";
  */
 export default function BudgetPage() {
   const { t } = useTranslation();
-  const { data, error, isLoading } = useSWR<BudgetVarianceResult>(
+  const { data, error, isLoading, mutate } = useSWR<BudgetVarianceResult>(
     "/forecasts/budget-variance?horizon=1",
     () => getBudgetVariance({ horizon: 1 }),
   );
@@ -58,6 +59,7 @@ export default function BudgetPage() {
           title={t("noBudgetSet")}
           description={t("createBudgetHint")}
         />
+        <BudgetForm onCreated={() => void mutate()} />
       </div>
     );
   }
@@ -91,7 +93,7 @@ export default function BudgetPage() {
         </div>
         <div className="card p-5">
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t("atRisk")}</p>
-          <p className="mt-2 text-2xl font-semibold text-amber-600 dark:text-amber-400">
+          <p className="mt-2 text-2xl font-semibold text-amber-700 dark:text-amber-400">
             {warning.length} {t("warningLabel")} · {overBudget.length} {t("overLabel")}
           </p>
         </div>
@@ -101,7 +103,7 @@ export default function BudgetPage() {
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
           {t("budgetVsProjectedTitle")}
         </h2>
-        <VarianceChart data={points} height={300} />
+        <VarianceChart data={points} height={300} currency={data.currency} />
       </section>
 
       <section className="card overflow-x-auto" aria-label="Category breakdown">
@@ -138,6 +140,8 @@ export default function BudgetPage() {
           </tbody>
         </table>
       </section>
+
+      <BudgetForm defaultCurrency={data.currency} onCreated={() => void mutate()} />
     </div>
   );
 }

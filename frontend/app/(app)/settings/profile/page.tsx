@@ -72,7 +72,7 @@ export default function ProfileSettingsPage() {
                   <option key={loc} value={loc}>{LOCALE_LABELS[loc]}</option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                 {t("language")} — {t("selectLanguage")}.
               </p>
             </div>
@@ -94,14 +94,14 @@ export default function ProfileSettingsPage() {
                 className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
               />
             </label>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               {t("onboardingLabel")} {data?.onboarding_done ? t("onboardingComplete") : t("onboardingNotDone")}
             </p>
             <button type="button" onClick={save} disabled={saving} className="btn-primary text-sm">
               {saving ? t("saving") : t("savePreferences")}
             </button>
             {saved ? (
-              <span className="ml-2 text-sm text-emerald-600 dark:text-emerald-400" role="status">
+              <span className="ml-2 text-sm text-emerald-700 dark:text-emerald-400" role="status">
                 {t("saved")}
               </span>
             ) : null}

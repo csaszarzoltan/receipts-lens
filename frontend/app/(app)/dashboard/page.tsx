@@ -11,6 +11,8 @@ import type {
 import { PageSkeleton } from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
 import SavingsBlockCard from "@/components/SavingsBlockCard";
+import Money from "@/components/Money";
+import UnpricedNote from "@/components/UnpricedNote";
 import { formatDate, formatMoney } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
@@ -29,6 +31,11 @@ import { useTranslation } from "@/lib/i18n";
  * Consumer language: no business jargon. in the empty state the block
  * onboarding/first-step CTA-ra mutat.
  */
+/** A zero that comes from receipts with no confirmed total is "unknown", not 0.00. */
+function spentOrUnknown(spent: number, unpriced: number | undefined): number | null {
+  return spent === 0 && (unpriced ?? 0) > 0 ? null : spent;
+}
+
 export default function ConsumerDashboardPage() {
   const { t } = useTranslation();
   const { data, error, isLoading } = useSWR<ConsumerDashboard>(
@@ -98,7 +105,7 @@ export default function ConsumerDashboardPage() {
                 style={{ width: `${Math.min(100, daily_remaining.pct_used)}%` }}
               />
             </div>
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                {daily_remaining.pct_used}%</p>
           </div>
         ) : (
@@ -123,8 +130,13 @@ export default function ConsumerDashboardPage() {
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {monthly_by_category.month} {t("monthlySpending")} — {t("totalSpentLabel")}{" "}
-              {formatMoney(monthly_by_category.total_spent, monthly_by_category.currency)}.
+              <Money
+                amount={spentOrUnknown(monthly_by_category.total_spent, monthly_by_category.unpriced_receipts)}
+                currency={monthly_by_category.currency}
+              />
+              .
             </p>
+            <UnpricedNote count={monthly_by_category.unpriced_receipts} />
           </div>
           <Link
             href="/reports"
@@ -157,7 +169,7 @@ export default function ConsumerDashboardPage() {
                   <span className="font-medium text-slate-800 dark:text-slate-100">
                     {category.label}
                   </span>
-                  <span className="text-xs text-slate-400 dark:text-slate-500">
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
                     {category.count} db
                   </span>
                 </div>
@@ -203,7 +215,7 @@ export default function ConsumerDashboardPage() {
                 <p className="font-medium text-slate-900 dark:text-slate-100">
                   {alert.message}
                 </p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                    {formatMoney(alert.monthly_cost, alert.currency)} — {t("warning")}
                   
                 </p>
@@ -288,23 +300,31 @@ function HouseholdBlock({ household }: { household: HouseholdStatus }) {
       <div className="mt-3 grid grid-cols-3 gap-3 text-center">
         <div>
           <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            {formatMoney(household.shared_budget, household.currency)}
+            <Money amount={household.shared_budget > 0 ? household.shared_budget : null} currency={household.currency} />
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400">{t("familyBudget")}</p>
         </div>
         <div>
           <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            {formatMoney(household.spent, household.currency)}
+            <Money amount={spentOrUnknown(household.spent, household.unpriced_receipts)} currency={household.currency} />
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400">{t("spent")}</p>
         </div>
         <div>
-          <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
-            {formatMoney(household.remaining, household.currency)}
+          <p className="text-lg font-semibold text-emerald-700 dark:text-emerald-400">
+            <Money
+              amount={
+                household.shared_budget <= 0 || spentOrUnknown(household.spent, household.unpriced_receipts) === null
+                  ? null
+                  : household.remaining
+              }
+              currency={household.currency}
+            />
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400">{t("remaining")}</p>
         </div>
       </div>
+      <UnpricedNote count={household.unpriced_receipts} />
       {household.spent_other_currencies && Object.keys(household.spent_other_currencies).length > 0 ? (
         <p className="mt-3 text-xs text-slate-500 dark:text-slate-400" data-testid="other-currency-spend">
           {t("alsoSpentOtherCurrencies")}{" "}

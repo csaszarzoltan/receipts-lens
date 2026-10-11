@@ -48,7 +48,7 @@ export default function CurrencyField({ receiptId, currency, source, assumed, ve
   return (
     <div className="space-y-1" data-testid="currency-field">
       <div className="flex flex-wrap items-center gap-2">
-        <label htmlFor="receipt-currency" className="text-xs uppercase tracking-wide text-slate-400">
+        <label htmlFor="receipt-currency" className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">
           {t("currencyLabel")}
         </label>
         <select
@@ -69,9 +69,9 @@ export default function CurrencyField({ receiptId, currency, source, assumed, ve
             {t(badgeKey)}
           </span>
         )}
-        {userSet && <span className="text-xs text-slate-400">{t("currencyUserSet")}</span>}
+        {userSet && <span className="text-xs text-slate-600 dark:text-slate-400">{t("currencyUserSet")}</span>}
       </div>
-      {message && <p role="status" className="text-xs text-slate-400">{message}</p>}
+      {message && <p role="status" className="text-xs text-slate-600 dark:text-slate-400">{message}</p>}
     </div>
   );
 }

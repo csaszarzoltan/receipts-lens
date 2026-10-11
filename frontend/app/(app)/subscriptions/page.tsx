@@ -16,6 +16,7 @@ import type {
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatDate, formatMoney } from "@/lib/utils";
+import Money from "@/components/Money";
 import { useTranslation } from "@/lib/i18n";
 
 const RENEWAL_SOON_DAYS = 14;
@@ -156,7 +157,7 @@ export default function SubscriptionsPage() {
                   {t("monthlyCostLabel")}
                 </p>
                 <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-                  {formatMoney(summary.monthly_total, "USD")}
+                  <Money amount={summary.monthly_total > 0 ? summary.monthly_total : null} currency="USD" />
                 </p>
               </div>
             </section>
@@ -180,7 +181,7 @@ export default function SubscriptionsPage() {
                     </div>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                       {formatDate(s.renewal_date)} ·{" "}
-                      {formatMoney(s.monthly_cost, "USD")}/mo
+                      {s.monthly_cost > 0 ? `${formatMoney(s.monthly_cost, "USD")}/mo` : "—"}
                     </p>
                   </li>
                 ))}
@@ -209,7 +210,7 @@ export default function SubscriptionsPage() {
                     </div>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                       Now {formatMoney(s.amount, "USD")} ·{" "}
-                      {formatMoney(s.monthly_cost, "USD")}/mo
+                      {s.monthly_cost > 0 ? `${formatMoney(s.monthly_cost, "USD")}/mo` : "—"}
                     </p>
                   </li>
                 ))}
@@ -250,10 +251,10 @@ export default function SubscriptionsPage() {
                         {formatDate(s.renewal_date)}
                       </td>
                       <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">
-                        {formatMoney(s.monthly_cost, "USD")}
+                        {s.monthly_cost > 0 ? formatMoney(s.monthly_cost, "USD") : "—"}
                       </td>
                       <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">
-                        {formatMoney(s.annualized, "USD")}
+                        {s.annualized > 0 ? formatMoney(s.annualized, "USD") : "—"}
                       </td>
                       <td className="px-4 py-3">
                         {s.trend === "up" ? (
@@ -261,7 +262,7 @@ export default function SubscriptionsPage() {
                             ↑ {t("trendUp")}
                           </span>
                         ) : (
-                          <span className="text-emerald-600 dark:text-emerald-400">
+                          <span className="text-emerald-700 dark:text-emerald-400">
                             → {t("trendStable")}
                           </span>
                         )}
@@ -309,7 +310,7 @@ export default function SubscriptionsPage() {
               <button
                 type="button"
                 onClick={() => setGuideFor(null)}
-                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+                className="rounded-md p-1 text-slate-600 dark:text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
                 aria-label={t("closeLabel")}
               >
                 ✕
@@ -317,7 +318,7 @@ export default function SubscriptionsPage() {
             </div>
 
             {guideLoading ? (
-              <p className="mt-4 text-sm text-slate-400">{t("loadingGuide")}</p>
+              <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">{t("loadingGuide")}</p>
             ) : guide ? (
               <ol className="mt-4 list-decimal space-y-2 pl-5">
                 {guide.steps.map((step, index) => (

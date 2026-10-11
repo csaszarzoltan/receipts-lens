@@ -118,7 +118,7 @@ export default function ApprovalsPage() {
                   </button>
                 </div>
               ) : (
-                <p className="mt-4 text-xs text-slate-400">
+                <p className="mt-4 text-xs text-slate-600 dark:text-slate-400">
                   {t("decidedByLabel")} {approval.decided_by ?? "system"} {t("atLabel")} {formatDateTime(approval.decided_at)}
                 </p>
               )}

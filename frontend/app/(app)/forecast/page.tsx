@@ -82,6 +82,10 @@ export default function ForecastPage() {
   }));
 
   const anomalyEntries = anomalies?.anomalies ?? [];
+  const spanDays = forecast.source_range
+    ? (Date.parse(forecast.source_range.date_to) - Date.parse(forecast.source_range.date_from)) / 86_400_000
+    : 0;
+  const thinHistory = !(spanDays >= 60);
 
   return (
     <div className="space-y-6">
@@ -97,7 +101,12 @@ export default function ForecastPage() {
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
           {t("nextPeriodProjections")}
         </h2>
-        <ForecastChart data={forecastPoints} height={280} />
+        {thinHistory ? (
+          <p className="mt-2 text-sm text-amber-700 dark:text-amber-400" data-testid="forecast-thin-history">
+            {t("forecastHistoryNote")}
+          </p>
+        ) : null}
+        <ForecastChart data={forecastPoints} height={280} currency={forecast.currency} />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -111,7 +120,7 @@ export default function ForecastPage() {
             </p>
           ) : (
             <>
-              <VarianceChart data={variancePoints} height={240} />
+              <VarianceChart data={variancePoints} height={240} currency={variance?.currency} />
               <ul className="mt-4 space-y-2">
                 {variance?.projections.map((projection) => (
                   <li key={projection.budget_id} className="flex items-center justify-between gap-3 text-sm">
@@ -132,7 +141,7 @@ export default function ForecastPage() {
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
             Anomalies
             {anomalies ? (
-              <span className="ml-2 text-xs font-normal text-slate-400">
+              <span className="ml-2 text-xs font-normal text-slate-600 dark:text-slate-400">
                 ({anomalies.method}, threshold {anomalies.threshold})
               </span>
             ) : null}

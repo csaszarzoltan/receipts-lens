@@ -165,7 +165,7 @@ def _monthly_by_category(today: date, tenant_id: str) -> dict[str, Any]:
     """
     date_from, date_to = _month_bounds(today)
     payloads = _tenant_receipt_payloads(tenant_id)
-    spend, _ = _spend_by_currency(payloads, today)
+    spend, unpriced = _spend_by_currency(payloads, today)
     currency = _primary_currency(spend, None)
     group_totals: dict[str, float] = {}
     group_counts: dict[str, int] = {}
@@ -206,6 +206,7 @@ def _monthly_by_category(today: date, tenant_id: str) -> dict[str, Any]:
         "currency": currency,
         "categories": top,
         "other_currency_totals": {c: _money(v) for c, v in spend.items() if c != currency},
+        "unpriced_receipts": unpriced,
     }
 
 

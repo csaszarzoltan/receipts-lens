@@ -36,7 +36,7 @@ export default function SavingsBlockCard({ savings }: { savings: SavingsBlock })
       </div>
       {hasSavings ? (
         <>
-          <p className="mt-3 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+          <p className="mt-3 text-3xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400">
             {formatMoney(savings.potential_saving, currency)}
           </p>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">

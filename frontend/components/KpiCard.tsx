@@ -10,8 +10,8 @@ interface KpiCardProps {
 
 const TONES = {
   default: "text-slate-900 dark:text-slate-100",
-  success: "text-emerald-600 dark:text-emerald-400",
-  warning: "text-amber-600 dark:text-amber-400",
+  success: "text-emerald-700 dark:text-emerald-400",
+  warning: "text-amber-700 dark:text-amber-400",
   danger: "text-rose-600 dark:text-rose-400",
 };
 
@@ -24,7 +24,7 @@ export default function KpiCard({ title, value, sub, icon, tone = "default" }: K
         <span className="text-xl" aria-hidden="true">{icon}</span>
       </div>
       <p className={cx("mt-2 text-2xl font-semibold tracking-tight", TONES[tone])}>{value}</p>
-      {sub ? <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{sub}</p> : null}
+      {sub ? <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{sub}</p> : null}
     </div>
   );
 }

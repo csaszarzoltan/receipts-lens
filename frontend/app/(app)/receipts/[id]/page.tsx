@@ -152,7 +152,7 @@ function ReceiptDetailContent({ id }: { id: string }) {
               loading="lazy"
             />
           ) : (
-            <div className="flex h-80 items-center justify-center text-sm text-slate-400">
+            <div className="flex h-80 items-center justify-center text-sm text-slate-600 dark:text-slate-400">
               {t("imageUnavailable")}
             </div>
           )}
@@ -165,27 +165,27 @@ function ReceiptDetailContent({ id }: { id: string }) {
           </h2>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 py-4 text-sm">
             <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-400">Vendor</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Vendor</dt>
               <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">{receipt.vendor || "—"}</dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-400">Date</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Date</dt>
               <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">{formatDate(receipt.date)}</dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-400">Total</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Total</dt>
               <dd className="mt-0.5 text-lg font-semibold text-slate-900 dark:text-slate-100">
                 <Money amount={receipt.total} currency={receipt.currency} />
               </dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-400">Tax</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Tax</dt>
               <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">
                 <Money amount={receipt.tax} currency={receipt.currency} />
               </dd>
             </div>
             <div className="col-span-2">
-              <dt className="text-xs uppercase tracking-wide text-slate-400">Category</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Category</dt>
               <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">
                 {receipt.category ?? t("uncategorizedLabel")}
               </dd>
@@ -286,11 +286,11 @@ function ReceiptDetailContent({ id }: { id: string }) {
             <button type="button" onClick={() => setEditing(false)} className="btn-secondary text-sm">
               {t("cancel")}
             </button>
-            <span className="text-xs text-slate-400">{t("optimisticConcurrencyHint")} v{item.version})</span>
+            <span className="text-xs text-slate-600 dark:text-slate-400">{t("optimisticConcurrencyHint")} v{item.version})</span>
           </div>
         ) : null}
         {saveMessage ? (
-          <p className="px-5 py-2 text-xs text-emerald-600 dark:text-emerald-400" role="status">{saveMessage}</p>
+          <p className="px-5 py-2 text-xs text-emerald-700 dark:text-emerald-400" role="status">{saveMessage}</p>
         ) : null}
       </section>
 
@@ -302,7 +302,7 @@ function ReceiptDetailContent({ id }: { id: string }) {
           </h2>
           <ul className="max-h-64 overflow-y-auto px-5 py-4">
             {boxes.length === 0 ? (
-              <li className="text-sm text-slate-400">{t("noOcrBoxes")}</li>
+              <li className="text-sm text-slate-600 dark:text-slate-400">{t("noOcrBoxes")}</li>
             ) : (
               boxes.map((box, index) => (
                 <li key={index} className="mb-2 flex items-center justify-between gap-3 text-sm">
@@ -320,14 +320,14 @@ function ReceiptDetailContent({ id }: { id: string }) {
           {t("historyTitle")}
         </h2>
         {history.length === 0 ? (
-          <p className="px-5 py-4 text-sm text-slate-400">{t("noHistory")}</p>
+          <p className="px-5 py-4 text-sm text-slate-600 dark:text-slate-400">{t("noHistory")}</p>
         ) : (
           <ol className="px-5 py-4">
             {history.map((entry, index) => (
               <li key={index} className="relative pb-4 pl-6 last:pb-0">
                 <span className="absolute left-1 top-1.5 h-2.5 w-2.5 rounded-full bg-brand-500" aria-hidden="true" />
                 <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{entry.action}</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   {formatDateTime(entry.created_at)} · {entry.actor_role}
                 </p>
               </li>

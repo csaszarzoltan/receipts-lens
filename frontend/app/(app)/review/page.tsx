@@ -128,7 +128,7 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
               loading="lazy"
             />
           ) : (
-            <div className="flex h-64 items-center justify-center text-sm text-slate-400">
+            <div className="flex h-64 items-center justify-center text-sm text-slate-600 dark:text-slate-400">
               {t("imageUnavailable")}
             </div>
           )}
@@ -158,7 +158,7 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
               {item.receipt.line_items?.length ?? 0} {t("lineItemsSuffix")}
             </span>
             {item.receipt.confidence_level ? (
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 {item.receipt.confidence_level} {t("confidenceSuffix")}
               </span>
             ) : null}
@@ -173,7 +173,7 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
           ) : null}
           <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-400">Total</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Total</dt>
               <dd className="mt-0.5 text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {formatMoney(item.receipt.total ?? candidate, item.receipt.currency)}
               </dd>
@@ -182,7 +182,7 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
               ) : null}
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-400">Tax</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Tax</dt>
               <dd className="mt-0.5 text-slate-700 dark:text-slate-200">
                 {formatMoney(item.receipt.tax, item.receipt.currency)}
               </dd>
@@ -201,7 +201,7 @@ function ReviewCard({ item, onDone }: { item: ReviewItem; onDone: () => void }) 
               {saving ? t("savingLabel") : weak ? t("confirmAmount") : t("looksGood")}
             </button>
             {message ? (
-              <span className="text-xs text-emerald-600 dark:text-emerald-400" role="status">
+              <span className="text-xs text-emerald-700 dark:text-emerald-400" role="status">
                 {message}
               </span>
             ) : null}

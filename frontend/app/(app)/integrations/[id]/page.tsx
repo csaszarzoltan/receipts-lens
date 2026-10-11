@@ -142,7 +142,7 @@ export default function ConnectionDetailPage({ params }: { params: { id: string 
                 <li key={run.export_id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
                   <span className="font-medium text-slate-800 dark:text-slate-100">{run.format}</span>
                   <span className="text-slate-500 dark:text-slate-400">{run.status}</span>
-                  <span className="text-slate-400">{formatDateTime(run.created_at)}</span>
+                  <span className="text-slate-600 dark:text-slate-400">{formatDateTime(run.created_at)}</span>
                 </li>
               ))}
           </ul>

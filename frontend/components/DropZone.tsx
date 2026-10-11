@@ -105,7 +105,7 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
         >
           <span className="text-4xl" aria-hidden="true">🧾</span>
           <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">{dropLabel}</p>
-          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{t("dropFormats")}</p>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{t("dropFormats")}</p>
         </div>
         {/* Camera capture is a sibling of the dropzone button (not nested) so
             screen readers see two distinct, non-nested interactive controls. */}
@@ -150,7 +150,7 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
       />
 
       {cameraError ? (
-        <p className="mt-2 text-sm text-amber-600 dark:text-amber-400" role="alert">
+        <p className="mt-2 text-sm text-amber-700 dark:text-amber-400" role="alert">
           {cameraError}
         </p>
       ) : null}

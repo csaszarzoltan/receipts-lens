@@ -37,7 +37,7 @@ export default function UploadQueue({ entries, onRemove }: UploadQueueProps) {
             <button
               type="button"
               onClick={() => onRemove(entry.id)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
               aria-label={`Remove ${entry.fileName}`}
             >
               ✕

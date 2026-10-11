@@ -78,7 +78,7 @@ export default function AutomationsPage() {
                   className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                     rule.active
                       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                      : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                   }`}
                 >
                   {rule.active ? t("activeLabel") : t("inactiveLabel")}

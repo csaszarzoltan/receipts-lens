@@ -57,7 +57,7 @@ export default function UploadPage() {
             </p>
           </div>
           <span
-            className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+            className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-400"
             title={t("aiScanNotAvailable")}
           >
             {t("proBadge")}

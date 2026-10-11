@@ -124,7 +124,7 @@ export default function NotificationPanel({
                       ) : null}
                     </div>
                     <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{item.message}</p>
-                    <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+                    <p className="mt-1 text-[11px] text-slate-600 dark:text-slate-400">
                       {timeAgo(item.created_at)}
                     </p>
                   </button>
