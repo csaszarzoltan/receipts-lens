@@ -1,5 +1,6 @@
 "use client";
 
+import { categoryLabel } from "@/lib/categories";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
@@ -228,7 +229,7 @@ function ReceiptsContent() {
                     </a>
                   </td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{formatDate(item.receipt.date)}</td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{item.receipt.category ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{categoryLabel(t, item.receipt.category)}</td>
                   <td className="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-100">
                     {formatMoney(item.receipt.total, item.receipt.currency)}
                   </td>

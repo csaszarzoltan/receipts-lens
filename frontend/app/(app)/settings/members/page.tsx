@@ -42,7 +42,7 @@ export default function MembersSettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("familyMembers")}</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Household members and their roles.</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("membersSubtitle")}</p>
       </div>
 
       {isLoading ? (
@@ -50,7 +50,7 @@ export default function MembersSettingsPage() {
       ) : error ? (
         <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
       ) : members.length === 0 ? (
-        <EmptyState icon="👥" title="No members yet" description="Add your first family member below." />
+        <EmptyState icon="👥" title={t("noMembersYetTitle")} description={t("noMembersYetDesc")} />
       ) : (
         <ul className="card divide-y divide-slate-100 dark:divide-slate-800" aria-label="Members">
           {members.map((member) => (
@@ -80,7 +80,7 @@ export default function MembersSettingsPage() {
           <input
             type="email"
             className="input flex-1"
-            placeholder="csalad@example.com"
+            placeholder={t("emailPlaceholder")}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             aria-label={t("memberEmail")}

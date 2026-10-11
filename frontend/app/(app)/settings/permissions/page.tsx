@@ -7,10 +7,11 @@ import type { PermissionMatrix } from "@/lib/types";
 import { roleLabel } from "@/lib/roles";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
-import { useTranslation } from "@/lib/i18n";
+import { useTranslation, type MessageKey } from "@/lib/i18n";
 
 export default function PermissionsSettingsPage() {
   const { t } = useTranslation();
+  const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
   const { data, error, isLoading, mutate } = useSWR<PermissionMatrix>("/product/permissions", getPermissions);
 
   if (isLoading) return <SkeletonCard className="h-64" />;
@@ -28,8 +29,21 @@ export default function PermissionsSettingsPage() {
     const next = current.includes(permission)
       ? current.filter((item) => item !== permission)
       : [...current, permission];
-    await updatePermissions({ role, permissions: next });
+    try {
+      await updatePermissions({ role, permissions: next });
+      setStatus("saved");
+    } catch {
+      setStatus("error");
+    }
     mutate();
+  }
+
+  /** A plain-language name and one-line explanation; unknown keys show as they are. */
+  function describe(permission: string): { name: string; hint: string | null } {
+    const nameKey = `perm_${permission}` as MessageKey;
+    const name = t(nameKey);
+    if (name === nameKey) return { name: permission, hint: null };
+    return { name, hint: t(`${nameKey}_desc` as MessageKey) };
   }
 
   return (
@@ -54,7 +68,12 @@ export default function PermissionsSettingsPage() {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {permissions.map((permission) => (
               <tr key={permission}>
-                <td className="px-4 py-2.5 font-medium text-slate-700 dark:text-slate-200">{permission}</td>
+                <td className="px-4 py-2.5">
+                  <span className="block font-medium text-slate-800 dark:text-slate-100">{describe(permission).name}</span>
+                  {describe(permission).hint ? (
+                    <span className="block text-xs text-slate-600 dark:text-slate-400">{describe(permission).hint}</span>
+                  ) : null}
+                </td>
                 {roles.map((role) => {
                   const granted = (data.roles[role] ?? []).includes(permission);
                   return (
@@ -64,7 +83,7 @@ export default function PermissionsSettingsPage() {
                         checked={granted}
                         onChange={() => toggle(role, permission)}
                         className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                        aria-label={`${permission} for ${role}`}
+                        aria-label={`${describe(permission).name} — ${roleLabel(role)}`}
                       />
                     </td>
                   );
@@ -74,8 +93,11 @@ export default function PermissionsSettingsPage() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-slate-600 dark:text-slate-400">
-        {t("changesSavedNote")}
+      <p
+        className={status === "error" ? "text-xs font-medium text-rose-700 dark:text-rose-300" : "text-xs text-slate-600 dark:text-slate-400"}
+        role="status"
+      >
+        {status === "saved" ? t("permSaved") : status === "error" ? t("permSaveError") : t("changesSavedNote")}
       </p>
     </div>
   );

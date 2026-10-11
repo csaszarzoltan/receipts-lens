@@ -13,7 +13,8 @@ import EmptyState from "@/components/EmptyState";
 import SavingsBlockCard from "@/components/SavingsBlockCard";
 import Money from "@/components/Money";
 import UnpricedNote from "@/components/UnpricedNote";
-import { formatDate, formatMoney } from "@/lib/utils";
+import { formatDate, formatMoney, formatMonth } from "@/lib/utils";
+import { categoryLabel } from "@/lib/categories";
 import { useTranslation } from "@/lib/i18n";
 
 /**
@@ -113,7 +114,7 @@ export default function ConsumerDashboardPage() {
             icon="🎯"
             title={t("noBudgetSet")}
             description={t("noBudgetSetHint")}
-            action={{ label: t("noBudgetSet"), href: "/budget" }}
+            action={{ label: t("budgetCreateButton"), href: "/budget" }}
           />
         )}
 
@@ -129,7 +130,7 @@ export default function ConsumerDashboardPage() {
               {t("monthlySpending")}
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {monthly_by_category.month} {t("monthlySpending")} — {t("totalSpentLabel")}{" "}
+              {formatMonth(monthly_by_category.month)} · {t("totalSpentLabel")}{" "}
               <Money
                 amount={spentOrUnknown(monthly_by_category.total_spent, monthly_by_category.unpriced_receipts)}
                 currency={monthly_by_category.currency}
@@ -167,10 +168,10 @@ export default function ConsumerDashboardPage() {
                     aria-hidden="true"
                   />
                   <span className="font-medium text-slate-800 dark:text-slate-100">
-                    {category.label}
+                    {categoryLabel(t, category.key)}
                   </span>
                   <span className="text-xs text-slate-600 dark:text-slate-400">
-                    {category.count} db
+                    {category.count} {t("receiptsCountLabel")}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -233,8 +234,7 @@ export default function ConsumerDashboardPage() {
               {t("cancellableSubscriptions")}
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {t("cancellableSubscriptions")}: the cancellation guide is in {t("subscriptions")}
-              oldalon van.
+              {t("cancellationGuideHint")}
             </p>
           </div>
           <Link

@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { getPreferences, savePreferences } from "@/lib/api";
 import type { Preferences } from "@/lib/types";
 import CurrencySelector from "@/components/CurrencySelector";
+import { effectiveBaseCurrency } from "@/lib/utils";
 import { getLocale, setLocale, useTranslation, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n";
 
 export default function ProfileSettingsPage() {
@@ -57,10 +58,10 @@ export default function ProfileSettingsPage() {
           <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{t("couldNotLoad")}</p>
         ) : null}
         <div className="mt-4 space-y-4">
-          <CurrencySelector value={data?.base_currency || "USD"} onSaved={() => mutate()} />
+          <CurrencySelector value={effectiveBaseCurrency(data, locale)} onSaved={() => mutate()} />
             <div>
               <label htmlFor="pref-language" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
-                Language
+                {t("language")}
               </label>
               <select
                 id="pref-language"

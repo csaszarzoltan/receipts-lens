@@ -6,6 +6,8 @@ interface ConfidenceBadgeProps {
   /** OCR confidence 0..1 (or 0..100, auto-detected). */
   value: number;
   label?: string;
+  /** Hide the retake hint under a low value (used where space is tight, e.g. list cards). */
+  compact?: boolean;
 }
 
 function tone(ratio: number): string {
@@ -15,7 +17,7 @@ function tone(ratio: number): string {
 }
 
 /** OCR confidence indicator — green/amber/red by threshold. */
-export default function ConfidenceBadge({ value, label }: ConfidenceBadgeProps) {
+export default function ConfidenceBadge({ value, label, compact = false }: ConfidenceBadgeProps) {
   const { t } = useTranslation();
   const ratio = value > 1 ? value / 100 : value;
   const isLow = ratio < 0.6;
@@ -31,7 +33,7 @@ export default function ConfidenceBadge({ value, label }: ConfidenceBadgeProps) 
         <span aria-hidden="true">◉</span>
         {formatPercent(ratio)}
       </span>
-      {isLow && (
+      {isLow && !compact && (
         <span className="text-xs text-rose-700 dark:text-rose-300">
           {t("lowConfidenceShort")}
           <span className="block text-[11px] opacity-80">{t("retryCaptureHint")}</span>

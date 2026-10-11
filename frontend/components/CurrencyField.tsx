@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { updateReceiptWorkspace } from "@/lib/api";
 import { useTranslation, type MessageKey } from "@/lib/i18n";
+import { defaultCurrencyForLocale } from "@/lib/utils";
 import type { CurrencySource } from "@/lib/types";
 
 const CURRENCIES = ["HUF", "EUR", "USD", "GBP", "CHF", "CZK", "PLN", "RON", "JPY", "CAD", "AUD"];
@@ -23,8 +24,8 @@ interface CurrencyFieldProps {
 
 /** Shows the receipt currency, says whether it was guessed, and lets the user correct it. */
 export default function CurrencyField({ receiptId, currency, source, assumed, version, onSaved }: CurrencyFieldProps) {
-  const { t } = useTranslation();
-  const [value, setValue] = useState(currency ?? "USD");
+  const { t, locale } = useTranslation();
+  const [value, setValue] = useState(currency ?? defaultCurrencyForLocale(locale));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 

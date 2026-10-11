@@ -34,7 +34,7 @@ export const viewport: Viewport = {
  * is visible before hydration.
  */
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('receiptlens.theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();`;
-const LOCALE_INIT_SCRIPT = `(function(){try{var l=localStorage.getItem('receiptlens.locale');if(l&&['en','hu','de','fr','es','it','pt','nl','pl','ro'].indexOf(l)>=0)document.documentElement.lang=l;}catch(e){}})();`;
+const LOCALE_INIT_SCRIPT = `(function(){try{var S=['en','hu','de','fr','es','it','pt','nl','pl','ro'];var l=localStorage.getItem('receiptlens.locale');if(!l||S.indexOf(l)<0){l=null;var P=navigator.languages||[navigator.language];for(var i=0;i<P.length&&!l;i++){var b=String(P[i]||'').toLowerCase().split('-')[0];if(S.indexOf(b)>=0)l=b;}}if(l)document.documentElement.lang=l;}catch(e){}})();`;
 
 export default function RootLayout({
   children,

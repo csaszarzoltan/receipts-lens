@@ -7,6 +7,7 @@ import re
 import sqlite3
 import threading
 import uuid
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -308,12 +309,39 @@ class AdvancedWorkspace:
                             (str(uuid.uuid4()), tenant_id, left_id, right_id, decision, self._now()))
         return {"left_id": left_id, "right_id": right_id, "decision": decision}
 
-    def preferences(self, tenant_id: str, role: str) -> dict[str, Any]:
+    def household_currency(self, tenant_id: str) -> str | None:
+        """The currency most of the household's receipts state or were set to by hand.
+
+        Guesses never count, so an earlier guess cannot reinforce itself.
+        """
+        rows = self.db.execute(
+            "SELECT payload FROM receipts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 500",
+            (tenant_id,),
+        ).fetchall()
+        counts: Counter[str] = Counter()
+        for row in rows:
+            payload = json.loads(row[0])
+            if payload.get("currency_source") in {"marker", "user"} and payload.get("currency"):
+                counts[payload["currency"]] += 1
+        return counts.most_common(1)[0][0] if counts else None
+
+    def _stored_preferences(self, tenant_id: str, role: str) -> dict[str, Any]:
         row = self.db.execute("SELECT payload FROM user_preferences WHERE tenant_id=? AND role=?",
                               (tenant_id, role)).fetchone()
-        return json.loads(row[0]) if row else {"language": "en", "base_currency": "USD", "compact": False,
-                                               "high_contrast": False,
-                                               "dashboard_widgets": ["kpis", "actions", "spending", "quality"]}
+        return json.loads(row[0]) if row else {}
+
+    def preferences(self, tenant_id: str, role: str) -> dict[str, Any]:
+        """Saved preferences; until a currency is chosen, the household's own is offered."""
+        stored = self._stored_preferences(tenant_id, role)
+        if stored.get("base_currency"):
+            base, source = stored["base_currency"], "saved"
+        elif (seen := self.household_currency(tenant_id)):
+            base, source = seen, "receipts"
+        else:
+            base, source = "USD", "default"
+        return {"language": "en", "compact": False, "high_contrast": False,
+                "dashboard_widgets": ["kpis", "actions", "spending", "quality"],
+                **stored, "base_currency": base, "base_currency_source": source}
 
     def save_preferences(self, tenant_id: str, role: str, payload: dict[str, Any]) -> dict[str, Any]:
         allowed = {"language", "compact", "high_contrast", "dashboard_widgets",
@@ -324,11 +352,13 @@ class AdvancedWorkspace:
             if not re.fullmatch(r"[A-Z]{3}", currency):
                 raise ValueError("base_currency must be a three-letter ISO 4217 code")
             clean["base_currency"] = currency
-        merged = {**self.preferences(tenant_id, role), **clean}
+        # Only what was saved is stored: an offered default must not become a choice.
+        merged = {**self._stored_preferences(tenant_id, role), **clean}
         with self.db:
             self.db.execute("INSERT OR REPLACE INTO user_preferences VALUES(?,?,?,?)",
                             (tenant_id, role, json.dumps(merged, sort_keys=True), self._now()))
-        return merged
+        # The write response is the preferences as saved; where a default came from is a read concern.
+        return {k: v for k, v in self.preferences(tenant_id, role).items() if k != "base_currency_source"}
 
     def record_export(self, tenant_id: str, format: str, requested: int,
                       exported: int, errors: list[str]) -> dict[str, Any]:

@@ -1,5 +1,6 @@
 "use client";
 
+import { categoryLabel } from "@/lib/categories";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { getReceipt, getReceiptBoxes, getReceiptHistory, getReceiptImage, updateLineItems, updateMetadata } from "@/lib/api";
@@ -271,7 +272,7 @@ function ReceiptDetailContent({ id }: { id: string }) {
                       )}
                     </td>
                     <td className="px-5 py-2 text-right text-slate-600 dark:text-slate-300">{line.quantity ?? 1}</td>
-                    <td className="px-5 py-2 text-slate-600 dark:text-slate-300">{line.category ?? "—"}</td>
+                    <td className="px-5 py-2 text-slate-600 dark:text-slate-300">{categoryLabel(t, line.category)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -286,7 +287,6 @@ function ReceiptDetailContent({ id }: { id: string }) {
             <button type="button" onClick={() => setEditing(false)} className="btn-secondary text-sm">
               {t("cancel")}
             </button>
-            <span className="text-xs text-slate-600 dark:text-slate-400">{t("optimisticConcurrencyHint")} v{item.version})</span>
           </div>
         ) : null}
         {saveMessage ? (

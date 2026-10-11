@@ -9,7 +9,7 @@ import EmptyState from "@/components/EmptyState";
 import StatusBadge from "@/components/StatusBadge";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { SkeletonCard } from "@/components/Skeleton";
-import { cx, formatMoney, parseAmount } from "@/lib/utils";
+import { cx, formatDate, formatMoney, parseAmount } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
 /** Receipts with an uncertain OCR extraction land in review. */
@@ -320,7 +320,7 @@ function ReviewCard({ item, reading, onDone }: { item: ReviewItem; reading: bool
                 {item.receipt.vendor || t("unknownVendorLabel")}
               </h2>
               <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">
-                {item.receipt.date ?? t("noDateLabel")}
+                {item.receipt.date ? formatDate(item.receipt.date) : t("noDateLabel")}
               </p>
             </div>
             <StatusBadge status="needs_review" />

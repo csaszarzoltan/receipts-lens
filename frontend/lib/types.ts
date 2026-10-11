@@ -531,6 +531,8 @@ export interface PermissionMatrix {
 export interface Preferences {
   language: string;
   base_currency: string;
+  /** "saved" (chosen), "receipts" (what the receipts state) or "default" (nothing known yet). */
+  base_currency_source?: "saved" | "receipts" | "default";
   compact: boolean;
   high_contrast: boolean;
   onboarding_done: boolean;

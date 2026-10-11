@@ -7,16 +7,60 @@ const LOCALE_TO_INTL: Record<string, string> = {
   it: "it-IT", pt: "pt-PT", nl: "nl-NL", pl: "pl-PL", ro: "ro-RO",
 };
 
-function currentIntlLocale(): string {
-  if (typeof window === "undefined") return "en-US";
+const LOCALE_STORAGE_KEY = "receiptlens.locale";
+
+/**
+ * The UI language code: the saved choice, else the browser's first supported
+ * language, else English. Kept here (no React) so server components can format too.
+ */
+export function preferredLocaleCode(): string {
+  if (typeof window === "undefined") return "en";
   try {
-    const stored = window.localStorage.getItem("receiptlens.locale");
-    if (stored && LOCALE_TO_INTL[stored]) return LOCALE_TO_INTL[stored];
-  } catch { /* ignore */ }
-  return "en-US";
+    const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+    if (stored && LOCALE_TO_INTL[stored]) return stored;
+  } catch { /* storage blocked: use the browser's language */ }
+  const preferred = navigator.languages?.length ? navigator.languages : [navigator.language];
+  for (const tag of preferred) {
+    const base = String(tag ?? "").toLowerCase().split("-")[0];
+    if (LOCALE_TO_INTL[base]) return base;
+  }
+  return "en";
 }
 
-/** Format an amount in a given currency, e.g. 1234.5, "USD" → "$1,234.50". */
+function currentIntlLocale(): string {
+  return LOCALE_TO_INTL[preferredLocaleCode()] ?? "en-US";
+}
+
+/** The currency a new household most likely uses, from its language. */
+export function defaultCurrencyForLocale(locale: string): string {
+  const byLocale: Record<string, string> = {
+    hu: "HUF", de: "EUR", fr: "EUR", es: "EUR", it: "EUR", pt: "EUR", nl: "EUR", pl: "PLN", ro: "RON",
+  };
+  return byLocale[locale] ?? "USD";
+}
+
+/**
+ * The household's working currency: the one it chose or its receipts state;
+ * with neither, the one that fits its language.
+ */
+export function effectiveBaseCurrency(
+  prefs: { base_currency?: string | null; base_currency_source?: string | null } | undefined,
+  locale: string,
+): string {
+  if (prefs?.base_currency && prefs.base_currency_source !== "default") return prefs.base_currency;
+  return defaultCurrencyForLocale(locale);
+}
+
+/** Currencies that are quoted in whole units (no cents in everyday use). */
+const WHOLE_UNIT_CURRENCIES = new Set(["HUF", "JPY"]);
+
+/**
+ * Format an amount in a given currency, e.g. 1234.5, "USD" → "$1,234.50".
+ *
+ * Whole-unit currencies (HUF, JPY) drop the empty cents when the amount is a
+ * whole number. With no currency the amount is a plain number: guessing a
+ * symbol would state a currency nobody knows.
+ */
 export function formatMoney(
   amount: number | null | undefined,
   currency: string | null | undefined = "USD",
@@ -24,16 +68,24 @@ export function formatMoney(
 ): string {
   if (amount === null || amount === undefined || Number.isNaN(amount)) return "—";
   const effLocale = locale ?? currentIntlLocale();
+  const whole = !!currency && WHOLE_UNIT_CURRENCIES.has(currency) && Number.isInteger(amount);
+  const digits = whole ? 0 : 2;
   try {
+    if (!currency) {
+      return new Intl.NumberFormat(effLocale, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      }).format(amount);
+    }
     return new Intl.NumberFormat(effLocale, {
       style: "currency",
-      currency: currency ?? "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      currency,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
     }).format(amount);
   } catch {
     // Unknown currency code — fall back to a plain formatted number.
-    return `${currency ?? ""} ${amount.toFixed(2)}`.trim();
+    return `${currency ?? ""} ${amount.toFixed(digits)}`.trim();
   }
 }
 
@@ -50,6 +102,13 @@ export function formatDate(
     month: "short",
     day: "numeric",
   }).format(date);
+}
+
+/** "2026-10" → "October 2026" / "2026. október". */
+export function formatMonth(yearMonth: string | null | undefined, locale?: string): string {
+  if (!yearMonth || !/^\d{4}-\d{2}$/.test(yearMonth)) return yearMonth ?? "—";
+  return new Intl.DateTimeFormat(locale ?? currentIntlLocale(), { year: "numeric", month: "long" })
+    .format(new Date(`${yearMonth}-01T00:00:00`));
 }
 
 /** Format a datetime with time, e.g. "Aug 5, 2026, 3:04 PM". */
