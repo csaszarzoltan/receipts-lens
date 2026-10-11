@@ -97,3 +97,12 @@ def test_category_breakdown_only_counts_primary_currency(stored):
     assert out["currency"] == "HUF"
     assert out["total_spent"] == 4400.0
     assert out["other_currency_totals"] == {"USD": 10.0}
+
+
+@pytest.mark.test_id("TEST-RL-V02-203")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-061")
+@pytest.mark.scenario("AC-RL-V02-42")
+def test_category_breakdown_reports_unpriced_receipts(stored):
+    """Receipts without a total must be countable so the UI shows "unknown", not 0."""
+    out = dash._monthly_by_category(TODAY, "tenant-a")
+    assert out["unpriced_receipts"] == 2
