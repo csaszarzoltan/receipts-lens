@@ -184,6 +184,8 @@ export interface CancellableSubscription {
   frequency: "monthly" | "quarterly" | "annual";
   trend: SubscriptionTrend;
   price_increase: boolean;
+  /** Currency of the receipts behind this subscription; null when it was not printed. */
+  currency?: string | null;
 }
 
 export interface HouseholdMember {
@@ -556,11 +558,15 @@ export interface Subscription {
   trend: SubscriptionTrend;
   price_increase: boolean;
   likely_subscription: boolean;
+  currency?: string | null;
 }
 
 export interface SubscriptionSummary {
   total: number;
+  /** Monthly cost in `currency` only; other currencies are listed separately, never added. */
   monthly_total: number;
+  currency?: string | null;
+  other_currency_totals?: Record<string, number>;
 }
 
 export interface SubscriptionListResponse {

@@ -174,16 +174,28 @@ def _monthly_by_category(today: date, tenant_id: str) -> dict[str, Any]:
             continue
         if str(payload.get("currency") or "") != currency:
             continue
+        if payload.get("total") is None:
+            continue  # unpriced: counted separately, not part of the breakdown
         items = payload.get("line_items") or []
         if not items:
             key = "Uncategorized"
             group_totals[key] = group_totals.get(key, 0.0) + float(payload.get("total") or 0.0)
             group_counts[key] = group_counts.get(key, 0) + 1
             continue
+        items_sum = 0.0
         for item in items:
             key = str(item.get("category") or "Uncategorized") or "Uncategorized"
-            group_totals[key] = group_totals.get(key, 0.0) + float(item.get("price", item.get("amount", 0)) or 0.0)
+            price = float(item.get("price", item.get("amount", 0)) or 0.0)
+            items_sum += price
+            group_totals[key] = group_totals.get(key, 0.0) + price
             group_counts[key] = group_counts.get(key, 0) + 1
+        # Line items that do not add up to the receipt total (partial OCR) must not
+        # make the breakdown smaller than what was actually spent: the rest is
+        # shown as Uncategorized so the categories sum to the month's total.
+        receipt_total = payload.get("total")
+        if receipt_total is not None and float(receipt_total) - items_sum > 0.005:
+            group_totals["Uncategorized"] = group_totals.get("Uncategorized", 0.0) + float(receipt_total) - items_sum
+            group_counts.setdefault("Uncategorized", 1)
 
     total = round(sum(group_totals.values()), 2)
     groups = sorted(group_totals.items(), key=lambda kv: kv[1], reverse=True)
@@ -222,16 +234,17 @@ def _price_alerts(today: date, tenant_id: str) -> list[dict[str, Any]]:
     alerts: list[dict[str, Any]] = []
     for sub in _build_subscriptions(tenant_id):
         if sub.get("price_increase"):
+            code = str(sub.get("currency") or "")
             alerts.append(
                 {
                     "merchant": sub["merchant"],
                     "amount": _money(sub["amount"]),
-                    "currency": "USD",
+                    "currency": code,
                     "monthly_cost": _money(sub["monthly_cost"]),
                     "renewal_date": sub.get("renewal_date") or "",
                     "message": (
                         f"{sub['merchant']} price increased — now "
-                        f"{_money(sub['amount']):.2f} USD last charge"
+                        f"{_money(sub['amount']):.2f} {code} last charge".replace("  ", " ")
                     ),
                 }
             )
@@ -258,6 +271,7 @@ def _cancellable(today: date, tenant_id: str) -> list[dict[str, Any]]:
             "frequency": s.get("frequency") or "monthly",
             "trend": s.get("trend") or "stable",
             "price_increase": bool(s.get("price_increase")),
+            "currency": s.get("currency"),
         }
         for s in upcoming[:_MAX_CANCELLABLE]
     ]

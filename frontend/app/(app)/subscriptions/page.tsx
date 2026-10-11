@@ -34,6 +34,11 @@ function daysLabel(days: number, t: (k: any) => string): string {
   return `${t("renewsInDays")} ${days} ${t("daysSuffix")}`;
 }
 
+/** An amount in its own currency; without a known currency just the number (never a guessed "$"). */
+function amountIn(amount: number, currency: string | null | undefined): string {
+  return currency ? formatMoney(amount, currency) : amount.toFixed(2);
+}
+
 export default function SubscriptionsPage() {
   const { t } = useTranslation();
   const [guideFor, setGuideFor] = useState<Subscription | null>(null);
@@ -157,7 +162,12 @@ export default function SubscriptionsPage() {
                   {t("monthlyCostLabel")}
                 </p>
                 <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">
-                  <Money amount={summary.monthly_total > 0 ? summary.monthly_total : null} currency="USD" />
+                  <Money amount={summary.monthly_total > 0 ? summary.monthly_total : null} currency={summary.currency} />
+                {summary.other_currency_totals && Object.keys(summary.other_currency_totals).length > 0 ? (
+                  <span className="mt-1 block text-xs font-normal text-slate-600 dark:text-slate-400">
+                    + {Object.entries(summary.other_currency_totals).map(([code, amount]) => `${amount.toFixed(2)} ${code}`).join(" · ")}
+                  </span>
+                ) : null}
                 </p>
               </div>
             </section>
@@ -181,7 +191,7 @@ export default function SubscriptionsPage() {
                     </div>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                       {formatDate(s.renewal_date)} ·{" "}
-                      {s.monthly_cost > 0 ? `${formatMoney(s.monthly_cost, "USD")}/mo` : "—"}
+                      {s.monthly_cost > 0 ? `${amountIn(s.monthly_cost, s.currency)}/mo` : "—"}
                     </p>
                   </li>
                 ))}
@@ -209,8 +219,8 @@ export default function SubscriptionsPage() {
                       </span>
                     </div>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                      Now {formatMoney(s.amount, "USD")} ·{" "}
-                      {s.monthly_cost > 0 ? `${formatMoney(s.monthly_cost, "USD")}/mo` : "—"}
+                      Now {amountIn(s.amount, s.currency)} ·{" "}
+                      {s.monthly_cost > 0 ? `${amountIn(s.monthly_cost, s.currency)}/mo` : "—"}
                     </p>
                   </li>
                 ))}
@@ -251,10 +261,10 @@ export default function SubscriptionsPage() {
                         {formatDate(s.renewal_date)}
                       </td>
                       <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">
-                        {s.monthly_cost > 0 ? formatMoney(s.monthly_cost, "USD") : "—"}
+                        {s.monthly_cost > 0 ? amountIn(s.monthly_cost, s.currency) : "—"}
                       </td>
                       <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-300">
-                        {s.annualized > 0 ? formatMoney(s.annualized, "USD") : "—"}
+                        {s.annualized > 0 ? amountIn(s.annualized, s.currency) : "—"}
                       </td>
                       <td className="px-4 py-3">
                         {s.trend === "up" ? (
@@ -303,7 +313,7 @@ export default function SubscriptionsPage() {
                   Cancel {guideFor.merchant}
                 </h2>
                 <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-                  {guideFor.frequency} · {formatMoney(guideFor.amount, "USD")}{" "}
+                  {guideFor.frequency} · {amountIn(guideFor.amount, guideFor.currency)}{" "}
                   {t("perChargeLabel")}
                 </p>
               </div>

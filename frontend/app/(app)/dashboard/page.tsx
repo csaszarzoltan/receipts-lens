@@ -267,7 +267,7 @@ export default function ConsumerDashboardPage() {
                   ) : null}
                 </div>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                  {formatMoney(subscription.monthly_cost, "USD")}/mo · {t("statusPending")}:{" "}
+                  {subscription.currency ? formatMoney(subscription.monthly_cost, subscription.currency) : subscription.monthly_cost.toFixed(2)}/mo · {t("statusPending")}:{" "}
                   {formatDate(subscription.renewal_date)}
                 </p>
               </li>

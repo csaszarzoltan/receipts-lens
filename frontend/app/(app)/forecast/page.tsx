@@ -81,7 +81,8 @@ export default function ForecastPage() {
     overage: projection.expected_overage,
   }));
 
-  const anomalyEntries = anomalies?.anomalies ?? [];
+  // The API scores every period; only the flagged ones are anomalies.
+  const anomalyEntries = (anomalies?.anomalies ?? []).filter((entry) => entry.flagged);
   const spanDays = forecast.source_range
     ? (Date.parse(forecast.source_range.date_to) - Date.parse(forecast.source_range.date_from)) / 86_400_000
     : 0;

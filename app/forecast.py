@@ -27,10 +27,11 @@ from __future__ import annotations
 
 import calendar
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Header
 
 from app.budgets import BudgetPeriod, budget_store
 from app.reports import receipt_store
@@ -40,15 +41,83 @@ from app.reports import receipt_store
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class _TenantItem:
+    category: str | None
+    price: float | None
+
+
+@dataclass(frozen=True)
+class _TenantReceipt:
+    date: str | None
+    total: float | None
+    items: list[_TenantItem]
+
+
+def _tenant_receipts(
+    tenant_id: str, only_currency: str | None = None
+) -> tuple[list[_TenantReceipt], str]:
+    """The tenant's stored receipts (the product SQLite store) and their currency.
+
+    The forecast must describe the receipts the product actually holds, not the
+    global in-memory ``receipt_store`` that production never writes to. Receipts
+    in other currencies than the tenant's main one are left out (amounts are
+    never converted), and a receipt with no total and no line items is skipped
+    rather than counted as 0.
+    """
+    from app.consumer_dashboard import _tenant_receipt_payloads
+
+    payloads = _tenant_receipt_payloads(tenant_id)
+    spend: dict[str, float] = {}
+    for payload in payloads:
+        code = str(payload.get("currency") or "")
+        if code and payload.get("total") is not None:
+            spend[code] = spend.get(code, 0.0) + float(payload["total"])
+    currency = only_currency or (max(spend.items(), key=lambda kv: kv[1])[0] if spend else "USD")
+    receipts: list[_TenantReceipt] = []
+    for payload in payloads:
+        code = str(payload.get("currency") or "")
+        if code and code != currency:
+            continue
+        raw_items = payload.get("line_items") or []
+        items = [
+            _TenantItem(
+                category=item.get("category"),
+                price=item.get("price", item.get("amount")),
+            )
+            for item in raw_items
+        ]
+        total = payload.get("total")
+        if total is None and not items:
+            continue
+        receipts.append(
+            _TenantReceipt(
+                date=payload.get("date") or None,
+                total=float(total) if total is not None else None,
+                items=items,
+            )
+        )
+    return receipts, currency
+
+
 def _receipts_in_range(
-    date_from: str | None, date_to: str | None
+    date_from: str | None, date_to: str | None, tenant_id: str | None = None
 ) -> list[Any]:
     """Return receipts filtered by an optional ISO date range.
 
     Uses ``ReceiptStore.list`` when both bounds are present; otherwise falls
     back to ``list_all`` and applies whichever bound was given, so callers
-    can pass only one bound.
+    can pass only one bound. With ``tenant_id`` the tenant's own receipts are
+    used instead of the global store.
     """
+    if tenant_id is not None:
+        return [
+            r
+            for r in _tenant_receipts(tenant_id)[0]
+            if r.date
+            and (not date_from or r.date >= date_from)
+            and (not date_to or r.date <= date_to)
+        ]
     if date_from and date_to:
         return receipt_store.list(date_from=date_from, date_to=date_to)
 
@@ -155,7 +224,8 @@ def _forecast_series(
         else 0.0
     )
 
-    forecast = moving_avg + slope * horizon
+    # Spend cannot be negative: a steep downward trend is floored at zero.
+    forecast = max(0.0, moving_avg + slope * horizon)
 
     # Residual standard deviation around the fitted line -> confidence bounds.
     fitted = [mean_y + slope * (x - mean_x) for x in range(n)]
@@ -163,7 +233,7 @@ def _forecast_series(
     k = 1.96
     return (
         round(forecast, 2),
-        round(forecast - k * std, 2),
+        round(max(0.0, forecast - k * std), 2),
         round(forecast + k * std, 2),
         round(slope, 2),
     )
@@ -205,6 +275,7 @@ class ForecastEngine:
         period: str = "monthly",
         category: str | None = None,
         horizon: int = 1,
+        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         """Forecast the next period(s) for one category or overall spend.
 
@@ -214,7 +285,8 @@ class ForecastEngine:
         ``next_period_total``, ``confidence_low``, ``confidence_high``,
         ``trend``, ``method``).
         """
-        receipts = _receipts_in_range(date_from, date_to)
+        receipts = _receipts_in_range(date_from, date_to, tenant_id)
+        currency = _tenant_receipts(tenant_id)[1] if tenant_id is not None else "USD"
         by_category = _category_period_totals(receipts, period)
         overall = _overall_period_totals(receipts, period)
 
@@ -235,7 +307,7 @@ class ForecastEngine:
 
         result: dict[str, Any] = {
             "period": period,
-            "currency": "USD",
+            "currency": currency,
             "forecasts": forecasts,
             "source_range": _source_range(receipts, date_from, date_to),
         }
@@ -322,6 +394,7 @@ class AnomalyDetector:
         date_to: str | None = None,
         method: str = "zscore",
         threshold: float = 2.0,
+        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         """Flag periods whose spend deviates from the historical pattern.
 
@@ -330,7 +403,7 @@ class AnomalyDetector:
         ``anomalies`` (a list of entries with ``period``, ``category``,
         ``expected``, ``actual``, ``score``, ``flagged``).
         """
-        receipts = _receipts_in_range(date_from, date_to)
+        receipts = _receipts_in_range(date_from, date_to, tenant_id)
         by_category = _category_period_totals(receipts, "monthly")
 
         anomalies: list[dict[str, Any]] = []
@@ -449,6 +522,7 @@ class BudgetVarianceProjector:
         self,
         period: str | None = None,
         horizon: int = 1,
+        tenant_id: str | None = None,
     ) -> dict[str, Any]:
         """Project variance for weekly/monthly/yearly budgets.
 
@@ -459,7 +533,8 @@ class BudgetVarianceProjector:
         ``status``).
         """
         projections: list[dict[str, Any]] = []
-        for budget in budget_store.list():
+        budgets = budget_store.list(tenant_id=tenant_id) if tenant_id is not None else budget_store.list()
+        for budget in budgets:
             budget_period = (
                 budget.period.value
                 if isinstance(budget.period, BudgetPeriod)
@@ -469,10 +544,15 @@ class BudgetVarianceProjector:
                 continue
 
             date_from, date_to = _budget_window(budget_period)
-            spent = _category_spend(
-                receipt_store.list(date_from=date_from, date_to=date_to),
-                budget.category,
-            )
+            if tenant_id is not None:
+                in_window = [
+                    r
+                    for r in _tenant_receipts(tenant_id, only_currency=budget.currency)[0]
+                    if r.date and date_from <= r.date <= date_to
+                ]
+            else:
+                in_window = receipt_store.list(date_from=date_from, date_to=date_to)
+            spent = _category_spend(in_window, budget.category)
 
             fraction = _fraction_elapsed(budget_period)
             projected = (spent / fraction) if fraction > 0 else spent
@@ -523,6 +603,25 @@ budget_variance_projector = BudgetVarianceProjector()
 forecast_router = APIRouter(prefix="/forecasts")
 
 
+def forecast_tenant(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-ID"),
+    x_role: str | None = Header(default=None, alias="X-Role"),
+) -> str | None:
+    """Tenant the forecast is computed for.
+
+    Callers that identify themselves (session token or dev headers) get their
+    own receipts and budgets only. In production identification is mandatory.
+    Without any credentials outside production the global in-memory store is
+    used, which holds demo and test data only.
+    """
+    from app.api import _is_production, _resolve_tenant_from_auth
+
+    if _is_production or authorization or x_tenant_id:
+        return _resolve_tenant_from_auth(authorization, x_tenant_id, x_role)
+    return None
+
+
 @forecast_router.get("", response_model=dict)
 def get_forecasts(
     period: str = "monthly",
@@ -530,6 +629,7 @@ def get_forecasts(
     horizon: int = 1,
     date_from: str | None = None,
     date_to: str | None = None,
+    tenant_id: str | None = Depends(forecast_tenant),
 ) -> dict[str, Any]:
     """Return next-period spend forecast (overall + per category)."""
     return forecast_engine.forecast(
@@ -538,6 +638,7 @@ def get_forecasts(
         period=period,
         category=category,
         horizon=horizon,
+        tenant_id=tenant_id,
     )
 
 
@@ -548,6 +649,7 @@ def get_forecast_anomalies(
     threshold: float = 2.0,
     date_from: str | None = None,
     date_to: str | None = None,
+    tenant_id: str | None = Depends(forecast_tenant),
 ) -> dict[str, Any]:
     """Return detected spending anomalies for the period.
 
@@ -559,6 +661,7 @@ def get_forecast_anomalies(
         date_to=date_to,
         method=method,
         threshold=threshold,
+        tenant_id=tenant_id,
     )
 
 
@@ -566,9 +669,11 @@ def get_forecast_anomalies(
 def get_budget_variance(
     period: str | None = None,
     horizon: int = 1,
+    tenant_id: str | None = Depends(forecast_tenant),
 ) -> dict[str, Any]:
     """Return projected budget variance with expected overage."""
     return budget_variance_projector.project_variance(
         period=period,
         horizon=horizon,
+        tenant_id=tenant_id,
     )

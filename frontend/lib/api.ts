@@ -829,7 +829,7 @@ export interface ForecastParams {
 }
 
 export async function getForecast(params: ForecastParams = {}): Promise<ForecastResult> {
-  return request<ForecastResult>(
+  return tenantRequest<ForecastResult>(
     `/forecasts${qs({
       period: params.period,
       category: params.category,
@@ -849,7 +849,7 @@ export interface AnomalyParams {
 }
 
 export async function getAnomalies(params: AnomalyParams = {}): Promise<AnomalyResult> {
-  return request<AnomalyResult>(
+  return tenantRequest<AnomalyResult>(
     `/forecasts/anomalies${qs({
       period: params.period,
       method: params.method,
@@ -868,7 +868,7 @@ export interface BudgetVarianceParams {
 export async function getBudgetVariance(
   params: BudgetVarianceParams = {},
 ): Promise<BudgetVarianceResult> {
-  return request<BudgetVarianceResult>(
+  return tenantRequest<BudgetVarianceResult>(
     `/forecasts/budget-variance${qs({
       period: params.period,
       horizon: params.horizon,

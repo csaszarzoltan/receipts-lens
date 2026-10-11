@@ -230,19 +230,25 @@ class AccountingWorkspace:
 
     def recurring(self, tenant: str) -> list[dict[str, Any]]:
         rows = self.db.execute("SELECT payload FROM receipts WHERE tenant_id=?", (tenant,)).fetchall()
-        groups: dict[str, list[dict[str, Any]]] = {}
+        groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
         for row in rows:
             payload = json.loads(row["payload"])
-            merchant = str(payload.get("vendor") or "Unknown")
-            groups.setdefault(merchant, []).append(payload)
+            merchant = str(payload.get("vendor") or "").strip()
+            # A receipt with no vendor, or with an unconfirmed total, cannot show a
+            # recurring price: grouping vendorless receipts as one "Unknown"
+            # subscription and counting unknown totals as 0 produced phantom
+            # subscriptions. Amounts in different currencies are never mixed.
+            if not merchant or payload.get("total") is None:
+                continue
+            groups.setdefault((merchant, str(payload.get("currency") or "")), []).append(payload)
         result = []
-        for merchant, receipts in groups.items():
+        for (merchant, currency), receipts in groups.items():
             if len(receipts) < 2:
                 continue
             # Order charges chronologically (payload dates are ISO strings) so
             # ``price_change`` and the price-increase check compare like-for-like.
             receipts.sort(key=lambda r: str(r.get("date") or ""))
-            amounts = [float(r.get("total") or 0) for r in receipts]
+            amounts = [float(r["total"]) for r in receipts]
             average = sum(amounts) / len(amounts)
             variance = max(amounts) - min(amounts)
             feedback = self.db.execute("SELECT is_subscription FROM recurring_feedback WHERE tenant_id=? AND merchant=?",
@@ -265,7 +271,8 @@ class AccountingWorkspace:
             result.append({"merchant": merchant, "occurrences": len(receipts),
                            "average_amount": round(average, 2), "annualized": round(average * 12, 2),
                            "likely_subscription": likely, "price_change": round(amounts[-1] - amounts[0], 2),
-                           "last_date": last_date, "amounts": [round(a, 2) for a in amounts]})
+                           "last_date": last_date, "amounts": [round(a, 2) for a in amounts],
+                           "currency": currency or None})
         return sorted(result, key=lambda x: x["annualized"], reverse=True)
 
     def recurring_feedback(self, tenant: str, merchant: str, is_subscription: bool) -> dict[str, Any]:
