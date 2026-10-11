@@ -106,3 +106,31 @@ def test_category_breakdown_reports_unpriced_receipts(stored):
     """Receipts without a total must be countable so the UI shows "unknown", not 0."""
     out = dash._monthly_by_category(TODAY, "tenant-a")
     assert out["unpriced_receipts"] == 2
+
+
+@pytest.mark.test_id("TEST-RL-V02-216")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-061")
+@pytest.mark.scenario("AC-RL-V02-42")
+def test_categories_add_up_to_receipt_total_when_line_items_are_partial(monkeypatch):
+    partial = [{"date": "2026-10-03", "total": 4400.0, "currency": "HUF",
+                "line_items": [{"name": "Tea", "price": 1000.0, "category": "Food"}]}]
+    monkeypatch.setattr(dash, "_tenant_receipt_payloads", lambda tenant_id: partial)
+    out = dash._monthly_by_category(TODAY, "tenant-a")
+    assert out["total_spent"] == 4400.0
+    assert {c["key"]: c["total"] for c in out["categories"]} == {"Food": 1000.0, "Uncategorized": 3400.0}
+
+
+@pytest.mark.test_id("TEST-RL-V02-218")
+@pytest.mark.requirements("FEAT-RL-V02-REQ-061")
+@pytest.mark.scenario("AC-RL-V02-42")
+def test_unpriced_receipt_line_items_stay_out_of_the_breakdown(monkeypatch):
+    payloads = [
+        {"date": "2026-10-03", "total": 100.0, "currency": "HUF",
+         "line_items": [{"name": "Tea", "price": 100.0, "category": "Food"}]},
+        {"date": "2026-10-04", "total": None, "currency": "HUF",
+         "line_items": [{"name": "Cake", "price": 1.2, "category": "Food"}]},
+    ]
+    monkeypatch.setattr(dash, "_tenant_receipt_payloads", lambda tenant_id: payloads)
+    out = dash._monthly_by_category(TODAY, "tenant-a")
+    assert out["total_spent"] == 100.0
+    assert out["unpriced_receipts"] == 1
