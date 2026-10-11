@@ -124,3 +124,20 @@ export function timeAgo(iso: string): string {
   if (days < 30) return `${days}d ago`;
   return formatDate(iso);
 }
+
+/** Parses "4 400,50", "4,400.50" and "4400.5"; returns NaN for anything else. */
+export function parseAmount(raw: string): number {
+  const compact = raw.replace(/[\s ]/g, "");
+  if (!/^\d[\d.,]*$/.test(compact)) return Number.NaN;
+  const lastComma = compact.lastIndexOf(",");
+  const lastDot = compact.lastIndexOf(".");
+  let normal = compact;
+  if (lastComma >= 0 && lastDot >= 0) {
+    const decimal = lastComma > lastDot ? "," : ".";
+    const group = decimal === "," ? "." : ",";
+    normal = compact.split(group).join("").replace(decimal, ".");
+  } else if (lastComma >= 0) {
+    normal = compact.replace(",", ".");
+  }
+  return Number(normal);
+}

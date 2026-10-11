@@ -44,6 +44,7 @@ export default function Topbar() {
       <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6">
         <Link
           href="/dashboard"
+          aria-label="ReceiptLens"
           className="flex items-center gap-2 font-semibold text-slate-900 lg:hidden dark:text-slate-100"
         >
           <span aria-hidden="true">🔎</span>

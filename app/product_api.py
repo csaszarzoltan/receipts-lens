@@ -19,7 +19,7 @@ from app.credential_store import CredentialStore
 from app.export_workflow import ExportWorkflow
 from app.inbox_service import InboxService
 from app.intuit_oauth import OAuthConfigError
-from app.ocr import ConfidenceReceipt, parse_receipt_with_confidence
+from app.ocr import ConfidenceReceipt, parse_receipt, parse_receipt_with_confidence
 from app.product_service import (
     HOUSEHOLD_ROLES,
     Actor,
@@ -217,6 +217,53 @@ def reviews(confidence_field: str | None = None, confidence_lt: float | None = N
         return service.list_reviews(current, confidence_field, confidence_lt, readiness, sort, limit, offset)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+
+@router.post("/product/review-items/reread")
+def reread_review_totals(limit: int = 3, current: Actor = Depends(actor)) -> dict[str, Any]:
+    """Read the total again from the stored image for receipts that have no amount to confirm.
+
+    Receipts saved before the total candidate existed show a bare dash in
+    review. This reads a few at a time (OCR is slow) and records what it found
+    as ``total_candidate``; it never sets ``total``, so the user still confirms.
+    """
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot re-read receipts")
+    limit = max(1, min(limit, 10))
+    rows = service._db.execute(
+        "SELECT receipt_id FROM receipts WHERE tenant_id=? AND status='needs_review' ORDER BY created_at",
+        (current.tenant_id,),
+    ).fetchall()
+    pending: list[str] = []
+    for row in rows:
+        stored = service._db.execute("SELECT payload FROM receipts WHERE receipt_id=?", (row["receipt_id"],)).fetchone()
+        payload = json.loads(stored["payload"])
+        if payload.get("total") is None and payload.get("total_candidate") is None \
+                and not payload.get("total_candidate_checked"):
+            pending.append(row["receipt_id"])
+    updated = failed = 0
+    for receipt_id in pending[:limit]:
+        asset = advanced.asset(current.tenant_id, receipt_id)
+        candidate = None
+        if asset is not None:
+            try:
+                candidate = parse_receipt(asset.content).total
+            except Exception:  # noqa: BLE001 — a bad image must not stop the rest of the batch
+                failed += 1
+                continue
+        with service._lock, service._db:
+            stored = service._db.execute(
+                "SELECT payload FROM receipts WHERE tenant_id=? AND receipt_id=?",
+                (current.tenant_id, receipt_id)).fetchone()
+            if stored is None:
+                continue
+            payload = json.loads(stored["payload"])
+            payload["total_candidate"] = candidate
+            payload["total_candidate_checked"] = True
+            encoded = json.dumps(payload, sort_keys=True)
+            service._db.execute("UPDATE receipts SET payload=? WHERE tenant_id=? AND receipt_id=?",
+                                (encoded, current.tenant_id, receipt_id))
+        updated += 1
+    return {"updated": updated, "failed": failed, "remaining": max(0, len(pending) - updated)}
 
 @router.patch("/product/review-items/{receipt_id}")
 def correct(receipt_id: str, body: CorrectionRequest, if_match: int = Header(alias="If-Match"), current: Actor = Depends(actor)) -> dict[str, Any]:

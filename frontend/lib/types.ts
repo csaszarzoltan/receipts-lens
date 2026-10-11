@@ -69,6 +69,8 @@ export interface Receipt {
   currency_assumed?: boolean;
   /** The total OCR read while the confidence gate withholds `total`. */
   total_candidate?: number | null;
+  /** True once the stored image was read again for a total candidate. */
+  total_candidate_checked?: boolean;
   line_items: LineItem[];
   confidence: Record<string, number>;
   confidence_level?: ConfidenceLevel | null;
@@ -250,10 +252,18 @@ export interface ConsumerDashboard {
 // Review
 // ---------------------------------------------------------------------------
 
+export interface ReviewChecks {
+  /** Sum of the priced line items, or null when there are none. */
+  line_sum: number | null;
+  /** Whether the lines add up to the amount; null when there is nothing to compare. */
+  lines_match: boolean | null;
+}
+
 export interface ReviewItem {
   receipt_id: string;
   receipt: Receipt;
   version: number;
+  checks?: ReviewChecks;
 }
 
 // ---------------------------------------------------------------------------

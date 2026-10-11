@@ -63,6 +63,30 @@ def is_production() -> bool:
     return os.getenv("RECEIPTLENS_ENV", "").strip().lower() == "production"
 
 
+
+def line_sum_check(payload: dict[str, Any]) -> dict[str, Any]:
+    """Compare the line items with the receipt total (or the OCR candidate for it).
+
+    ``lines_match`` is ``None`` when there is nothing to compare: no priced
+    lines, or no amount at all. A receipt matches when the lines add up to the
+    amount, or to the amount before tax, within rounding.
+    """
+    prices = [i.get("price") for i in payload.get("line_items") or []
+              if isinstance(i.get("price"), (int, float))]
+    basis = payload.get("total")
+    if basis is None:
+        basis = payload.get("total_candidate")
+    if not prices:
+        return {"line_sum": None, "lines_match": None}
+    line_sum = round(sum(prices), 2)
+    if basis is None:
+        return {"line_sum": line_sum, "lines_match": None}
+    tax = payload.get("tax") or 0
+    tolerance = max(0.02, 0.005 * abs(basis))
+    match = abs(line_sum - basis) <= tolerance or abs(line_sum + tax - basis) <= tolerance
+    return {"line_sum": line_sum, "lines_match": match}
+
+
 class ProductService:
     """Tenant-safe workflow service backed by SQLite."""
 
@@ -281,7 +305,8 @@ class ProductService:
                 continue
             items.append({"receipt_id":row["receipt_id"],"status":row["status"],"readiness":row["status"],
                           "version":row["version"],"receipt":payload,"lowest_confidence":min([v for v in confidence.values() if isinstance(v,(int,float))],default=None),
-                          "selected_confidence":value,"created_at":row["created_at"]})
+                          "selected_confidence":value,"created_at":row["created_at"],
+                          "checks":line_sum_check(payload)})
         if sort == "amount_desc": items.sort(key=lambda x: float(x["receipt"].get("total") or 0), reverse=True)
         elif sort == "confidence_asc": items.sort(key=lambda x: (-1 if x["selected_confidence"] is None else x["selected_confidence"]))
         elif sort != "created_asc": raise ValueError("unsupported sort")

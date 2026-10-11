@@ -399,8 +399,21 @@ export async function updateLineItems(
 // Review Items
 // ---------------------------------------------------------------------------
 
+/** The review queue: only receipts still waiting for a person, never the completed ones. */
 export async function getReviewItems(): Promise<{ items: ReviewItem[] }> {
-  return tenantRequest<{ items: ReviewItem[] }>("/product/review-items");
+  return tenantRequest<{ items: ReviewItem[] }>(
+    `/product/review-items${qs({ readiness: "needs_review", limit: 200 })}`,
+  );
+}
+
+/** Reads a few receipts' totals again from the stored images; call until `remaining` is 0. */
+export async function rereadReviewTotals(
+  limit = 3,
+): Promise<{ updated: number; failed: number; remaining: number }> {
+  return tenantRequest<{ updated: number; failed: number; remaining: number }>(
+    `/product/review-items/reread${qs({ limit })}`,
+    { method: "POST" },
+  );
 }
 
 export async function correctReceipt(
