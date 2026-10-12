@@ -67,7 +67,7 @@ function InviteInner() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 dark:from-brand-950 dark:to-slate-950">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 dark:from-brand-950 dark:to-slate-950">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-card dark:bg-slate-900">
         <div className="flex justify-end"><ThemeToggle /></div>
         <div className="text-center">
@@ -110,7 +110,7 @@ function InviteInner() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }
 

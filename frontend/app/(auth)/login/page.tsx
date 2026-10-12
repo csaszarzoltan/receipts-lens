@@ -44,7 +44,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 dark:from-brand-950 dark:to-slate-950">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 dark:from-brand-950 dark:to-slate-950">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-card dark:bg-slate-900">
         <div className="flex justify-end"><ThemeToggle /></div>
         <div className="text-center">
@@ -96,16 +96,16 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-          {t("welcome").includes(" ") ? "New here? " : "New here? "}
-          <Link href="/onboarding" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-            {t("onboarding")}
+          {t("newHere")}{" "}
+          <Link href="/auth/magic-link" className="font-medium text-brand-700 hover:underline dark:text-brand-300">
+            {t("createHousehold")}
           </Link>
           {" · "}
-          <Link href="/auth/magic-link" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-            {t("emailLinkLogin")}
+          <Link href="/onboarding" className="font-medium text-brand-700 hover:underline dark:text-brand-300">
+            {t("onboarding")}
           </Link>
         </p>
       </div>
-    </div>
+    </main>
   );
 }

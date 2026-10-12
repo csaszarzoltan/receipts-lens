@@ -25,6 +25,7 @@ function MagicLinkInner() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -52,6 +53,7 @@ function MagicLinkInner() {
       } else if (result.delivered) {
         setLink(null);
         setError(null);
+        setSentTo(email);
       } else {
         setError(t("magicLinkNoSmtp"));
       }
@@ -63,7 +65,7 @@ function MagicLinkInner() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 dark:from-brand-950 dark:to-slate-950">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 dark:from-brand-950 dark:to-slate-950">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-card dark:bg-slate-900">
         <div className="flex justify-end"><ThemeToggle /></div>
         <div className="text-center">
@@ -73,6 +75,8 @@ function MagicLinkInner() {
             {t("magicLinkTitle")}
           </p>
         </div>
+
+        <p className="mt-3 text-center text-sm text-slate-600 dark:text-slate-300">{t("magicLinkNewHint")}</p>
 
         <div className="mt-4">
           <LanguageSwitcher />
@@ -101,6 +105,11 @@ function MagicLinkInner() {
               {busy ? t("sending") : t("magicLinkSend")}
             </button>
 
+            {sentTo && (
+              <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" role="status">
+                {t("magicLinkSent")} <strong>{sentTo}</strong>
+              </p>
+            )}
             {error && (
               <p className="text-sm text-red-600 dark:text-red-400" role="alert">
                 {error}
@@ -124,7 +133,7 @@ function MagicLinkInner() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }
 

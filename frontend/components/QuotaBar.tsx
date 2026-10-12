@@ -28,7 +28,7 @@ export default function QuotaBar({ used, limit, isPro }: QuotaBarProps) {
           {t("quotaUsed")}: {used}/{limit}
         </span>
         <span className={cx("text-xs", remaining === 0 ? "font-semibold text-rose-600" : "text-slate-500")}>
-          {remaining === 0 ? t("upgradeToPro") : `${remaining} left`}
+          {remaining === 0 ? t("upgradeToPro") : `${remaining} ${t("quotaLeftSuffix")}`}
         </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700" role="progressbar" aria-valuenow={used} aria-valuemax={limit} aria-label="quota">

@@ -6,6 +6,7 @@ import { useUpload } from "@/lib/hooks/useUpload";
 import { useQuota } from "@/lib/hooks/useQuota";
 import QuotaBar from "@/components/QuotaBar";
 import DropZone from "@/components/DropZone";
+import SampleReceipt from "@/components/SampleReceipt";
 import UploadQueue from "@/components/UploadQueue";
 import EmptyState from "@/components/EmptyState";
 import AiScanToggle from "@/components/AiScanToggle";
@@ -41,6 +42,12 @@ export default function UploadPage() {
         </p>
       </div>
 
+      {quota ? <QuotaBar used={quota.used} limit={quota.limit} isPro={quota.pro} /> : null}
+
+      <DropZone onFiles={(files) => enqueue(files, { aiScan: AI_SCAN_ENABLED && aiScan })} />
+
+      <SampleReceipt />
+
       {AI_SCAN_ENABLED ? (
         <AiScanToggle checked={aiScan} onChange={setAiScan} />
       ) : (
@@ -64,10 +71,6 @@ export default function UploadPage() {
           </span>
         </div>
       )}
-
-      {quota ? <QuotaBar used={quota.used} limit={quota.limit} isPro={quota.pro} /> : null}
-
-      <DropZone onFiles={(files) => enqueue(files, { aiScan: AI_SCAN_ENABLED && aiScan })} />
 
       {entries.length > 0 ? (
         <section className="space-y-3" aria-label={t("uploadProgressLabel")}>
