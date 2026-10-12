@@ -411,6 +411,18 @@ export async function getReviewItems(): Promise<{ items: ReviewItem[] }> {
   );
 }
 
+export interface EnyugtaImportResult {
+  imported: number;
+  duplicates: number;
+  skipped: Array<{ index: number; reason: string }>;
+  elements: number;
+}
+
+/** Adds the receipts of a NAV eNyugta app export (XML); receipts imported before are skipped. */
+export function importEnyugta(file: File): Promise<EnyugtaImportResult> {
+  return uploadWithProgress<EnyugtaImportResult>("/product/enyugta-import", file);
+}
+
 /** Checks a bank/card CSV against the household's receipts; the server does not keep the file. */
 export function checkStatement(file: File): Promise<StatementResult> {
   return uploadWithProgress<StatementResult>("/product/statement-check", file);

@@ -58,7 +58,7 @@ export default function StatementPage() {
       setResult(await checkStatement(file));
     } catch (err) {
       setResult(null);
-      setError(err instanceof Error ? err.message : t("statementError"));
+      setError(err instanceof Error && err.message ? `${t("statementError")} (${err.message})` : t("statementError"));
     } finally {
       setBusy(false);
     }

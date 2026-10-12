@@ -16,6 +16,8 @@ from app.advanced_workspace import AdvancedWorkspace, extract_ocr_boxes
 from app.automation_service import AutomationService
 from app.connection_service import ConnectionService
 from app.credential_store import CredentialStore
+from app.enyugta_import import MAX_BYTES as ENYUGTA_MAX_BYTES
+from app.enyugta_import import EnyugtaError, parse_export
 from app.export_workflow import ExportWorkflow
 from app.household_warranties import HouseholdWarranties
 from app.inbox_service import InboxService
@@ -658,6 +660,43 @@ async def statement_check(file: UploadFile = File(...), current: Actor = Depends
         return check_statement(raw, tenant_receipts(service._db, current.tenant_id))
     except StatementError as exc:
         raise HTTPException(422, str(exc)) from exc
+
+@router.post("/product/enyugta-import", status_code=201)
+async def enyugta_import(file: UploadFile = File(...), current: Actor = Depends(actor)) -> dict[str, Any]:
+    """Add the receipts of a NAV eNyugta app export; ones already imported are skipped."""
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot import receipts")
+    raw = await file.read(ENYUGTA_MAX_BYTES + 1)
+    try:
+        exported, skipped = parse_export(raw)
+    except EnyugtaError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    known = {
+        json.loads(r["payload"]).get("source_key")
+        for r in service._db.execute("SELECT payload FROM receipts WHERE tenant_id=?", (current.tenant_id,))
+    }
+    imported = duplicates = 0
+    for item in exported:
+        if item.key in known:
+            duplicates += 1
+            continue
+        known.add(item.key)
+        parsed = ConfidenceReceipt(
+            merchant=item.supplier, date=item.day, items=[], total=item.gross_huf, tax=None,
+            currency="HUF", raw_text="", currency_source="marker",
+            confidence={"merchant": 1.0, "date": 1.0, "total": 1.0, "currency": 1.0},
+            confidence_level="high", total_candidate=item.gross_huf,
+        )
+        created = service.create_receipt(current, parsed, "enyugta-export.xml")
+        with service._lock, service._db:
+            stored = json.loads(service._db.execute(
+                "SELECT payload FROM receipts WHERE receipt_id=?", (created["receipt_id"],)).fetchone()["payload"])
+            stored.update({"source": "enyugta_export", "source_key": item.key,
+                           "document_number": item.document_number, "total_candidate": None})
+            service._db.execute("UPDATE receipts SET payload=? WHERE receipt_id=?",
+                                (json.dumps(stored, sort_keys=True), created["receipt_id"]))
+        imported += 1
+    return {"imported": imported, "duplicates": duplicates, "skipped": skipped, "elements": len(exported) + len(skipped)}
 
 @router.get("/product/export-runs")
 def export_runs(current: Actor = Depends(actor)) -> dict[str, Any]:

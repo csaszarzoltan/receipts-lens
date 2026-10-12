@@ -7,6 +7,7 @@ import { useQuota } from "@/lib/hooks/useQuota";
 import QuotaBar from "@/components/QuotaBar";
 import DropZone from "@/components/DropZone";
 import SampleReceipt from "@/components/SampleReceipt";
+import EnyugtaImport from "@/components/EnyugtaImport";
 import UploadQueue from "@/components/UploadQueue";
 import EmptyState from "@/components/EmptyState";
 import AiScanToggle from "@/components/AiScanToggle";
@@ -47,6 +48,8 @@ export default function UploadPage() {
       <DropZone onFiles={(files) => enqueue(files, { aiScan: AI_SCAN_ENABLED && aiScan })} />
 
       <SampleReceipt />
+
+      <EnyugtaImport />
 
       {AI_SCAN_ENABLED ? (
         <AiScanToggle checked={aiScan} onChange={setAiScan} />
