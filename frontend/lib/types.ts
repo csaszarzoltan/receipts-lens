@@ -707,3 +707,35 @@ export interface WarrantyInput {
   receipt_id?: string;
   notes?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Statement check
+// ---------------------------------------------------------------------------
+
+export interface StatementLine {
+  row: number;
+  date: string;
+  amount: number;
+  description: string;
+  currency: string | null;
+}
+
+export interface StatementReceipt {
+  receipt_id: string;
+  vendor: string | null;
+  date: string;
+  amount: number | null;
+  confirmed: boolean;
+  currency: string | null;
+  version: number;
+}
+
+export interface StatementResult {
+  assumptions: { direction: string; skipped_rows: number; date_order: string };
+  period: { from: string | null; to: string | null };
+  counts: { lines: number; matched: number; unmatched_lines: number; unmatched_receipts: number; suggestions: number };
+  matched: Array<{ line: StatementLine; receipt: StatementReceipt; confirmed: boolean }>;
+  suggestions: Array<{ line: StatementLine; receipt: StatementReceipt }>;
+  unmatched_lines: StatementLine[];
+  unmatched_receipts: StatementReceipt[];
+}

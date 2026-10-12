@@ -54,6 +54,7 @@ import type {
   WarrantyInput,
   WarrantyList,
   WarrantyStatus,
+  StatementResult,
   SavedView,
   SubscriptionListResponse,
   ValidationResult,
@@ -408,6 +409,11 @@ export async function getReviewItems(): Promise<{ items: ReviewItem[] }> {
   return tenantRequest<{ items: ReviewItem[] }>(
     `/product/review-items${qs({ readiness: "needs_review", limit: 200 })}`,
   );
+}
+
+/** Checks a bank/card CSV against the household's receipts; the server does not keep the file. */
+export function checkStatement(file: File): Promise<StatementResult> {
+  return uploadWithProgress<StatementResult>("/product/statement-check", file);
 }
 
 export async function getWarranties(): Promise<WarrantyList> {

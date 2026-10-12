@@ -27,6 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/forecast", labelKey: "forecast", icon: "📈", group: "analyse" },
   { href: "/budget", labelKey: "budget", icon: "🎯", group: "analyse" },
   { href: "/warranties", labelKey: "warranties", icon: "🛡️", group: "analyse" },
+  { href: "/statement", labelKey: "statementCheck", icon: "🏦", group: "analyse" },
   { href: "/reports", labelKey: "reports", icon: "📄", group: "analyse" },
   { href: "/chat", labelKey: "chat", icon: "💬", group: "analyse" },
   { href: "/insights", labelKey: "insights", icon: "💡", group: "analyse" },

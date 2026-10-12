@@ -29,6 +29,9 @@ from app.product_service import (
     is_production,
 )
 from app.quality_service import QualityService
+from app.statement_check import MAX_BYTES as STATEMENT_MAX_BYTES
+from app.statement_check import StatementError, tenant_receipts
+from app.statement_check import check as check_statement
 from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_vision
 
 router = APIRouter()
@@ -646,6 +649,15 @@ def delete_warranty(warranty_id: str, current: Actor = Depends(actor)) -> None:
         warranties.delete(current.tenant_id, warranty_id)
     except KeyError as exc:
         raise HTTPException(404, "Warranty not found") from exc
+
+@router.post("/product/statement-check")
+async def statement_check(file: UploadFile = File(...), current: Actor = Depends(actor)) -> dict[str, Any]:
+    """Match a bank or card statement (CSV) against the household's receipts; nothing is stored."""
+    raw = await file.read(STATEMENT_MAX_BYTES + 1)
+    try:
+        return check_statement(raw, tenant_receipts(service._db, current.tenant_id))
+    except StatementError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 @router.get("/product/export-runs")
 def export_runs(current: Actor = Depends(actor)) -> dict[str, Any]:
