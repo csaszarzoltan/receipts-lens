@@ -665,3 +665,45 @@ export interface LineItemsResult {
   line_items: LineItem[];
   version: number;
 }
+
+// ---------------------------------------------------------------------------
+// Warranties and return deadlines
+// ---------------------------------------------------------------------------
+
+export type WarrantyStatus = "active" | "returned" | "claim" | "archived";
+
+export interface Warranty {
+  warranty_id: string;
+  receipt_id: string | null;
+  item_name: string;
+  merchant: string | null;
+  purchase_date: string;
+  return_days: number;
+  warranty_months: number;
+  status: WarrantyStatus;
+  notes: string | null;
+  return_by: string | null;
+  warranty_ends: string | null;
+  /** Negative once the date has passed; null when there is no such deadline. */
+  return_days_left: number | null;
+  warranty_days_left: number | null;
+  next_deadline: string | null;
+  next_deadline_kind: "return" | "warranty" | null;
+  days_to_next: number | null;
+  due_soon: boolean;
+}
+
+export interface WarrantyList {
+  items: Warranty[];
+  summary: { active: number; due_soon: number };
+}
+
+export interface WarrantyInput {
+  item_name: string;
+  merchant?: string;
+  purchase_date: string;
+  return_days: number;
+  warranty_months: number;
+  receipt_id?: string;
+  notes?: string;
+}

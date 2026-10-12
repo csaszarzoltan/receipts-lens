@@ -135,7 +135,19 @@ function ReceiptDetailContent({ id }: { id: string }) {
             </span>
           </div>
         </div>
-        <a href="/receipts" className="btn-secondary">{t("allReceiptsLink")}</a>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={`/warranties?${new URLSearchParams({
+              receipt: item.receipt_id,
+              ...(receipt.vendor ? { merchant: receipt.vendor } : {}),
+              ...(receipt.date ? { date: receipt.date } : {}),
+            }).toString()}`}
+            className="btn-secondary"
+          >
+            {t("warrantyTrackFromReceipt")}
+          </a>
+          <a href="/receipts" className="btn-secondary">{t("allReceiptsLink")}</a>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

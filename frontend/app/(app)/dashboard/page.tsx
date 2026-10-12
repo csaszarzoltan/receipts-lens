@@ -13,6 +13,7 @@ import EmptyState from "@/components/EmptyState";
 import SavingsBlockCard from "@/components/SavingsBlockCard";
 import Money from "@/components/Money";
 import UnpricedNote from "@/components/UnpricedNote";
+import DeadlinesCard from "@/components/DeadlinesCard";
 import { formatDate, formatMoney, formatMonth } from "@/lib/utils";
 import { categoryLabel } from "@/lib/categories";
 import { useTranslation } from "@/lib/i18n";
@@ -225,6 +226,8 @@ export default function ConsumerDashboardPage() {
           </ul>
         )}
       </section>
+
+      <DeadlinesCard />
 
       {/* 4. {t("cancellableSubscriptions")} */}
       <section className="card p-5" aria-label={t("cancellableSubscriptions")}>

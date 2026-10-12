@@ -17,6 +17,7 @@ from app.automation_service import AutomationService
 from app.connection_service import ConnectionService
 from app.credential_store import CredentialStore
 from app.export_workflow import ExportWorkflow
+from app.household_warranties import HouseholdWarranties
 from app.inbox_service import InboxService
 from app.intuit_oauth import OAuthConfigError
 from app.ocr import ConfidenceReceipt, parse_receipt, parse_receipt_with_confidence
@@ -33,6 +34,7 @@ from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_v
 router = APIRouter()
 service = ProductService(os.getenv("RECEIPTLENS_PRODUCT_DB", ":memory:"))
 advanced = AdvancedWorkspace(service)
+warranties = HouseholdWarranties(service)
 
 
 def actor(authorization: str | None = Header(default=None, alias="Authorization"),
@@ -589,6 +591,61 @@ def save_preferences(body: PreferencesRequest,
     if not service.can_write(current):
         raise HTTPException(403, "Read-only role cannot save preferences")
     return advanced.save_preferences(current.tenant_id, current.role, body.payload)
+
+class WarrantyRequest(BaseModel):
+    """Create or change a warranty; on a change only the fields sent are applied."""
+    model_config = ConfigDict(extra="forbid")
+    item_name: str | None = None
+    merchant: str | None = None
+    purchase_date: str | None = None
+    return_days: int | None = None
+    warranty_months: int | None = None
+    receipt_id: str | None = None
+    notes: str | None = None
+    status: str | None = None
+
+
+def _warranty_body(body: WarrantyRequest) -> dict[str, Any]:
+    return body.model_dump(exclude_unset=True)
+
+
+@router.get("/product/warranties")
+def list_warranties(current: Actor = Depends(actor)) -> dict[str, Any]:
+    return warranties.list(current.tenant_id)
+
+@router.post("/product/warranties", status_code=201)
+def create_warranty(body: WarrantyRequest, current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot add warranties")
+    data = _warranty_body(body)
+    receipt_id = data.get("receipt_id")
+    if receipt_id and not service._db.execute(
+            "SELECT 1 FROM receipts WHERE tenant_id=? AND receipt_id=?", (current.tenant_id, receipt_id)).fetchone():
+        raise HTTPException(404, "Receipt not found")
+    try:
+        return warranties.create(current.tenant_id, data)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+@router.patch("/product/warranties/{warranty_id}")
+def update_warranty(warranty_id: str, body: WarrantyRequest, current: Actor = Depends(actor)) -> dict[str, Any]:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot change warranties")
+    try:
+        return warranties.update(current.tenant_id, warranty_id, _warranty_body(body))
+    except KeyError as exc:
+        raise HTTPException(404, "Warranty not found") from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+@router.delete("/product/warranties/{warranty_id}", status_code=204)
+def delete_warranty(warranty_id: str, current: Actor = Depends(actor)) -> None:
+    if not service.can_write(current):
+        raise HTTPException(403, "Read-only role cannot delete warranties")
+    try:
+        warranties.delete(current.tenant_id, warranty_id)
+    except KeyError as exc:
+        raise HTTPException(404, "Warranty not found") from exc
 
 @router.get("/product/export-runs")
 def export_runs(current: Actor = Depends(actor)) -> dict[str, Any]:

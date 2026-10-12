@@ -50,6 +50,10 @@ import type {
   ReceiptItem,
   RecurringExpense,
   ReviewItem,
+  Warranty,
+  WarrantyInput,
+  WarrantyList,
+  WarrantyStatus,
   SavedView,
   SubscriptionListResponse,
   ValidationResult,
@@ -404,6 +408,25 @@ export async function getReviewItems(): Promise<{ items: ReviewItem[] }> {
   return tenantRequest<{ items: ReviewItem[] }>(
     `/product/review-items${qs({ readiness: "needs_review", limit: 200 })}`,
   );
+}
+
+export async function getWarranties(): Promise<WarrantyList> {
+  return tenantRequest<WarrantyList>("/product/warranties");
+}
+
+export async function createWarranty(input: WarrantyInput): Promise<Warranty> {
+  return tenantRequest<Warranty>("/product/warranties", { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function updateWarranty(id: string, changes: Partial<WarrantyInput> & { status?: WarrantyStatus }): Promise<Warranty> {
+  return tenantRequest<Warranty>(`/product/warranties/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
+}
+
+export async function deleteWarranty(id: string): Promise<void> {
+  return tenantRequest<void>(`/product/warranties/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 /** Reads a few receipts' totals again from the stored images; call until `remaining` is 0. */
