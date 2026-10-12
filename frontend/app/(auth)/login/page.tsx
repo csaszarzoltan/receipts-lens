@@ -9,37 +9,62 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { useTranslation, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n";
 
 /**
- * Login page with one authentication gateway and no manual household or role selector.
- * The X-Tenant-ID header auth is the legacy dev path; the real consumer path
- * uses magic-link or Google SSO.
+ * Login page: an email link or Google SSO. No household or role selector.
+ * The shared demo household is only offered when NEXT_PUBLIC_DEMO_LOGIN=1 at build time.
  */
 export default function LoginPage() {
   const { t, locale, setLocale } = useTranslation();
   const router = useRouter();
   const [googleReady, setGoogleReady] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     googleSsoEnabled().then(setGoogleReady).catch(() => {});
   }, []);
 
-  async function signIn() {
+  /** The shared demo household is a development shortcut; a production build never sets this flag. */
+  const demoEnabled = process.env.NEXT_PUBLIC_DEMO_LOGIN === "1";
+
+  async function finishWithToken(token: string) {
+    const session = await verifyMagicLink(token);
+    if (session.session_token) setSessionToken(session.session_token);
+    router.push("/dashboard");
+  }
+
+  async function signIn(event: React.FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await requestMagicLink({ email: email.trim() });
+      if (res.token) {
+        // Only a backend outside production hands the token back; sign in straight away.
+        await finishWithToken(res.token);
+        return;
+      }
+      if (res.delivered) setSentTo(email.trim());
+      else setError(t("magicLinkNoSmtp"));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t("magicLinkError"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function signInAsDemo() {
     setLoading(true);
     setAuthState("demo", "admin");
     try {
-      const email = "demo-admin@receiptlens.local";
-      const res = await requestMagicLink({ email });
-      if (res.token) {
-        const session = await verifyMagicLink(res.token);
-        if (session.session_token) {
-          setSessionToken(session.session_token);
-        }
-      }
+      const res = await requestMagicLink({ email: "demo-admin@receiptlens.local" });
+      if (res.token) await finishWithToken(res.token);
+      else router.push("/dashboard");
     } catch {
-      // dev fallback
+      router.push("/dashboard");
     } finally {
       setLoading(false);
-      router.push("/dashboard");
     }
   }
 
@@ -89,11 +114,42 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div className="mt-6 space-y-4">
-          <button type="button" onClick={signIn} disabled={loading} className="btn-primary w-full">
+        <form onSubmit={signIn} className="mt-6 space-y-4">
+          <div>
+            <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
+              {t("magicLinkEmailLabel")}
+            </label>
+            <input
+              id="login-email"
+              type="email"
+              required
+              autoComplete="email"
+              className="input"
+              placeholder={t("emailPlaceholder")}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </div>
+          <button type="submit" disabled={loading || !email.trim()} className="btn-primary w-full">
             {loading ? "..." : t("login")}
           </button>
-        </div>
+          {sentTo && (
+            <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" role="status">
+              {t("magicLinkSent")} <strong>{sentTo}</strong>
+            </p>
+          )}
+          {error && (
+            <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+              {error}
+            </p>
+          )}
+        </form>
+
+        {demoEnabled && (
+          <button type="button" onClick={signInAsDemo} disabled={loading} className="mt-3 w-full text-center text-sm text-slate-500 underline dark:text-slate-400">
+            {t("demoLogin")}
+          </button>
+        )}
 
         <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
           {t("newHere")}{" "}
