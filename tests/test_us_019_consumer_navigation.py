@@ -47,6 +47,8 @@ EXPECTED_CONSUMER_NAV = {
     "/subscriptions": "subscriptions",
     "/forecast": "forecast",
     "/budget": "budget",
+    "/warranties": "warranties",
+    "/statement": "statementCheck",
     "/reports": "reports",
     "/chat": "chat",
     "/insights": "insights",

@@ -21,7 +21,7 @@ import app.preprocessing as pre_module
 from app.preprocessing import preprocess_image
 
 HU_WARNING = "Ellenőrzés szükséges — összeg bizonytalan"
-RETRY_HINT = "Próbálja újra jobb megvilágítással / nagyobb felbontással"
+RETRY_HINT = "Próbáld újra jobb megvilágítással vagy nagyobb felbontással"
 
 
 def _make_low_dpi_bytes(w: int = 320, h: int = 200) -> bytes:
