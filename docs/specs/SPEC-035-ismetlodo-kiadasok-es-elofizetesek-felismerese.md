@@ -22,7 +22,6 @@ A rendszeresen ismétlődő terhelések és árváltozások észrevétlenül nö
 
 Kanonikus források:
 - `briefs/BRIEF-035-ismetlodo-kiadasok-es-elofizetesek-felismerese.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 
 Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási adatelkülönítés, explicit megerősítés, hibánál részleges állapot tilalma és ismételt kérés biztonsága.

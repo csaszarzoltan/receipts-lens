@@ -22,7 +22,6 @@ A külső rendszer és a helyi nyilvántartás eltérései csendes adatvesztést
 
 Kanonikus források:
 - `briefs/BRIEF-019-szinkronizalas-es-egyeztetes.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/decisions/ADR-006-qbo-xero-sync-accountant-invite.md`
 

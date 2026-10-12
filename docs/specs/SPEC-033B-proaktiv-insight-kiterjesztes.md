@@ -11,7 +11,7 @@ extends: FEAT-033
 
 # FEAT-033B: Proaktív insight-kiterjesztés a szokatlan költésekre
 
-> Előretekintő (forward) kiterjesztés-specifikáció a VERITAS 1.1 §4.5
+> Előretekintő (forward) kiterjesztés-specifikáció a spec-sablon §4.5
 > 16-fejezetes szerkezetében. Ez NEM új FEAT: a FEAT-033
 > (SPEC-033-szokatlan-koltesek) és a FEAT-026
 > (SPEC-026-ertesitesek) meglévő képességeire épülő kiterjesztés.
@@ -61,7 +61,7 @@ Kanonikus források:
 - FEAT-049 olvasó-chat (`docs/specs/SPEC-049-ai-olvoso-chat.md`,
   `POST /api/v2/chat/ask` + chat-panel a Nyugták-listán belül) — élő
   függőség, a mélylink célja
-- `VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md` §4.5, §6 (R2)
+- spec-sablon §4.5, §6 (R2)
 
 Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási
 adatelkülönítés, explicit megerősítés helyett zaj-kontroll (küszöb +

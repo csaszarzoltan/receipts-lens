@@ -1,7 +1,7 @@
 # BRIEF-rekonstrukciós tételes lefedettségi és bizonyítékmátrix
 
 **Dátum:** 2026-08-31  
-**Módszertan:** METHODOLOGY.md (3.1 és 4. fejezetek)  
+**Módszertan:** korábbi szabályrendszer  
 **Dokumentált BRIEF-ek:** 29 db  
 **Lefedett felhasználói történetek:** 147 db  
 

@@ -3,7 +3,7 @@
 > **Minden agent kötelezően olvassa el** a kódírás előtt (worker prompt hivatkozik rá).
 > Ez a fájl a projekt "modern, felhasználóbarát, megbízható" definíciója —
 > ami itt szerepel, az **ellenőrizhető követelmény**, nem ízlés.
-> VERITAS 1.1 (`VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md`) 10. kapujának (Traceability Gate) projektszintű lebontása: ez a checklist rögzíti a release előtti ellenőrizhető követelményeket.
+> A traceability kapu (10. kapu) projektszintű lebontása: ez a checklist rögzíti a release előtti ellenőrizhető követelményeket.
 
 ## 1. Felhasználói felület / UX
 

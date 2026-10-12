@@ -1,6 +1,6 @@
 # Traceability index — BRIEF ↔ SPEC ↔ kód ↔ teszt
 
-> VERITAS 1.1 §13 (Automatikus Traceability Graph) szerinti kézi összesítő.
+> Kézi összesítő.
 > Lefedi a SPEC-001..SPEC-048 teljes állományt; a SPEC-038..048 visszamenőleges
 > (kód→spec) pótlás, a többi a korábbi szállítmány része. Generálva: 2026-09-11.
 > Forrás-leltár: `briefs/BRIEF-*.md`, `docs/specs/SPEC-*.md`, `app/*_{api,models,service}.py`,
@@ -13,7 +13,7 @@
 | BRIEF-ek | 48 (BRIEF-001..048) |
 | SPEC-ek | 48 (SPEC-001..048, mind `docs/specs/`) |
 | 1:1 lefedettség | 100% |
-| VERITAS 1.1 §4.5 fejezetek SPEC-038..048-ban | 16/16 |
+| spec-sablon §4.5 fejezetek SPEC-038..048-ban | 16/16 |
 | REQ→AC→E2E leképezés SPEC-038..048-ban | 88/88 |
 | E2E REST (2026-08-31 jelentés) | 88/88 PASS |
 | E2E GUI (2026-08-31 jelentés) | 33/33 PASS |
@@ -45,7 +45,7 @@ idempotencia-őrzés (`:15-17`), problem-helper (`:19`).
 
 | SPEC | Státusz | Megjegyzés |
 | :--- | :--- | :--- |
-| SPEC-001..037 | `READY_FOR_DEV`, 14-fejezetes szerkezet | Nem része ennek a feladatnak; lásd `docs/specs/index.json` és `docs/specs/VALIDATION.md`. A VERITAS 1.1 §4.5 16-fejezetes sablonját a SPEC-038..048 vezeti be; a régebbi SPEC-ek 15. (rollback/megfigyelhetőség) és 16. (DoD) fejezetre hozása külön feladat lehet. |
+| SPEC-001..037 | `READY_FOR_DEV`, 14-fejezetes szerkezet | Nem része ennek a feladatnak; lásd `docs/specs/index.json` és `docs/specs/VALIDATION.md`. A spec-sablon §4.5 16-fejezetes sablonját a SPEC-038..048 vezeti be; a régebbi SPEC-ek 15. (rollback/megfigyelhetőség) és 16. (DoD) fejezetre hozása külön feladat lehet. |
 
 ## 4. GAP-lista (összesített, 45 tétel)
 

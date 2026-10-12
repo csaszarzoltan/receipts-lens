@@ -22,7 +22,6 @@ A könyvelési és nyugtaforrások kézi mozgatása időigényes, a kapcsolatok 
 
 Kanonikus források:
 - `briefs/BRIEF-018-kulso-szolgaltatasok-csatlakoztatasa.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/quickbooks-online.md`
 - `docs/decisions/ADR-006-qbo-xero-sync-accountant-invite.md`

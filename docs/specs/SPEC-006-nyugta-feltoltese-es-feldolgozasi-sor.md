@@ -22,7 +22,6 @@ A papír- és digitális nyugták rögzítése lassú, a több fájlból álló 
 
 Kanonikus források:
 - `briefs/BRIEF-006-nyugta-feltoltese-es-feldolgozasi-sor.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/ocr-pipeline.md`
 - `specs/batch_processing_v0.3.md`

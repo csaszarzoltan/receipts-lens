@@ -22,7 +22,6 @@ A felhasználónak egyetlen helyen kell látnia a pénzügyi helyzetét és a k�
 
 Kanonikus források:
 - `briefs/BRIEF-005-haztartasi-attekinto-es-napi-teendok.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/stories/US-001-dashboard-megnyitas.md`
 - `docs/consolidated-v1-workspace.md`

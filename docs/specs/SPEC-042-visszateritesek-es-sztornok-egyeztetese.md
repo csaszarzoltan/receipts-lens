@@ -11,7 +11,7 @@ related_brief: BRIEF-042
 # FEAT-042: Visszatérítések és sztornók egyeztetése
 
 > Visszamenőleges (kód→spec) specifikáció. A megvalósítás már szállítva;
-> ez a dokumentum a tényleges kódviselkedést rögzíti a VERITAS 1.1 §4.5
+> ez a dokumentum a tényleges kódviselkedést rögzíti a spec-sablon §4.5
 > 16-fejezetes szerkezetében. Ahol a BRIEF többet állít, azt a 14. fejezet
 > SPEC-GAP listája jelöli.
 
@@ -33,7 +33,7 @@ végrehajtható E2E-teszt (`.agent-pipeline/03_e2e_suites/test_e2e_042.py`,
 Kanonikus források:
 
 - `briefs/BRIEF-042-visszateritesek-es-sztornok-egyeztetese.md` (9 US: US-042-01..US-042-09)
-- `VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md` §4.5
+- spec-sablon §4.5
 - `05_docs/2026-08-31-phase2-feat038-048-verification-report.md`
 - `.agent-pipeline/02_specs/done/SPEC-042-visszateritesek-es-sztornok-egyeztetese.md` (előd pipeline-spec)
 

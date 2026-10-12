@@ -22,7 +22,6 @@ Hibás vagy hiányos nyugtákat nem szabad észrevétlenül külső feldolgozás
 
 Kanonikus források:
 - `briefs/BRIEF-015-export-elokeszites-es-adatatadas.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/accounting-export-guide.md`
 

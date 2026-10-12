@@ -22,7 +22,6 @@ A nyugta többszöri javítása után tudni kell, mi változott, mikor és milye
 
 Kanonikus források:
 - `briefs/BRIEF-032-nyugta-valtozastortenete-es-auditalhato-javitas.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 
 Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási adatelkülönítés, explicit megerősítés, hibánál részleges állapot tilalma és ismételt kérés biztonsága.

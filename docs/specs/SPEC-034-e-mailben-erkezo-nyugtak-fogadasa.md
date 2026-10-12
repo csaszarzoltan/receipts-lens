@@ -22,7 +22,6 @@ A digitális nyugták kézi letöltése és újrafeltöltése felesleges lépés
 
 Kanonikus források:
 - `briefs/BRIEF-034-e-mailben-erkezo-nyugtak-fogadasa.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 
 Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási adatelkülönítés, explicit megerősítés, hibánál részleges állapot tilalma és ismételt kérés biztonsága.

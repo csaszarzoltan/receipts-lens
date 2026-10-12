@@ -22,7 +22,6 @@ A pénzügyi munkafolyamatoknak egér nélkül, segítő technológiával és k�
 
 Kanonikus források:
 - `briefs/BRIEF-027-hozzaferhetoseg-es-reszponziv-navigacio.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/engineering-standards.md`
 

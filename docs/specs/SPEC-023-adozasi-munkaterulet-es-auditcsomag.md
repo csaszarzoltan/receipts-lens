@@ -22,7 +22,6 @@ Az adózási célú összesítéshez bizonyítható forráskapcsolat, hiányoss�
 
 Kanonikus források:
 - `briefs/BRIEF-023-adozasi-munkaterulet-es-auditcsomag.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/decisions/ADR-004-tax-pro-pack.md`
 - `.agent-pipeline/02_specs/done/SPEC-ADR-004.md`

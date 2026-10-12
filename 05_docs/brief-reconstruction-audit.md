@@ -1,7 +1,7 @@
 # Teljes forráskód-alapú BRIEF-rekonstrukció auditja
 
 **Dátum:** 2026-08-31  
-**Módszertan:** METHODOLOGY.md 3.1 és a követelmény-artefaktumok elválasztási szabályai
+**Módszertan:** a követelmény-artefaktumok elválasztási szabályai
 
 ## Összefoglaló
 
@@ -39,7 +39,7 @@ A végrehajtott ellenőrzések eredményeit a tesztfuttató eszközök segítsé
 ### Tényleges futtatási eredmények
 
 1. **Célzott BRIEF szerkezeti és tartalmi tesztek (`pytest tests/unit/test_brief_quality_gates.py::test_qg1_brief_structure_and_headers`):**
-   - **Eredmény:** SIKERES (PASSED). Mind a 29 BRIEF tartalmazza a METHODOLOGY.md által előírt 8 kötelező szekciót.
+   - **Eredmény:** SIKERES (PASSED). Mind a 29 BRIEF tartalmazza a korábbi szabályrendszer által előírt 8 kötelező szekciót.
 2. **Csonka user story-k ellenőrzése (`pytest tests/unit/test_brief_quality_gates.py::test_qg2_no_truncated_stories`):**
    - **Eredmény:** SIKERES (PASSED). 0 csonka történet; minden történet szabályos szereplővel, céllal és értékkel rendelkezik.
 3. **Tiltott technikai részletek keresése (`pytest tests/unit/test_brief_quality_gates.py::test_qg3_no_forbidden_technical_terms`):**

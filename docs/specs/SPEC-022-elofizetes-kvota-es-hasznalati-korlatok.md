@@ -22,7 +22,6 @@ A felhasználónak előre értenie kell, milyen csomagot használ, mennyi feldol
 
 Kanonikus források:
 - `briefs/BRIEF-022-elofizetes-kvota-es-hasznalati-korlatok.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/subscription-alerts.md`
 - `docs/research/2026-08-27-receipt-lens-revenue-features.md`

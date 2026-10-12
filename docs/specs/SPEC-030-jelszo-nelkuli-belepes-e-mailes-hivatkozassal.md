@@ -22,7 +22,6 @@ A felhasználó jelszó megadása nélkül is biztonságosan szeretne hozzáfér
 
 Kanonikus források:
 - `briefs/BRIEF-030-jelszo-nelkuli-belepes-e-mailes-hivatkozassal.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 
 Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási adatelkülönítés, explicit megerősítés, hibánál részleges állapot tilalma és ismételt kérés biztonsága.

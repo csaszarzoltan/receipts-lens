@@ -22,7 +22,6 @@ A vásárlások egységes besorolása nélkül nehéz megérteni, mire megy el a
 
 Kanonikus források:
 - `briefs/BRIEF-011-kategorizalas-es-haztartasi-konyvelesi-besorolas.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/categorization.md`
 

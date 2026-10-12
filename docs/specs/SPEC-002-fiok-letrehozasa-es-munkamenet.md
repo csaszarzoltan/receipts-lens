@@ -22,7 +22,6 @@ A felhasználónak védett fiókra és kiszámítható belépési folyamatra van
 
 Kanonikus források:
 - `briefs/BRIEF-002-fiok-letrehozasa-es-munkamenet.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/engineering-standards.md`
 - `docs/plans/user-stories-consumer-pivot.md`

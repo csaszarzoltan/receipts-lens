@@ -22,7 +22,6 @@ Sok rögzített nyugta között nehéz megtalálni egy konkrét vásárlást és
 
 Kanonikus források:
 - `briefs/BRIEF-008-nyugtak-listaja-keresese-es-reszletei.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/gui-workspace.md`
 - `docs/consolidated-v1-workspace.md`

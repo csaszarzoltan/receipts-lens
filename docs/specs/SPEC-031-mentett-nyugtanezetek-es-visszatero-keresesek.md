@@ -22,7 +22,6 @@ Az ismételten használt szűrési feltételek kézi újraépítése lassítja a
 
 Kanonikus források:
 - `briefs/BRIEF-031-mentett-nyugtanezetek-es-visszatero-keresesek.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 
 Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási adatelkülönítés, explicit megerősítés, hibánál részleges állapot tilalma és ismételt kérés biztonsága.

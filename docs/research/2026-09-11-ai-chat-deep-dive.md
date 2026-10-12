@@ -1,6 +1,6 @@
 # AI-chat ("kérdezd a számláidat") — deep-dive kutatás + SPEC-javaslat
 
-**Dátum:** 2026-09-11 · **Feladat:** RL RESEARCH-1 (t_e8a9057c) · **Módszer:** VERITAS 1.1 (normatív alap)
+**Dátum:** 2026-09-11 · **Feladat:** RL RESEARCH-1 (t_e8a9057c) · **Módszer:** korábbi szabályrendszer (normatív alap)
 **Repo-local kontextus:** 48 BRIEF + FEAT-001..048 SPEC; `receipts(tenant_id, payload JSON, blob_ref)` modell; OCR-szöveg + kategóriák léteznek (FEAT-007/011); keresés/szűrés (FEAT-008), költéselemzés (FEAT-013), anomália-jelzés (FEAT-033), adatmegőrzés/törlés (FEAT-025) adott.
 **Élő-web megjegyzés:** `web_search` működött, de `web_extract`/böngészős oldal-kinyerés nem (extract-backend hiány, böngésző-daemon hiba). A verbatim idézetek ezért **kereső-snippetekből** származnak, nem teljes oldalszövegből — az érintett sorokat `[snippet]` jelöli. Kód/teszt érintetlen.
 
@@ -36,12 +36,12 @@
 ### (a) Olvasó-chat — összegzés / keresés NL-ben
 - **Adat-scope:** csak saját `tenant_id`; `receipts.payload` (kereskedő, dátum, összeg, kategória, OCR-szöveg) + FEAT-013 aggregátumok. Csak SELECT-jellegű lekérdezés, determinisztikus SQL/aggregáció fut, az LLM csak fordít + fogalmaz.
 - **UX:** chat-panel a Nyugták-listán (FEAT-008) belül; minden válaszban **forrás-hivatkozás** (nyugta-sor + összeg), "olcsó kérdés → determinisztikus válasz" elv; üres/kevés adat esetén explicit "nincs elég adat" (FEAT-033 REQ-033-04 minta).
-- **Kockázat: R2** (új termékviselkedés/UI, VERITAS 1.1 §6). R3-közeli pont: promptba kerülő PII → ld. 4. fejezet. Hallucináció-kockázat ellen: LLM nem számol, csak a DB-eredményt verbalizálja; szám-eltérés = hibaág (Text-to-SQL guardrail-minta: csak olvasó statement mehet végre [14]).
+- **Kockázat: R2** (új termékviselkedés/UI, §6). R3-közeli pont: promptba kerülő PII → ld. 4. fejezet. Hallucináció-kockázat ellen: LLM nem számol, csak a DB-eredményt verbalizálja; szám-eltérés = hibaág (Text-to-SQL guardrail-minta: csak olvasó statement mehet végre [14]).
 
 ### (b) Író-chat — kategória-javítás, szabály-állítás
 - **Adat-scope:** (a) + írási jog `receipts.payload` kategória-mezőjére és FEAT-021 szabályokra; pénzügyi igazságot érint.
 - **UX:** javaslat → diff-előnézet → **explicit megerősítés** (FEAT-020/FEAT-032 audit-minta: minden javítás verziózott, visszavonható).
-- **Kockázat: R3** (pénzügyi adat írása, VERITAS §6: "security, privacy, pénzügy"). Kötelező **Human Authority** kapu minden írás előtt; bulk/migrációs írás tiltott; Runner `fail-closed` (csak jóváhagyott csomag hajtódik végre).
+- **Kockázat: R3** (pénzügyi adat írása, §6: "security, privacy, pénzügy"). Kötelező **Human Authority** kapu minden írás előtt; bulk/migrációs írás tiltott; Runner `fail-closed` (csak jóváhagyott csomag hajtódik végre).
 
 ### (c) Proaktív insight — "ez a hónap kilóg"
 - **Adat-scope:** (a) olvasó-scope + FEAT-033 anomália-jelek + FEAT-012 keretek; háttérben futó, ütemezett kiértékelés.

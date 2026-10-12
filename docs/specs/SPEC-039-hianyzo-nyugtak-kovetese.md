@@ -11,7 +11,7 @@ related_brief: BRIEF-039
 # FEAT-039: Hiányzó nyugták követése
 
 > Visszamenőleges (kód→spec) specifikáció. A megvalósítás már szállítva;
-> ez a dokumentum a tényleges kódviselkedést rögzíti a VERITAS 1.1 §4.5
+> ez a dokumentum a tényleges kódviselkedést rögzíti a spec-sablon §4.5
 > 16-fejezetes szerkezetében. Ahol a BRIEF többet állít, azt a 14. fejezet
 > SPEC-GAP listája jelöli.
 
@@ -33,7 +33,7 @@ végrehajtható E2E-teszt (`.agent-pipeline/03_e2e_suites/test_e2e_039.py`,
 Kanonikus források:
 
 - `briefs/BRIEF-039-hianyzo-nyugtak-kovetese.md` (9 US: US-039-01..US-039-09)
-- `VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md` §4.5
+- spec-sablon §4.5
 - `05_docs/2026-08-31-phase2-feat038-048-verification-report.md`
 - `.agent-pipeline/02_specs/done/SPEC-039-hianyzo-nyugtak-kovetese.md` (előd pipeline-spec)
 

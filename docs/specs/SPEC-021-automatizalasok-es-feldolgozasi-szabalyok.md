@@ -22,7 +22,6 @@ Az ismétlődő feldolgozási lépések kézi végrehajtása időigényes, de az
 
 Kanonikus források:
 - `briefs/BRIEF-021-automatizalasok-es-feldolgozasi-szabalyok.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/product-workflows.md`
 

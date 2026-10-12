@@ -22,7 +22,6 @@ A felhasználó gyorsabb belépést szeretne úgy, hogy közben ne keletkezzen v
 
 Kanonikus források:
 - `briefs/BRIEF-003-google-belepes-es-fiok-osszekapcsolas.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/stories/US-002-google-sso.md`
 - `docs/plans/google-sso-2026-08-26.md`

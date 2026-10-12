@@ -11,7 +11,7 @@ related_brief: BRIEF-038
 # FEAT-038: Bank- és kártyatranzakciók párosítása
 
 > Visszamenőleges (kód→spec) specifikáció. A megvalósítás már szállítva;
-> ez a dokumentum a tényleges kódviselkedést rögzíti a VERITAS 1.1 §4.5
+> ez a dokumentum a tényleges kódviselkedést rögzíti a spec-sablon §4.5
 > 16-fejezetes szerkezetében. Ahol a BRIEF többet állít, azt a 14. fejezet
 > SPEC-GAP listája jelöli.
 
@@ -33,7 +33,7 @@ végrehajtható E2E-teszt (`.agent-pipeline/03_e2e_suites/test_e2e_038.py`,
 Kanonikus források:
 
 - `briefs/BRIEF-038-bank-es-kartyatranzakciok-parositasa.md` (10 US: US-038-01..US-038-10)
-- `VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md` §4.5 (kötelező 16 fejezet)
+- spec-sablon §4.5 (kötelező 16 fejezet)
 - `05_docs/2026-08-31-phase2-feat038-048-verification-report.md` (88 REST + 33 GUI PASS)
 - `.agent-pipeline/02_specs/done/SPEC-038-bank-es-kartyatranzakciok-parositasa.md` (előd pipeline-spec, 14 fejezet)
 

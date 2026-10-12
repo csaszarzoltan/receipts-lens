@@ -22,7 +22,6 @@ A felhasználó nem kaphat félrevezető sikert, ha a szolgáltatás vagy valame
 
 Kanonikus források:
 - `briefs/BRIEF-028-rendszerallapot-biztonsag-es-mukodesi-atlathatosag.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/engineering-standards.md`
 - `docs/api.md`

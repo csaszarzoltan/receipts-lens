@@ -1,6 +1,5 @@
 /**
  * GUI E2E Test Suite: Settings, Integrations & Diagnostics (FEAT-018, FEAT-019, FEAT-022, FEAT-024 to FEAT-029, FEAT-037)
- * Traceability: METHODOLOGY.md Section 8.4
  */
 import { test, expect } from "@playwright/test";
 import { seedAuthenticatedSession } from "./helpers/auth";

@@ -1,6 +1,5 @@
 /**
  * GUI E2E Test Suite: Household Collaboration, Approvals & Magic Link (FEAT-016, FEAT-017, FEAT-020, FEAT-030, FEAT-034)
- * Traceability: METHODOLOGY.md Section 8.4
  */
 import { test, expect } from "@playwright/test";
 import { seedAuthenticatedSession } from "./helpers/auth";

@@ -22,7 +22,6 @@ Külföldi nyugták esetén a felhasználónak átláthatóan kell látnia az er
 
 Kanonikus források:
 - `briefs/BRIEF-036-penznemvaltas-es-atvaltasi-arfolyam-kezelese.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 
 Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási adatelkülönítés, explicit megerősítés, hibánál részleges állapot tilalma és ismételt kérés biztonsága.

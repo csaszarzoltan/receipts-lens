@@ -12,9 +12,9 @@ related_brief: docs/research/2026-09-11-ai-chat-deep-dive.md
 
 > Előretekintő (kutatás→spec) specifikáció. A megvalósítás még nem
 > szállítva; ez a dokumentum a `docs/research/2026-09-11-ai-chat-deep-dive.md`
-> 5. fejezet SPEC-vázlatát rögzíti a VERITAS 1.1 §4.5 16-fejezetes
+> 5. fejezet SPEC-vázlatát rögzíti a spec-sablon §4.5 16-fejezetes
 > szerkezetében (a SPEC-038..048 által bevezetett sablon szerint).
-> Normatív alap: VERITAS 1.1. Kockázat: R2.
+> Kockázat: R2.
 
 ## 1. Cél és felhasználói eredmény
 
@@ -40,7 +40,7 @@ Kanonikus források:
   commit d0a229e) — 1) versenytárs-tábla (Dext, Sage, Veryfi, Ramp, Expensify),
   2) scope-opciók (a/b/c), 3) LLM-költségbecslés, 4) privacy/R3, 5) RICE +
   SPEC-vázlat (REQ-049-01..08, NFR, acceptance).
-- `VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md` §4.5 (SPEC-sablon),
+- spec-sablon §4.5 (SPEC-sablon),
   §6 (kockázati osztályok R2/R3).
 - `docs/specs/SPEC-008-*.md` — REQ-008-06 (tenant-izoláció MUST NOT-minta),
   NFR-008-01 (500 ms UI-visszajelzés minta).

@@ -22,7 +22,6 @@ Ugyanannak a vásárlásnak a többszöri rögzítése torzíthatja a költések
 
 Kanonikus források:
 - `briefs/BRIEF-010-ismetlodo-es-duplikalt-nyugtak-kezelese.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `specs/duplicate_detection_v0.4.md`
 - `docs/product-workflows.md`

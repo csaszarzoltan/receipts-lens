@@ -11,7 +11,7 @@ related_brief: BRIEF-047
 # FEAT-047: Könyvelési időszak lezárása
 
 > Visszamenőleges (kód→spec) specifikáció. A megvalósítás már szállítva;
-> ez a dokumentum a tényleges kódviselkedést rögzíti a VERITAS 1.1 §4.5
+> ez a dokumentum a tényleges kódviselkedést rögzíti a spec-sablon §4.5
 > 16-fejezetes szerkezetében. Ahol a BRIEF többet állít, azt a 14. fejezet
 > SPEC-GAP listája jelöli.
 
@@ -37,7 +37,7 @@ végrehajtható E2E-teszt (`.agent-pipeline/03_e2e_suites/test_e2e_047.py`,
 Kanonikus források:
 
 - `briefs/BRIEF-047-konyvelesi-idoszak-lezarasa.md` (10 US: US-047-01..US-047-10)
-- `VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md` §4.5
+- spec-sablon §4.5
 - `05_docs/2026-08-31-phase2-feat038-048-verification-report.md`
 - `.agent-pipeline/02_specs/done/SPEC-047-konyvelesi-idoszak-lezarasa.md` (előd pipeline-spec)
 

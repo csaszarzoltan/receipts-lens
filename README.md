@@ -717,4 +717,3 @@ Provider connections can now be listed tenant-safely, inspected, disconnected wi
 - [Döntések / tanulságok](docs/decisions/) — javított hibák és anti-minták
 - [Specifikációk](docs/specs/) — feature-ök kanonikus követelményei
 
-- [Módszertan](docs/METHODOLOGY.md) — a lab fejlesztési módszertana (kötelező olvasmány)

@@ -22,7 +22,6 @@ A felhasználónak megosztható, újra előállítható összesítésre van szü
 
 Kanonikus források:
 - `briefs/BRIEF-014-jelentesek-letrehozasa-es-letoltese.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/budgets-and-analytics.md`
 

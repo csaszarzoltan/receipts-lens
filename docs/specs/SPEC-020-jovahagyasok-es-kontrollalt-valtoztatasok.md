@@ -22,7 +22,6 @@ A pénzügyi hatású műveletekhez a végrehajtás előtt megfelelő szerepkör
 
 Kanonikus források:
 - `briefs/BRIEF-020-jovahagyasok-es-kontrollalt-valtoztatasok.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/product-workflows.md`
 

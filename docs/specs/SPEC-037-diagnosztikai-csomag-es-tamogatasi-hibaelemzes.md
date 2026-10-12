@@ -22,7 +22,6 @@ Mérhető készültségi feltétel: minden alábbi kötelező követelményhez s
 
 Kanonikus források:
 - `briefs/BRIEF-037-diagnosztikai-csomag-es-tamogatasi-hibaelemzes.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 
 Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási adatelkülönítés, explicit megerősítés, hibánál részleges állapot tilalma és ismételt kérés biztonsága.

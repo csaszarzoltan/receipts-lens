@@ -22,7 +22,6 @@ A felhasználó későn veszi észre, ha egy költési kategória megközelíti 
 
 Kanonikus források:
 - `briefs/BRIEF-012-haztartasi-keretek-es-riasztasok.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/budgets-and-analytics.md`
 - `docs/alerts.md`

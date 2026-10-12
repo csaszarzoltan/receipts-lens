@@ -22,7 +22,6 @@ Látogatóként nehezen tudnám felmérni, mire használható a szolgáltatás, 
 
 Kanonikus források:
 - `briefs/BRIEF-001-nyilvanos-bemutatkozas-es-belepesi-utvonal.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/WINDOWS_GUIDE_HU.md`
 - `docs/decisions/ADR-001-pre-login-language-switcher.md`

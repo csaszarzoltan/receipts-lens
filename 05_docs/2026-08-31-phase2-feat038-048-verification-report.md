@@ -2,7 +2,7 @@
 
 **Dátum:** 2026-08-31  
 **Szerepkör:** Python System Architect & E2E QA Lead  
-**Módszertan:** METHODOLOGY.md (RVAD 1.1) Phase 2: E2E Verification  
+**Módszertan:** Phase 2: E2E Verification  
 **Hatókör:** FEAT-038 .. FEAT-048 (11 új funkcióterület)  
 
 ---

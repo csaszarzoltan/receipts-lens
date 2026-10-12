@@ -22,7 +22,6 @@ A felismerési küszöbök ellenőrizetlen módosítása túl sok hibás adatot 
 
 Kanonikus források:
 - `briefs/BRIEF-029-ocr-minoseg-es-adminisztrativ-diagnosztika.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/ocr-pipeline.md`
 

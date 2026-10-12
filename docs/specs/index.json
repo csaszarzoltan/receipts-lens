@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated_at": "2026-09-12",
-  "methodology": "METHODOLOGY.md sections 3.3 and 4; VERITAS_1_1_adaptiv_egyseges_fejlesztesi_modszertan.md section 4.5",
+  "methodology": "spec-sablon section 4.5",
   "brief_count": 48,
   "spec_count": 51,
   "coverage_percent": 100,

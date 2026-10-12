@@ -16,7 +16,7 @@ A BRIEF-047 képesség teljes, tenant-biztos, magyarázható és felhasználó �
 
 ## 2. Kontextus és források
 
-Kanonikus források: `briefs/BRIEF-047-konyvelesi-idoszak-lezarasa.md`, `METHODOLOGY.md`, `.agents/rules/methodology.md`. Kapcsolódó platform-invariánsok: explicit tenant, szerveroldali RBAC, audit, revízió, idempotencia, stabil hibaszerződés és érzékeny adatok minimalizálása.
+Kanonikus források: `briefs/BRIEF-047-konyvelesi-idoszak-lezarasa.md`. Kapcsolódó platform-invariánsok: explicit tenant, szerveroldali RBAC, audit, revízió, idempotencia, stabil hibaszerződés és érzékeny adatok minimalizálása.
 
 ### Target Files
 

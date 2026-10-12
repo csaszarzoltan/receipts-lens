@@ -22,7 +22,6 @@ A felismert nyugtaadatok nem mindig pontosak, ezért a felhasználónak látnia 
 
 Kanonikus források:
 - `briefs/BRIEF-007-ai-alapu-nyugtafelismeres-es-bizonytalansag.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/ai-vision-ocr.md`
 - `docs/ocr.md`

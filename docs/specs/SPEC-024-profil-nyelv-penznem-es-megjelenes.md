@@ -22,7 +22,6 @@ A különböző háztartások eltérő nyelvi, pénznemi és megjelenítési ig�
 
 Kanonikus források:
 - `briefs/BRIEF-024-profil-nyelv-penznem-es-megjelenes.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/multi-language-guide.md`
 - `docs/plans/dark-mode-2026-08-12.md`

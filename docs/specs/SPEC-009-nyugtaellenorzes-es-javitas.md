@@ -22,7 +22,6 @@ A hibásan felismert mezők javítása nélkül a költési, adózási és expor
 
 Kanonikus források:
 - `briefs/BRIEF-009-nyugtaellenorzes-es-javitas.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/product-workflows.md`
 - `docs/consolidated-v1-workspace.md`

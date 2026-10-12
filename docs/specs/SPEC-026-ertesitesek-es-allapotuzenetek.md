@@ -22,7 +22,6 @@ A háttérben befejeződő vagy beavatkozást igénylő műveletek könnyen ész
 
 Kanonikus források:
 - `briefs/BRIEF-026-ertesitesek-es-allapotuzenetek.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/alerts.md`
 

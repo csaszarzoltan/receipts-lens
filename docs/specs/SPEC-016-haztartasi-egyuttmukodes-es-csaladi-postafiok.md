@@ -22,7 +22,6 @@ A közösen kezelt nyugtákhoz egyértelmű tagságra, szerepkörökre és felad
 
 Kanonikus források:
 - `briefs/BRIEF-016-haztartasi-egyuttmukodes-es-csaladi-postafiok.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/plans/consumer-pivot-2026-08-13.md`
 

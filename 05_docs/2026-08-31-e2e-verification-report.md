@@ -2,7 +2,7 @@
 
 **Dátum:** 2026-08-31  
 **Szerepkör:** Python System Architect & E2E QA Lead  
-**Módszertan:** METHODOLOGY.md (RVAD 1.1) Phase 2: E2E Verification  
+**Módszertan:** Phase 2: E2E Verification  
 **Hatókör:** FEAT-001 .. FEAT-037 és ADR-004 .. ADR-006  
 
 ---
@@ -27,7 +27,7 @@ A ReceiptLens projekt teljes Black-Box E2E tesztcsomagja lefutott és sikeresen 
 
 ## 2. Pipeline és Állapotváltozások
 
-A `METHODOLOGY.md` Phase 2 előírásai alapján a sikeres futás után az alábbi adminisztrációs és dokumentációs lépések hajtódtak végre:
+A Phase 2 előírásai alapján a sikeres futás után az alábbi adminisztrációs és dokumentációs lépések hajtódtak végre:
 
 1. **Manifest frissítés (`.agent-pipeline/00_index/manifest.json`):**
    - Mind a 37 feladat (`SPEC-001` .. `SPEC-037`) státusza `READY_FOR_QA` -> **`COMPLETED`** állapotra frissült.

@@ -22,7 +22,6 @@ A felhasználó nehezen veszi észre azokat a vásárlásokat, amelyek jelentős
 
 Kanonikus források:
 - `briefs/BRIEF-033-szokatlan-koltesek-felismerese-es-magyarazata.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 
 Kapcsolódó domain-invariánsok: szerveroldali jogosultság, háztartási adatelkülönítés, explicit megerősítés, hibánál részleges állapot tilalma és ismételt kérés biztonsága.

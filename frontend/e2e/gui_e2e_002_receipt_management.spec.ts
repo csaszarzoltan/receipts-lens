@@ -1,6 +1,5 @@
 /**
  * GUI E2E Test Suite: Receipt Management, Upload, OCR & Review (FEAT-006 - FEAT-010, FEAT-031, FEAT-032)
- * Traceability: METHODOLOGY.md Section 8.4
  */
 import { test, expect } from "@playwright/test";
 import { seedAuthenticatedSession } from "./helpers/auth";

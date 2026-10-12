@@ -22,7 +22,6 @@ A múltbeli adatok önmagukban nem mutatják meg könnyen a trendeket és a vár
 
 Kanonikus források:
 - `briefs/BRIEF-013-koltesi-elemzes-es-elorejelzes.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/budgets-and-analytics.md`
 

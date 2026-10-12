@@ -22,7 +22,6 @@ A pénzügyi képek és adatok érzékenyek, ezért a felhasználónak átlátha
 
 Kanonikus források:
 - `briefs/BRIEF-025-adatvedelem-megorzes-es-torles.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/engineering-standards.md`
 

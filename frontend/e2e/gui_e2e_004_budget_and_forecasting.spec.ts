@@ -1,6 +1,5 @@
 /**
  * GUI E2E Test Suite: Budget, Forecasting & Recurring Expenses (FEAT-005, FEAT-012, FEAT-013, FEAT-033, FEAT-035, FEAT-036)
- * Traceability: METHODOLOGY.md Section 8.4
  */
 import { test, expect } from "@playwright/test";
 import { seedAuthenticatedSession } from "./helpers/auth";

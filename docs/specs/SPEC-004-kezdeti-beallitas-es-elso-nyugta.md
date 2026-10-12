@@ -22,7 +22,6 @@ Az első használatkor túl sok ismeretlen lehetőség akadályozhatja a gyors �
 
 Kanonikus források:
 - `briefs/BRIEF-004-kezdeti-beallitas-es-elso-nyugta.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/stories/US-003-nyugta-feltoltes.md`
 - `docs/plans/consumer-pivot-2026-08-13.md`

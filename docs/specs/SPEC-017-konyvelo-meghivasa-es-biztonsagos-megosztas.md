@@ -22,7 +22,6 @@ A külső könyvelőnek ellenőrizhető, korlátozott és visszavonható hozzáf
 
 Kanonikus források:
 - `briefs/BRIEF-017-konyvelo-meghivasa-es-biztonsagos-megosztas.md`
-- `METHODOLOGY.md`
 - `05_docs/brief-evidence-matrix.md`
 - `docs/decisions/ADR-006-qbo-xero-sync-accountant-invite.md`
 
