@@ -3,7 +3,7 @@ import {defineConfig} from '@playwright/test';
 // run-ux-browser-check.py builds an isolated copy before starting this server.
 export default defineConfig({
   testDir: './e2e',
-  testMatch: 'ux-plan.spec.ts',
+  testMatch: ['ux-plan.spec.ts', 'ux-walk.spec.ts'],
   workers: 1,
   timeout: 20000,
   use: {baseURL: 'http://127.0.0.1:3040', browserName: 'chromium', headless: true},
