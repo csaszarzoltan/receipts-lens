@@ -1,0 +1,86 @@
+
+> receipts-lens-frontend@1.4.0 build
+> next build
+
+  ▲ Next.js 14.2.35
+  - Environments: .env.production
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/52) ...
+   Generating static pages (13/52) 
+   Generating static pages (26/52) 
+   Generating static pages (39/52) 
+ ✓ Generating static pages (52/52)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    1.87 kB         176 kB
+├ ○ /_not-found                          880 B          88.4 kB
+├ ƒ /accountant/[token]                  156 B          87.7 kB
+├ ○ /accounting                          2.45 kB         177 kB
+├ ○ /accounting/period-close             754 B          88.3 kB
+├ ○ /approvals                           3.56 kB         178 kB
+├ ○ /auth/google/callback                1.94 kB         167 kB
+├ ○ /auth/invite                         2.08 kB         179 kB
+├ ○ /auth/magic-link                     2.05 kB         179 kB
+├ ○ /automations                         3.17 kB         177 kB
+├ ƒ /automations/[id]                    1.17 kB        92.1 kB
+├ ƒ /automations/[id]/runs               944 B           106 kB
+├ ƒ /automations/[id]/runs/[runId]       1.15 kB        97.7 kB
+├ ○ /budget                              3.6 kB          285 kB
+├ ○ /chat                                1.95 kB         179 kB
+├ ○ /cost-splits                         752 B          88.3 kB
+├ ○ /dashboard                           5.79 kB         189 kB
+├ ○ /duplicates                          1.78 kB         176 kB
+├ ○ /exports                             3.16 kB         177 kB
+├ ○ /exports/prepare                     2.03 kB         176 kB
+├ ƒ /exports/runs/[id]                   1.12 kB        97.7 kB
+├ ○ /finances                            1.7 kB          176 kB
+├ ○ /forecast                            3.34 kB         285 kB
+├ ○ /inbox                               1.84 kB         176 kB
+├ ○ /insights                            1.81 kB         185 kB
+├ ○ /integrations                        3.85 kB         187 kB
+├ ƒ /integrations/[id]                   2.4 kB          185 kB
+├ ○ /login                               3.37 kB         181 kB
+├ ○ /manifest.webmanifest                0 B                0 B
+├ ○ /missing-receipts                    743 B          88.3 kB
+├ ○ /more                                1.7 kB          176 kB
+├ ○ /onboarding                          414 B           194 kB
+├ ○ /price-tracking                      745 B          88.3 kB
+├ ○ /quality-inbox                       744 B          88.3 kB
+├ ○ /receipts                            4.45 kB         187 kB
+├ ƒ /receipts/[id]                       5.18 kB         188 kB
+├ ○ /receipts/capture                    753 B          88.3 kB
+├ ○ /receipts/offline                    756 B          88.3 kB
+├ ○ /reconciliation                      753 B          88.3 kB
+├ ○ /reconciliation/refunds              743 B          88.3 kB
+├ ○ /register                            156 B          87.7 kB
+├ ○ /reports                             2.64 kB         293 kB
+├ ○ /review                              4.8 kB          188 kB
+├ ○ /savings-goals                       757 B          88.3 kB
+├ ○ /settings                            727 B           175 kB
+├ ○ /settings/diagnostics                1.57 kB         176 kB
+├ ○ /settings/diagnostics/quality        1.25 kB        97.8 kB
+├ ○ /settings/members                    2.23 kB         176 kB
+├ ○ /settings/notifications              1.29 kB         184 kB
+├ ○ /settings/permissions                2.04 kB         176 kB
+├ ○ /settings/privacy                    1.12 kB         170 kB
+├ ○ /settings/profile                    1.58 kB         176 kB
+├ ○ /statement                           2.83 kB         186 kB
+├ ○ /subscriptions                       3.4 kB          178 kB
+├ ○ /tax                                 2.32 kB         176 kB
+├ ○ /upload                              5.21 kB         194 kB
+└ ○ /warranties                          4.01 kB         187 kB
++ First Load JS shared by all            87.5 kB
+  ├ chunks/30af802d-b47cde5d2fc50083.js  53.6 kB
+  ├ chunks/7619-408c8753e04c7a91.js      31.9 kB
+  └ other shared chunks (total)          1.96 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

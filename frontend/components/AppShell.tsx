@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import MobileNav from "@/components/MobileNav";
 import Topbar from "@/components/Topbar";
+import { ApiError } from "@/lib/api";
+import { useTranslation } from "@/lib/i18n";
 import { getSessionToken, clearSessionToken } from "@/lib/auth";
 
 /**
@@ -19,11 +21,16 @@ import { getSessionToken, clearSessionToken } from "@/lib/auth";
  */
 export default function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const { t } = useTranslation();
+  const [attempt, setAttempt] = useState(0);
+  const [retryableError, setRetryableError] = useState(false);
   const [checking, setChecking] = useState(true);
   const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    setChecking(true);
+    setRetryableError(false);
     async function check() {
       const token = getSessionToken();
       if (!token) {
@@ -42,27 +49,31 @@ export default function AppShell({ children }: { children: ReactNode }) {
           setAuthed(true);
         }
       } catch (err) {
-        console.error("resolveSession failed:", err);
-        clearSessionToken();
         if (!cancelled) {
           setChecking(false);
           setAuthed(false);
-          router.replace("/login");
+          if (err instanceof ApiError && err.status === 401) {
+            clearSessionToken();
+            router.replace("/login");
+          } else {
+            setRetryableError(true);
+          }
         }
       }
     }
     check();
     return () => { cancelled = true; };
-  }, [router]);
+  }, [router, attempt]);
 
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
+        <div role="status" aria-label="ReceiptLens" className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600 motion-reduce:animate-none" />
       </div>
     );
   }
 
+  if (retryableError) return <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center"><p role="alert">{t("sessionRetryHint")}</p><button type="button" className="btn-primary" onClick={() => setAttempt(value => value + 1)}>{t("retry")}</button></main>;
   if (!authed) return null;
 
   return (
@@ -71,7 +82,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-white"
       >
-        Skip to content
+        {t("skipToContent")}
       </a>
       <Sidebar />
       <MobileNav />

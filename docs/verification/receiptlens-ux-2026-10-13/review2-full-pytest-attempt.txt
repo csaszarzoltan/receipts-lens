@@ -1,0 +1,74 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0 -- /home/zoltan/receipts-lens/.venv/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /home/zoltan/receipts-lens
+configfile: pyproject.toml
+testpaths: tests
+plugins: xdist-3.6.1, asyncio-1.4.0, anyio-4.14.2
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1923 items
+
+tests/test_accessible_actions_and_deep_links.py::test_export_blocker_task_deep_links_to_receipt_and_field PASSED [  0%]
+tests/test_accessible_actions_and_deep_links.py::test_review_and_approval_tasks_have_precise_deep_links PASSED [  0%]
+tests/test_accessible_actions_and_deep_links.py::test_workspace_has_no_browser_prompt_or_confirm_for_business_actions Timeout (0:00:15)!
+Thread 0x00007293533fd6c0 (most recent call first):
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/selectors.py", line 468 in select
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/asyncio/base_events.py", line 1898 in _run_once
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/asyncio/base_events.py", line 608 in run_forever
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/asyncio/base_events.py", line 641 in run_until_complete
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/asyncio/runners.py", line 118 in run
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/anyio/_backends/_asyncio.py", line 2481 in run
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/anyio/_core/_eventloop.py", line 83 in run
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/anyio/from_thread.py", line 536 in run_blocking_portal
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/threading.py", line 982 in run
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/threading.py", line 1045 in _bootstrap_inner
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/threading.py", line 1002 in _bootstrap
+
+Thread 0x0000729358f55740 (most recent call first):
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/threading.py", line 327 in wait
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/concurrent/futures/_base.py", line 451 in result
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/anyio/_backends/_asyncio.py", line 2715 in run_sync_from_thread
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/anyio/from_thread.py", line 118 in run_sync
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/anyio/from_thread.py", line 301 in _spawn_task_from_thread
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/anyio/from_thread.py", line 382 in start_task_soon
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/anyio/from_thread.py", line 338 in call
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/starlette/testclient.py", line 352 in handle_request
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/httpx/_client.py", line 1014 in _send_single_request
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/httpx/_client.py", line 979 in _send_handling_redirects
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/httpx/_client.py", line 942 in _send_handling_auth
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/httpx/_client.py", line 914 in send
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/httpx/_client.py", line 825 in request
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/starlette/testclient.py", line 454 in request
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/httpx/_client.py", line 1053 in get
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/starlette/testclient.py", line 482 in get
+  File "/home/zoltan/receipts-lens/tests/test_accessible_actions_and_deep_links.py", line 47 in test_workspace_has_no_browser_prompt_or_confirm_for_business_actions
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/python.py", line 167 in pytest_pyfunc_call
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/python.py", line 1707 in runtest
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 184 in pytest_runtest_call
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 250 in <lambda>
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 361 in from_call
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 249 in call_and_report
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 139 in runtestprotocol
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 118 in pytest_runtest_protocol
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/main.py", line 408 in pytest_runtestloop
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/main.py", line 384 in _main
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/main.py", line 330 in wrap_session
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/main.py", line 377 in pytest_cmdline_main
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py", line 229 in _main
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py", line 253 in _console_main
+  File "/home/zoltan/receipts-lens/.venv/bin/pytest", line 8 in <module>

@@ -20,6 +20,7 @@ export default function SettingsPage() {
           {t("settingsSubtitle")}
         </p>
       </div>
+      <Link href="/settings/notifications" className="btn-secondary mb-4">{t("notificationSettings")}</Link>
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Settings sections">
         {SECTIONS.map((section) => (
           <li key={section.href}>

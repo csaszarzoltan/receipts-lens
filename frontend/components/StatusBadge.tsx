@@ -46,7 +46,7 @@ export default function StatusBadge({ status }: { status: Status }) {
   return (
     <span
       className={cx(
-        "inline-flex min-h-6 items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize",
+        "inline-flex min-h-6 items-center rounded-full px-2 py-0.5 text-xs font-medium",
         TONES[status] ?? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
       )}
     >

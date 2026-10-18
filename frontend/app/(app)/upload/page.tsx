@@ -30,7 +30,7 @@ import { useTranslation } from "@/lib/i18n";
  */
 export default function UploadPage() {
   const { t } = useTranslation();
-  const { entries, enqueue, clear, remove, lastAiResult } = useUpload();
+  const { entries, enqueue, clear, remove, retry, lastResult, lastAiResult } = useUpload();
   const { quota } = useQuota();
   const [aiScan, setAiScan] = useState(false);
 
@@ -45,35 +45,13 @@ export default function UploadPage() {
 
       {quota ? <QuotaBar used={quota.used} limit={quota.limit} isPro={quota.pro} /> : null}
 
-      <DropZone onFiles={(files) => enqueue(files, { aiScan: AI_SCAN_ENABLED && aiScan })} />
+      <section id="receipt-capture" aria-label={t("addReceipt")}><DropZone label={lastResult ? t("addNextReceipt") : undefined} onFiles={(files) => enqueue(files, { aiScan: AI_SCAN_ENABLED && aiScan })} /></section>
 
       <SampleReceipt />
 
       <EnyugtaImport />
 
-      {AI_SCAN_ENABLED ? (
-        <AiScanToggle checked={aiScan} onChange={setAiScan} />
-      ) : (
-        <div
-          data-testid="ai-scan-upgrade-prompt"
-          className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
-        >
-          <div className="min-w-0">
-            <p className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              <span aria-hidden="true">✨</span> {t("aiScanComingSoon")}
-            </p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-              {t("aiScanDesc")}
-            </p>
-          </div>
-          <span
-            className="inline-flex shrink-0 items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-            title={t("aiScanNotAvailable")}
-          >
-            {t("proBadge")}
-          </span>
-        </div>
-      )}
+      {AI_SCAN_ENABLED ? <AiScanToggle checked={aiScan} onChange={setAiScan} /> : null}
 
       {entries.length > 0 ? (
         <section className="space-y-3" aria-label={t("uploadProgressLabel")}>
@@ -89,7 +67,7 @@ export default function UploadPage() {
               {t("clearAllLabel")}
             </button>
           </div>
-          <UploadQueue entries={entries} onRemove={remove} />
+          <UploadQueue entries={entries} onRemove={remove} onRetry={retry} />
         </section>
       ) : (
         <EmptyState

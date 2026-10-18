@@ -1,0 +1,16 @@
+Original bounded run, before updating superseded UX contracts and DNS fixtures:
+ ============================
+FAILED tests/test_frontend.py::TestOnboardingBehavior::test_onboarding_has_steps
+FAILED tests/test_ssrf_guard.py::test_allowed_schemes_http_and_https - socket...
+FAILED tests/test_ssrf_guard_034b.py::test_hostname_canonicalisation_blocks_bypasses[http://127.0.0.1.nip.io/x.jpg]
+FAILED tests/test_us_019_consumer_navigation.py::test_us_019_sidebars_render_business_section_entry_point
+FAILED tests/test_us_onboarding_f15.py::test_f15_exactly_three_steps - Assert...
+FAILED tests/test_us_onboarding_f15.py::test_f15_step1_shows_positioning_promise
+FAILED tests/test_us_onboarding_f15.py::test_f15_finish_navigates_to_consumer_dashboard
+FAILED tests/test_us_onboarding_f15.py::test_f15_state_persistence_prevents_replay
+FAILED tests/test_us_onboarding_f15.py::test_f15_step2_offers_camera_and_upload_access
+FAILED tests/test_us_onboarding_f15.py::test_f15_step3_shows_first_receipt_result
+ERROR tests/test_price_alert_delivery_proof.py::test_cli_run_delivers_and_records_ledger_row
+ERROR tests/test_price_alert_delivery_proof.py::test_ledger_row_is_complete
+ERROR tests/test_price_alert_delivery_proof.py::test_live_database_is_untouched_by_probe_run
+ERROR tests/test_price_alert_delivery_proof.py::test_captured_message_has_envelope_and_body

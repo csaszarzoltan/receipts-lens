@@ -1,0 +1,6 @@
+
+> receipts-lens-frontend@1.4.0 test:ux:e2e
+> playwright test --config playwright.ux.config.ts
+
+Error: Process from config.webServer exited early.
+

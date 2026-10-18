@@ -1,0 +1,15 @@
+{
+  "source": "v6 pytest progress positions matched against unchanged 1923-node collection",
+  "skipped_tests": [
+    "tests/test_security_egress_allowlist.py::test_allowlist_rejects_unlisted_host",
+    "tests/test_security_egress_allowlist.py::test_allowlist_accepts_listed_host",
+    "tests/test_security_egress_allowlist.py::test_allowlist_accepts_subdomain_of_listed_domain",
+    "tests/test_security_egress_allowlist.py::test_allowlist_unset_keeps_open_mode",
+    "tests/test_security_egress_allowlist.py::test_allowlist_rejects_private_host_even_if_listed",
+    "tests/test_security_egress_allowlist.py::test_dns_rebind_to_private_ip_blocked",
+    "tests/test_security_egress_allowlist.py::test_fetch_pins_validated_ip_not_rebound",
+    "tests/test_subscription_alerts.py::TestSubscriptionsEndpointBehavioral::test_subscription_item_shape",
+    "tests/test_subscription_dashboard.py::TestRenewalTimelineBehavioral::test_has_countdown_info",
+    "tests/test_subscription_dashboard.py::TestRenewalTimelineBehavioral::test_items_include_subscription_id"
+  ]
+}

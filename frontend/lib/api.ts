@@ -177,6 +177,7 @@ export function uploadWithProgress<T>(
   file: File,
   onProgress?: (percent: number) => void,
   formFields?: Record<string, string>,
+  idempotencyKey?: string,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -184,6 +185,9 @@ export function uploadWithProgress<T>(
     for (const [key, value] of Object.entries(authHeaders())) {
       xhr.setRequestHeader(key, value);
     }
+    if (idempotencyKey) xhr.setRequestHeader("Idempotency-Key", idempotencyKey);
+    xhr.timeout = 120_000;
+    xhr.ontimeout = () => reject(new ApiError(408, "Upload timed out"));
     xhr.upload.onprogress = (event) => {
       if (onProgress && event.lengthComputable) {
         onProgress(Math.round((event.loaded / event.total) * 100));
@@ -194,7 +198,7 @@ export function uploadWithProgress<T>(
         try {
           resolve(JSON.parse(xhr.responseText) as T);
         } catch {
-          resolve(undefined as T);
+          reject(new ApiError(502, "Invalid upload response"));
         }
       } else {
         let message = `Upload failed with status ${xhr.status}`;
@@ -258,11 +262,14 @@ export async function getCapabilities(): Promise<{
 export async function uploadReceipt(
   file: File,
   onProgress?: (percent: number) => void,
+  idempotencyKey?: string,
 ): Promise<ReceiptItem & { applied_rules?: unknown }> {
   return uploadWithProgress<ReceiptItem & { applied_rules?: unknown }>(
     "/product/receipts/upload",
     file,
     onProgress,
+    undefined,
+    idempotencyKey,
   );
 }
 
@@ -278,6 +285,7 @@ export async function uploadReceipt(
 export async function uploadReceiptWithAi(
   file: File,
   onProgress?: (percent: number) => void,
+  idempotencyKey?: string,
 ): Promise<AiScanUploadResponse> {
   if (!AI_SCAN_ENABLED) {
     throw new ApiError(403, "AI Scan is coming soon — part of the Pro plan.");
@@ -287,10 +295,14 @@ export async function uploadReceiptWithAi(
     file,
     onProgress,
     { ai_scan: "true" },
+    idempotencyKey,
   );
 }
 
 export interface SearchReceiptsParams {
+  category?: string;
+  date_from?: string;
+  date_to?: string;
   query?: string;
   status?: string;
   tag?: string;
@@ -306,6 +318,9 @@ export async function searchReceipts(
 ): Promise<PagedReceipts> {
   return tenantRequest<PagedReceipts>(
     `/product/receipts${qs({
+      category: params.category,
+      date_from: params.date_from,
+      date_to: params.date_to,
       query: params.query,
       status: params.status,
       tag: params.tag,
@@ -405,9 +420,9 @@ export async function updateLineItems(
 // ---------------------------------------------------------------------------
 
 /** The review queue: only receipts still waiting for a person, never the completed ones. */
-export async function getReviewItems(): Promise<{ items: ReviewItem[] }> {
+export async function getReviewItems(receiptId?: string): Promise<{ items: ReviewItem[] }> {
   return tenantRequest<{ items: ReviewItem[] }>(
-    `/product/review-items${qs({ readiness: "needs_review", limit: 200 })}`,
+    `/product/review-items${qs({ readiness: "needs_review", limit: 200, receipt_id: receiptId })}`,
   );
 }
 
@@ -1211,7 +1226,7 @@ export async function evaluateInsights(
 ): Promise<{ cards: InsightCard[] }> {
   return tenantRequest<{ cards: InsightCard[] }>("/api/v1/insights/evaluate", {
     method: "POST",
-    body: JSON.stringify(tenant_id ? { tenant_id } : {}),
+    body: JSON.stringify({ ...(tenant_id ? { tenant_id } : {}), force: true }),
   });
 }
 

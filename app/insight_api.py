@@ -20,7 +20,9 @@ Member-role tamogatott (chat_api.py _CHAT_ROLES mintajara).
 
 from __future__ import annotations
 
+import json
 import threading
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote_plus
 
@@ -238,6 +240,7 @@ def _header_tenant(
 
 class EvaluateRequest(BaseModel):
     tenant_id: str | None = None
+    force: bool = False
 
 
 class FeedbackRequest(BaseModel):
@@ -294,25 +297,40 @@ def evaluate_insights(
     x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict[str, Any]:
     """Utemezett kiErtekeles: kuszob feletti jelek -> jelolt kartyak."""
-    tenant_id, _ = _insight_tenant(
+    tenant_id, role = _insight_tenant(
         (body.tenant_id or "").strip() or None,
         authorization,
         x_tenant_id,
         x_role,
     )
-    try:
-        # Leiratkozott tenant nem kap UJ kartyat (REQ-033B-06); a mar
-        # kezbesitett kartyak a csatornan elerhetok maradnak.
-        fresh = [] if store.is_unsubscribed(tenant_id) else _evaluate_tenant(tenant_id)
-    except Exception as exc:
-        # REQ-033B-08: hiba = retryable, soha fel kartya a valaszban.
-        raise HTTPException(503, "Insight evaluation failed, retry later") from exc
-    # Dedup (REQ-033B-09): az azonos jelhez tartozo kartya a taroloban nem
-    # duplikalodik (insight_id = jel-azonosito); a valasz a futas utani
-    # Ervenyes kartya-keszlet (idempotens, ismetelt futas nem halmoz).
-    fresh_cards = store.upsert_cards(tenant_id, fresh)
-    # REQ-033B-09: ismetelt futas nem duplikal — a valasz csak az UJ
-    # kartya(ka)t hozza; a mar kezbesitett keszlet a GET /cards csatornan.
+    from app.product_api import advanced
+
+    # An explicitly selected cadence applies to financial insight summaries.
+    # Critical receipt-review notifications and renewal emails are independent.
+    with advanced.db:
+        prefs = advanced._stored_preferences(tenant_id, role)
+        frequency = prefs.get("insight_frequency")
+        if store.is_unsubscribed(tenant_id) or frequency == "never":
+            return {"cards": []}
+        now = datetime.now(UTC)
+        last = prefs.get("insight_last_evaluation")
+        if not body.force and frequency in {"daily", "weekly"} and last:
+            try:
+                previous = datetime.fromisoformat(last)
+                seconds = 86400 if frequency == "daily" else 7 * 86400
+                if (now - previous).total_seconds() < seconds:
+                    return {"cards": []}
+            except (ValueError, TypeError):
+                pass
+        try:
+            fresh = _evaluate_tenant(tenant_id)
+        except Exception as exc:
+            raise HTTPException(503, "Insight evaluation failed, retry later") from exc
+        fresh_cards = store.upsert_cards(tenant_id, fresh)
+        if frequency in {"daily", "weekly"}:
+            prefs["insight_last_evaluation"] = now.isoformat()
+            advanced.db.execute("INSERT OR REPLACE INTO user_preferences VALUES(?,?,?,?)",
+                                (tenant_id, role, json.dumps(prefs), advanced._now()))
     return {"cards": fresh_cards}
 
 

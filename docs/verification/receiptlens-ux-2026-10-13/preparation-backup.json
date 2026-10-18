@@ -1,0 +1,8 @@
+{
+  "source_access": "read-only",
+  "backup": "/home/zoltan/receipts-lens/backups/ux-release-1791907390708456130/receiptlens-product.db",
+  "integrity_ok": true,
+  "receipt_count": 72,
+  "sha256": "b0203545e9a049f05c3e4ce490250cc8f6fae3195834b1de0a9cdf1a6e5c3304",
+  "purpose": "preparation; refresh immediately before deployment"
+}

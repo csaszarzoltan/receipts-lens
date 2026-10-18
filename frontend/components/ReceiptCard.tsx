@@ -1,5 +1,6 @@
 "use client";
 
+import { averageConfidence } from "@/lib/confidence";
 import Link from "next/link";
 import { categoryLabel } from "@/lib/categories";
 import type { ReceiptItem } from "@/lib/types";
@@ -44,7 +45,7 @@ export default function ReceiptCard({ item }: ReceiptCardProps) {
         {receipt.confidence && Object.keys(receipt.confidence).length > 0 ? (
           <ConfidenceBadge
             compact
-            value={Math.min(...Object.values(receipt.confidence).filter((v) => v > 0), 1)}
+            value={averageConfidence(receipt.confidence)}
           />
         ) : null}
       </div>

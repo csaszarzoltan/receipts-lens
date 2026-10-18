@@ -345,8 +345,10 @@ class AdvancedWorkspace:
 
     def save_preferences(self, tenant_id: str, role: str, payload: dict[str, Any]) -> dict[str, Any]:
         allowed = {"language", "compact", "high_contrast", "dashboard_widgets",
-                   "onboarding_done", "email_alerts", "base_currency"}
+                   "onboarding_done", "email_alerts", "base_currency", "insight_frequency"}
         clean = {key: value for key, value in payload.items() if key in allowed}
+        if "insight_frequency" in clean and clean["insight_frequency"] not in {"daily", "weekly", "never"}:
+            raise ValueError("insight_frequency must be daily, weekly or never")
         if "base_currency" in clean:
             currency = str(clean["base_currency"]).strip().upper()
             if not re.fullmatch(r"[A-Z]{3}", currency):

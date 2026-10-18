@@ -118,13 +118,32 @@ def _spend_by_currency(
     return spend, unpriced
 
 
-def _primary_currency(spend: dict[str, float], preferred: str | None) -> str:
+def _household_preferred_currency(tenant_id: str, role: str = "admin") -> str | None:
+    """Use an explicit household choice; never turn a language into currency."""
+    from app.product_api import advanced
+
+    own = advanced._stored_preferences(tenant_id, role).get("base_currency")
+    if own:
+        return str(own)
+    rows = advanced.db.execute(
+        "SELECT payload FROM user_preferences WHERE tenant_id=? "
+        "ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, role",
+        (tenant_id,),
+    ).fetchall()
+    for row in rows:
+        code = json.loads(row[0]).get("base_currency")
+        if code:
+            return str(code)
+    return advanced.household_currency(tenant_id)
+
+
+def _primary_currency(spend: dict[str, float], preferred: str | None) -> str | None:
     """The currency the dashboard reports in: the budget's, else the largest spend."""
     if preferred:
         return preferred
     if spend:
         return max(spend.items(), key=lambda kv: kv[1])[0]
-    return "USD"
+    return None
 
 
 def _daily_remaining(today: date, tenant_id: str) -> dict[str, Any] | None:
@@ -139,8 +158,10 @@ def _daily_remaining(today: date, tenant_id: str) -> dict[str, Any] | None:
     if not budgets:
         return None
 
-    total_budget = sum(b.amount for b in budgets)
-    spent = _tenant_spent_this_month(tenant_id, today)
+    currency = budgets[0].currency
+    total_budget = sum(b.amount for b in budgets if b.currency == currency)
+    spend, unpriced = _spend_by_currency(_tenant_receipt_payloads(tenant_id), today)
+    spent = spend.get(currency, 0.0)
     days_in_month = calendar.monthrange(today.year, today.month)[1]
     days_left = max(0, days_in_month - today.day + 1)
     remaining = max(0.0, total_budget - spent)
@@ -154,10 +175,13 @@ def _daily_remaining(today: date, tenant_id: str) -> dict[str, Any] | None:
         "daily_remaining": _money(daily),
         "currency": budgets[0].currency,
         "pct_used": round((spent / total_budget * 100) if total_budget > 0 else 0.0, 1),
+        "unpriced_receipts": unpriced,
+        "other_currency_totals": {c: _money(v) for c, v in spend.items() if c != currency},
+        "other_budget_currencies": sorted({b.currency for b in budgets if b.currency != currency}),
     }
 
 
-def _monthly_by_category(today: date, tenant_id: str) -> dict[str, Any]:
+def _monthly_by_category(today: date, tenant_id: str, role: str = "admin") -> dict[str, Any]:
     """Block 2 — „Mire ment el a pénzem" (spending analytics, live).
 
     Aggregates the tenant's stored receipts by line-item category (falling
@@ -166,7 +190,7 @@ def _monthly_by_category(today: date, tenant_id: str) -> dict[str, Any]:
     date_from, date_to = _month_bounds(today)
     payloads = _tenant_receipt_payloads(tenant_id)
     spend, unpriced = _spend_by_currency(payloads, today)
-    currency = _primary_currency(spend, None)
+    currency = _primary_currency(spend, _household_preferred_currency(tenant_id, role))
     group_totals: dict[str, float] = {}
     group_counts: dict[str, int] = {}
     for payload in payloads:
@@ -177,6 +201,11 @@ def _monthly_by_category(today: date, tenant_id: str) -> dict[str, Any]:
         if payload.get("total") is None:
             continue  # unpriced: counted separately, not part of the breakdown
         items = payload.get("line_items") or []
+        if payload.get("category_source") == "user" and payload.get("category"):
+            key = str(payload["category"])
+            group_totals[key] = group_totals.get(key, 0.0) + float(payload["total"])
+            group_counts[key] = group_counts.get(key, 0) + 1
+            continue
         if not items:
             key = "Uncategorized"
             group_totals[key] = group_totals.get(key, 0.0) + float(payload.get("total") or 0.0)
@@ -277,7 +306,7 @@ def _cancellable(today: date, tenant_id: str) -> list[dict[str, Any]]:
     ]
 
 
-def _household(today: date, tenant_id: str) -> dict[str, Any]:
+def _household(today: date, tenant_id: str, role: str = "admin") -> dict[str, Any]:
     """Block 5 — családi keret-státusz (shared budget + member breakdown).
 
     Member-level *spend attribution* needs per-member receipt ownership,
@@ -288,9 +317,9 @@ def _household(today: date, tenant_id: str) -> dict[str, Any]:
     from app.product_api import service as product_service
 
     budgets = _tenant_monthly_budgets(tenant_id)
-    total_budget = sum(b.amount for b in budgets)
     spend, unpriced = _spend_by_currency(_tenant_receipt_payloads(tenant_id), today)
-    currency = _primary_currency(spend, budgets[0].currency if budgets else None)
+    currency = _primary_currency(spend, budgets[0].currency if budgets else _household_preferred_currency(tenant_id, role))
+    total_budget = sum(b.amount for b in budgets if b.currency == currency)
     spent = spend.get(currency, 0.0)
 
     members = []
@@ -349,7 +378,7 @@ def _recent_receipts(tenant_id: str) -> list[dict[str, Any]]:
                 "receipt_id": item["receipt_id"],
                 "merchant": str(payload.get("vendor") or "Unknown merchant"),
                 "total": _money(payload.get("total") or 0.0),
-                "currency": str(payload.get("currency") or "USD"),
+                "currency": payload.get("currency"),
                 "date": payload.get("date") or "",
                 "status": item.get("status") or "completed",
                 "confidence_level": payload.get("confidence_level") or None,
@@ -381,6 +410,7 @@ def build_consumer_dashboard(
     today: date | None = None,
     *,
     period: str = "90d",
+    role: str = "admin",
 ) -> dict[str, Any]:
     """Assemble the full consumer dashboard payload (all seven blocks)."""
     from app.recurring import parse_period_days
@@ -391,10 +421,10 @@ def build_consumer_dashboard(
         "generated_at": datetime.now(UTC).isoformat(),
         "tenant": tenant_id,
         "daily_remaining": _daily_remaining(anchor, tenant_id),
-        "monthly_by_category": _monthly_by_category(anchor, tenant_id),
+        "monthly_by_category": _monthly_by_category(anchor, tenant_id, role),
         "price_alerts": _price_alerts(anchor, tenant_id),
         "cancellable_subscriptions": _cancellable(anchor, tenant_id),
-        "household": _household(anchor, tenant_id),
+        "household": _household(anchor, tenant_id, role),
         "recent_receipts": _recent_receipts(tenant_id),
         "savings": _savings_block(tenant_id, period),
     }

@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
+import { averageConfidence } from "@/lib/confidence";
 import { categoryLabel } from "@/lib/categories";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
-import { getReceipt, getReceiptBoxes, getReceiptHistory, getReceiptImage, updateLineItems, updateMetadata } from "@/lib/api";
+import { getReceipt, getReceiptBoxes, getReceiptHistory, getReceiptImage, updateLineItems, updateMetadata, updateReceiptWorkspace } from "@/lib/api";
 import type { HistoryEntry, LineItem, OCRBox, ReceiptItem } from "@/lib/types";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import StatusBadge from "@/components/StatusBadge";
@@ -24,10 +26,14 @@ function ReceiptDetailContent({ id }: { id: string }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [tags, setTags] = useState("");
+  const [category, setCategory] = useState("");
+  const [categorySaving, setCategorySaving] = useState(false);
+  const [categoryError, setCategoryError] = useState(false);
   const [project, setProject] = useState("");
   const [costCenter, setCostCenter] = useState("");
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const item: ReceiptItem | undefined = page;
@@ -35,18 +41,21 @@ function ReceiptDetailContent({ id }: { id: string }) {
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
+    let objectUrl: string | undefined;
     getReceiptImage(id)
       .then((blob) => {
-        if (!cancelled) setImageUrl(URL.createObjectURL(blob));
+        if (!cancelled) { objectUrl = URL.createObjectURL(blob); setImageUrl(objectUrl); }
       })
       .catch(() => setImageUrl(null));
     return () => {
       cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [id]);
 
   useEffect(() => {
     if (item) {
+      setCategory(item.receipt.category ?? "");
       setTags(item.metadata?.tags?.join(", ") ?? "");
       setProject(item.metadata?.project ?? "");
       setCostCenter(item.metadata?.cost_center ?? "");
@@ -54,10 +63,21 @@ function ReceiptDetailContent({ id }: { id: string }) {
     }
   }, [item]);
 
+  async function saveCategory() {
+    if (!item) return;
+    setCategorySaving(true); setCategoryError(false);
+    try {
+      await updateReceiptWorkspace(id, { fields: { category: category.trim() || null } }, item.version);
+      await mutate();
+    } catch { setCategoryError(true); }
+    finally { setCategorySaving(false); }
+  }
+
   const saveMetadata = useCallback(async () => {
     if (!item) return;
     setSaving(true);
     setSaveMessage(null);
+    setSaveError(false);
     try {
       await updateMetadata(id, {
         tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean),
@@ -67,7 +87,8 @@ function ReceiptDetailContent({ id }: { id: string }) {
       setSaveMessage(t("metadataSaved"));
       mutate();
     } catch (err) {
-      setSaveMessage(err instanceof Error ? err.message : t("saveFailed"));
+      setSaveError(true);
+      setSaveMessage(t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -77,13 +98,15 @@ function ReceiptDetailContent({ id }: { id: string }) {
     if (!item) return;
     setSaving(true);
     setSaveMessage(null);
+    setSaveError(false);
     try {
       await updateLineItems(id, lineItems, item.version);
       setSaveMessage(t("lineItemsSaved"));
       setEditing(false);
       mutate();
     } catch (err) {
-      setSaveMessage(err instanceof Error ? err.message : t("saveFailed"));
+      setSaveError(true);
+      setSaveMessage(t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -104,7 +127,7 @@ function ReceiptDetailContent({ id }: { id: string }) {
   if (error || !item) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Receipt</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("receiptDetails")}</h1>
         <p className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
           {t("receiptNotFound")}
         </p>
@@ -115,10 +138,7 @@ function ReceiptDetailContent({ id }: { id: string }) {
   const receipt = item.receipt;
   const boxes: OCRBox[] = boxesData?.boxes ?? [];
   const history: HistoryEntry[] = historyData?.items ?? [];
-  const confidenceValues = Object.values(receipt.confidence ?? {}).filter((value) => value > 0);
-  const avgConfidence = confidenceValues.length
-    ? confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length
-    : 1;
+  const avgConfidence = averageConfidence(receipt.confidence);
 
   return (
     <div className="space-y-6">
@@ -136,6 +156,8 @@ function ReceiptDetailContent({ id }: { id: string }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link href="/upload" className="btn-primary">{t("addNextReceipt")}</Link>
+          {item.status === "needs_review" && <Link href={`/review?receipt=${encodeURIComponent(id)}`} className="btn-secondary">{t("checkReceipt")}</Link>}
           <a
             href={`/warranties?${new URLSearchParams({
               receipt: item.receipt_id,
@@ -152,18 +174,18 @@ function ReceiptDetailContent({ id }: { id: string }) {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Receipt image */}
-        <section className="card overflow-hidden" aria-label="Receipt image">
+        <section className="card overflow-hidden" aria-label={t("scannedReceiptTitle")}>
           <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
             {t("scannedReceiptTitle")}
           </h2>
           {imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <a href={imageUrl} target="_blank" rel="noopener noreferrer" aria-label={t("imageZoom")} className="block focus-visible:ring-2 focus-visible:ring-brand-500"><img
               src={imageUrl}
-              alt={`Scanned receipt from ${receipt.vendor || "unknown vendor"}`}
+              alt={`${t("scannedReceiptTitle")}: ${receipt.vendor || t("unknownVendorLabel")}`}
               className="h-80 w-full object-contain bg-slate-100 dark:bg-slate-900"
               loading="lazy"
-            />
+            /></a>
           ) : (
             <div className="flex h-80 items-center justify-center text-sm text-slate-600 dark:text-slate-400">
               {t("imageUnavailable")}
@@ -172,50 +194,57 @@ function ReceiptDetailContent({ id }: { id: string }) {
         </section>
 
         {/* Extracted fields */}
-        <section className="card" aria-label="Extracted data">
+        <section className="card" aria-label={t("extractedDataTitle")}>
           <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
             {t("extractedDataTitle")}
           </h2>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 py-4 text-sm">
             <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Vendor</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{t("vendor")}</dt>
               <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">{receipt.vendor || "—"}</dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Date</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{t("date")}</dt>
               <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">{formatDate(receipt.date)}</dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Total</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{t("total")}</dt>
               <dd className="mt-0.5 text-lg font-semibold text-slate-900 dark:text-slate-100">
                 <Money amount={receipt.total} currency={receipt.currency} />
               </dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Tax</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{t("tax")}</dt>
               <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">
                 <Money amount={receipt.tax} currency={receipt.currency} />
               </dd>
             </div>
             <div className="col-span-2">
-              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">Category</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{t("category")}</dt>
               <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">
-                {receipt.category ?? t("uncategorizedLabel")}
+                {receipt.category ? categoryLabel(t, receipt.category) : t("uncategorizedLabel")}
+                <label htmlFor="receipt-category" className="sr-only">{t("category")}</label>
+                <input id="receipt-category" className="input mt-2" maxLength={100} value={category} onChange={e => setCategory(e.target.value)} />
+                {item.suggested_category && item.suggested_category !== category && <div className="mt-2 text-sm"><span>{t("receiptCategorySuggestion")}: {categoryLabel(t, item.suggested_category)}</span><button type="button" className="btn-secondary mt-2" onClick={() => setCategory(item.suggested_category!)}>{t("useSuggestion")}</button></div>}
+                <button type="button" className="btn-secondary mt-2" disabled={categorySaving} onClick={saveCategory}>{categorySaving ? t("savingLabel") : t("save")}</button>
+                {categoryError && <p role="alert" className="mt-2 text-rose-700 dark:text-rose-300">{t("saveFailed")}</p>}
               </dd>
             </div>
-                      <div className="col-span-2">
-              <CurrencyField
+            <div className="col-span-2">
+              <dt className="sr-only">{t("currency")}</dt>
+              <dd><CurrencyField
                 receiptId={id}
                 currency={receipt.currency}
                 source={receipt.currency_source}
                 assumed={receipt.currency_assumed}
                 version={item.version}
                 onSaved={() => mutate()}
-              />
+              /></dd>
             </div>
           </dl>
 
-          <h3 className="border-t border-slate-200 px-5 pt-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
+          <details className="border-t border-slate-200 dark:border-slate-800"><summary className="cursor-pointer px-5 py-3 font-medium">{t("metadataTitle")}</summary>
+          <h3 className="sr-only border-t border-slate-200 px-5 pt-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
             {t("metadataTitle")}
           </h3>
           <div className="space-y-3 px-5 py-4">
@@ -235,11 +264,13 @@ function ReceiptDetailContent({ id }: { id: string }) {
               {saving ? t("savingLabel") : t("saveMetadataLabel")}
             </button>
           </div>
+          </details>
         </section>
       </div>
 
+      {saveMessage && <p role={saveError ? "alert" : "status"} className={saveError ? "text-rose-700 dark:text-rose-300" : "text-emerald-700 dark:text-emerald-300"}>{saveMessage}</p>}
       {/* Line items */}
-      <section className="card" aria-label="Line items">
+      <section className="card" aria-label={t("lineItems")}>
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3 dark:border-slate-800">
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t("lineItemsTitle")}</h2>
           {!editing ? (
@@ -301,14 +332,12 @@ function ReceiptDetailContent({ id }: { id: string }) {
             </button>
           </div>
         ) : null}
-        {saveMessage ? (
-          <p className="px-5 py-2 text-xs text-emerald-700 dark:text-emerald-400" role="status">{saveMessage}</p>
-        ) : null}
+
       </section>
 
       {/* OCR boxes + history */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="card" aria-label="OCR boxes">
+        <section className="card" aria-label={t("ocrTextTitle")}>
           <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
             {t("ocrTextTitle")} ({boxes.length})
           </h2>
@@ -327,7 +356,8 @@ function ReceiptDetailContent({ id }: { id: string }) {
         </section>
       </div>
 
-      <section className="card" aria-label="History">
+      <details className="card"><summary className="cursor-pointer px-5 py-4 font-medium">{t("historyTitle")}</summary>
+      <section aria-label={t("historyTitle")}>
         <h2 className="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">
           {t("historyTitle")}
         </h2>
@@ -346,7 +376,7 @@ function ReceiptDetailContent({ id }: { id: string }) {
             ))}
           </ol>
         )}
-      </section>
+      </section></details>
     </div>
   );
 }

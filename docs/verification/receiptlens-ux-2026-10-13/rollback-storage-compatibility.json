@@ -1,0 +1,15 @@
+{
+  "mode": "startup/storage compatibility on private backup copy, not HTTP acceptance",
+  "candidate": {
+    "receipt_count": 72,
+    "integrity_ok": true,
+    "migration_records": 1
+  },
+  "rollback_head": {
+    "receipt_count": 72,
+    "integrity_ok": true,
+    "migration_records": 1
+  },
+  "private_copy_removed": true,
+  "production_database_unchanged_by_check": true
+}

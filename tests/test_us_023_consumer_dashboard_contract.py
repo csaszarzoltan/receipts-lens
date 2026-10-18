@@ -42,7 +42,7 @@ TYPES = FRONTEND / "lib" / "types.ts"
 API_CLIENT = FRONTEND / "lib" / "api.ts"
 ENGINE = REPO_ROOT / "app" / "consumer_dashboard.py"
 
-# The six §3.4 blocks (wire keys — the contract the UI renders from).
+# Dashboard wire blocks, including the previously unwired savings payload.
 BLOCKS = [
     "daily_remaining",
     "monthly_by_category",
@@ -50,6 +50,7 @@ BLOCKS = [
     "cancellable_subscriptions",
     "household",
     "recent_receipts",
+    "savings",
 ]
 
 # Business jargon that must NOT appear in consumer copy (F1.1/3.4 rule).
@@ -379,7 +380,10 @@ class TestEmptyStates:
     @pytest.mark.scenario("AC-US023-012")
     def test_frontend_has_empty_state_component_reference(self) -> None:
         content = DASHBOARD_PAGE.read_text(encoding="utf-8")
-        assert "EmptyState" in content, "dashboard must render EmptyState for empty data"
+        # REQ-UX-09 replaces generic empty cards with a first-receipt action.
+        assert "firstReceiptTitle" in content and "startWithReceipt" in content
+        assert 'href="/upload"' in content
+        assert "SampleReceipt" in content
 
     @pytest.mark.test_id("TEST-US023-013")
     @pytest.mark.requirements("REQ-F1-2")

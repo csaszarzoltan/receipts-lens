@@ -1,0 +1,140 @@
+
+> receipts-lens-frontend@1.4.0 test:ux
+> node tests/ux-regressions.cjs
+
+TAP version 13
+# Subtest: REQ-UX-02/06 AC-UX-02/06 duplicate filenames and retry preserve file and key
+ok 1 - REQ-UX-02/06 AC-UX-02/06 duplicate filenames and retry preserve file and key
+  ---
+  duration_ms: 247.172192
+  type: 'test'
+  ...
+# Subtest: REQ-UX-03 AC-UX-03 unknown and zero confidence
+ok 2 - REQ-UX-03 AC-UX-03 unknown and zero confidence
+  ---
+  duration_ms: 13.857492
+  type: 'test'
+  ...
+# Subtest: REQ-UX-08 AC-UX-08 five mobile destinations include capture and retain receipts
+ok 3 - REQ-UX-08 AC-UX-08 five mobile destinations include capture and retain receipts
+  ---
+  duration_ms: 30.223676
+  type: 'test'
+  ...
+# Subtest: REQ-UX-01 AC-UX-01 file chooser is a real working button and disabled respects keyboard
+ok 4 - REQ-UX-01 AC-UX-01 file chooser is a real working button and disabled respects keyboard
+  ---
+  duration_ms: 90.584719
+  type: 'test'
+  ...
+# Subtest: REQ-UX-07/11/18 AC-UX-07/11/18 queue uses translated copy and review destination
+ok 5 - REQ-UX-07/11/18 AC-UX-07/11/18 queue uses translated copy and review destination
+  ---
+  duration_ms: 28.608816
+  type: 'test'
+  ...
+# Subtest: REQ-UX-09/13/19 AC-UX-09/13/19 empty dashboard focuses on first receipt; missing currency is explicit
+ok 6 - REQ-UX-09/13/19 AC-UX-09/13/19 empty dashboard focuses on first receipt; missing currency is explicit
+  ---
+  duration_ms: 74.959884
+  type: 'test'
+  ...
+# Subtest: REQ-UX-05 AC-UX-05 retryable session error preserves token while 401 clears it
+ok 7 - REQ-UX-05 AC-UX-05 retryable session error preserves token while 401 clears it
+  ---
+  duration_ms: 50.879488
+  type: 'test'
+  ...
+# Subtest: REQ-UX-12 AC-UX-12 dialog traps Tab, handles Escape and returns focus
+ok 8 - REQ-UX-12 AC-UX-12 dialog traps Tab, handles Escape and returns focus
+  ---
+  duration_ms: 29.996299
+  type: 'test'
+  ...
+# Subtest: REQ-UX-10 AC-UX-10 shared onboarding saves currency and never switches to a demo household
+ok 9 - REQ-UX-10 AC-UX-10 shared onboarding saves currency and never switches to a demo household
+  ---
+  duration_ms: 37.285127
+  type: 'test'
+  ...
+# Subtest: REQ-UX-14 AC-UX-14 category/date filters reach API and status labels remain distinct
+ok 10 - REQ-UX-14 AC-UX-14 category/date filters reach API and status labels remain distinct
+  ---
+  duration_ms: 38.139646
+  type: 'test'
+  ...
+# Subtest: REQ-UX-15 AC-UX-15 primary navigation uses five translated destinations with touch-sized controls
+ok 11 - REQ-UX-15 AC-UX-15 primary navigation uses five translated destinations with touch-sized controls
+  ---
+  duration_ms: 20.915713
+  type: 'test'
+  ...
+# Subtest: REQ-UX-13 AC-UX-13 incomplete monthly and daily totals visibly keep missing counts
+ok 12 - REQ-UX-13 AC-UX-13 incomplete monthly and daily totals visibly keep missing counts
+  ---
+  duration_ms: 45.800703
+  type: 'test'
+  ...
+# Subtest: REQ-UX-17 AC-UX-17 notifications deep-link to exact receipt and expose write failure
+ok 13 - REQ-UX-17 AC-UX-17 notifications deep-link to exact receipt and expose write failure
+  ---
+  duration_ms: 37.638913
+  type: 'test'
+  ...
+# Subtest: REQ-UX-07 AC-UX-07 hydration starts with server locale, then adopts stored locale
+ok 14 - REQ-UX-07 AC-UX-07 hydration starts with server locale, then adopts stored locale
+  ---
+  duration_ms: 266.315349
+  type: 'test'
+  ...
+# Subtest: REQ-UX-06 AC-UX-06 settling uploads refreshes the quota cache
+ok 15 - REQ-UX-06 AC-UX-06 settling uploads refreshes the quota cache
+  ---
+  duration_ms: 46.857609
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 camera double activation makes only one media request
+ok 16 - REQ-UX-18 camera double activation makes only one media request
+  ---
+  duration_ms: 33.578777
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 cancelled camera request never opens and releases late stream
+ok 17 - REQ-UX-18 cancelled camera request never opens and releases late stream
+  ---
+  duration_ms: 30.436674
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 camera resolution after unmount releases tracks
+ok 18 - REQ-UX-18 camera resolution after unmount releases tracks
+  ---
+  duration_ms: 34.001852
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 duplicate capture is prevented and cancelled encoding cannot upload
+ok 19 - REQ-UX-18 duplicate capture is prevented and cancelled encoding cannot upload
+  ---
+  duration_ms: 31.581144
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 capture waits for preview and emits only one JPEG
+ok 20 - REQ-UX-18 capture waits for preview and emits only one JPEG
+  ---
+  duration_ms: 30.821186
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 failed image encoding keeps camera open and allows retry
+ok 21 - REQ-UX-18 failed image encoding keeps camera open and allows retry
+  ---
+  duration_ms: 37.001944
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1280.674734

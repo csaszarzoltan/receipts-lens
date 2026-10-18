@@ -104,6 +104,7 @@ export interface ReadinessInfo {
 }
 
 export interface ReceiptItem {
+  suggested_category?: string | null;
   receipt_id: string;
   receipt: Receipt;
   metadata: ReceiptMetadata | null;
@@ -114,6 +115,7 @@ export interface ReceiptItem {
 }
 
 export interface PagedReceipts {
+  categories?: string[];
   items: ReceiptItem[];
   total: number;
   offset: number;
@@ -141,6 +143,9 @@ export interface DashboardData {
 // ---------------------------------------------------------------------------
 
 export interface DailyRemaining {
+  unpriced_receipts?: number;
+  other_currency_totals?: Record<string, number>;
+  other_budget_currencies?: string[];
   budgeted: number;
   spent_this_month: number;
   remaining_this_month: number;
@@ -161,7 +166,7 @@ export interface CategorySpend {
 export interface MonthlyByCategory {
   month: string;
   total_spent: number;
-  currency: string;
+  currency: string | null;
   categories: CategorySpend[];
   other_currency_totals?: Record<string, number>;
   unpriced_receipts?: number;
@@ -201,7 +206,7 @@ export interface HouseholdStatus {
   shared_budget: number;
   spent: number;
   remaining: number;
-  currency: string;
+  currency: string | null;
   members: HouseholdMember[];
   member_breakdown_note?: string | null;
   /** Spend in other currencies this month; not converted, so shown separately. */
@@ -213,8 +218,8 @@ export interface HouseholdStatus {
 export interface RecentReceipt {
   receipt_id: string;
   merchant: string;
-  total: number;
-  currency: string;
+  total: number | null;
+  currency: string | null;
   date: string;
   status: string;
   confidence_level?: ConfidenceLevel | null;
@@ -454,6 +459,8 @@ export interface WorkQueueItem {
 }
 
 export interface Notification {
+  kind?: string;
+  subject_id?: string | null;
   notification_id: string;
   title: string;
   message: string;
@@ -529,6 +536,7 @@ export interface PermissionMatrix {
 // ---------------------------------------------------------------------------
 
 export interface Preferences {
+  insight_frequency?: "daily" | "weekly" | "never";
   language: string;
   base_currency: string;
   /** "saved" (chosen), "receipts" (what the receipts state) or "default" (nothing known yet). */

@@ -4,7 +4,7 @@ import { useTranslation } from "@/lib/i18n";
 
 interface ConfidenceBadgeProps {
   /** OCR confidence 0..1 (or 0..100, auto-detected). */
-  value: number;
+  value: number | null;
   label?: string;
   /** Hide the retake hint under a low value (used where space is tight, e.g. list cards). */
   compact?: boolean;
@@ -19,6 +19,7 @@ function tone(ratio: number): string {
 /** OCR confidence indicator — green/amber/red by threshold. */
 export default function ConfidenceBadge({ value, label, compact = false }: ConfidenceBadgeProps) {
   const { t } = useTranslation();
+  if (value === null || !Number.isFinite(value)) return <span className="text-sm text-slate-600 dark:text-slate-400">{t("unknownConfidence")}</span>;
   const ratio = value > 1 ? value / 100 : value;
   const isLow = ratio < 0.6;
   return (

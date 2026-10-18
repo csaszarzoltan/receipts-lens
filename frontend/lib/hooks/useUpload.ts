@@ -1,5 +1,5 @@
 "use client";
-
+import { mutate } from "swr";
 import { useCallback, useRef, useState } from "react";
 import { uploadReceipt, uploadReceiptWithAi } from "@/lib/api";
 import { AI_MOCK_ENABLED, mockAiScanResponseForFile } from "@/lib/aiScanMock";
@@ -10,110 +10,65 @@ export interface UploadQueueEntry {
   id: string;
   fileName: string;
   progress: number;
-  status: "queued" | "uploading" | "done" | "error";
+  status: "queued" | "uploading" | "processing" | "done" | "error";
   result?: ReceiptItem & { applied_rules?: unknown };
-  /** Present when the file was uploaded in AI Scan mode. */
   aiResult?: AiScanUploadResponse;
   error?: string;
+  errorStatus?: number;
 }
+export interface EnqueueOptions { aiScan?: boolean; }
+interface UploadTask { file: File; aiScan: boolean; key: string; running: boolean; }
 
-export interface EnqueueOptions {
-  /** Run the upload through the LLM vision path (AI Scan mode). */
-  aiScan?: boolean;
-}
-
-/**
- * Upload queue state machine — one entry per file with progress, then a
- * navigable result. Driven by the real uploadReceipt() / uploadReceiptWithAi()
- * API calls; in AI mode, when NEXT_PUBLIC_USE_MOCK_AI=1 is set for local
- * development, it resolves against the contract-shaped mock instead.
- */
 export function useUpload() {
   const [entries, setEntries] = useState<UploadQueueEntry[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const counter = useRef(0);
-
+  const tasks = useRef(new Map<string, UploadTask>());
   const update = useCallback((id: string, patch: Partial<UploadQueueEntry>) => {
-    setEntries((prev) => prev.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
+    setEntries(prev => prev.map(entry => entry.id === id ? {...entry,...patch} : entry));
   }, []);
-
-  const enqueue = useCallback(
-    (files: FileList | File[], options: EnqueueOptions = {}) => {
-      // Production gate (defence-in-depth): even if a caller forces aiScan,
-      // the vision path only runs when NEXT_PUBLIC_AI_SCAN_ENABLED was set at
-      // build time. With the flag off, uploads fall back to classic OCR.
-      const aiScan = (options.aiScan ?? false) && AI_SCAN_ENABLED;
-      const list = Array.from(files);
-      const newEntries: UploadQueueEntry[] = list.map((file) => ({
-        id: `upload-${++counter.current}`,
-        fileName: file.name,
-        progress: 0,
-        status: "queued",
-      }));
-      setEntries((prev) => [...prev, ...newEntries]);
-      newEntries.forEach((entry) => {
-        const file = list.find((f) => f.name === entry.fileName);
-        if (!file) return;
-        setActiveId(entry.id);
-        update(entry.id, { status: "uploading" });
-
-        const settleDone = (aiResult: AiScanUploadResponse | undefined, result: ReceiptItem) => {
-          update(entry.id, {
-            status: "done",
-            progress: 100,
-            result,
-            ...(aiResult ? { aiResult } : {}),
-          });
-          setActiveId((current) => (current === entry.id ? null : current));
-        };
-
-        if (aiScan) {
-          const runAiUpload = async () => {
-            if (AI_MOCK_ENABLED) {
-              // Simulate a real upload's progress curve, then resolve the
-              // contract-shaped mock (dev-only; see lib/aiScanMock.ts).
-              update(entry.id, { progress: 45 });
-              await new Promise((resolve) => setTimeout(resolve, 400));
-              update(entry.id, { progress: 85 });
-              await new Promise((resolve) => setTimeout(resolve, 400));
-              const mock = mockAiScanResponseForFile(entry.fileName);
-              settleDone(mock, mock);
-              return;
-            }
-            const aiResult = await uploadReceiptWithAi(file, (percent) =>
-              update(entry.id, { progress: percent }),
-            );
-            settleDone(aiResult, aiResult);
-          };
-          runAiUpload().catch((err: unknown) => {
-            const message = err instanceof Error ? err.message : "AI Scan failed";
-            update(entry.id, { status: "error", error: message });
-            setActiveId((current) => (current === entry.id ? null : current));
-          });
-        } else {
-          uploadReceipt(file, (percent) => update(entry.id, { progress: percent }))
-            .then((result) => settleDone(undefined, result))
-            .catch((err: unknown) => {
-              const message = err instanceof Error ? err.message : "Upload failed";
-              update(entry.id, { status: "error", error: message });
-              setActiveId((current) => (current === entry.id ? null : current));
-            });
-        }
-      });
-    },
-    [update],
-  );
-
-  const clear = useCallback(() => setEntries([]), []);
-  const remove = useCallback(
-    (id: string) => setEntries((prev) => prev.filter((entry) => entry.id !== id)),
-    [],
-  );
-
-  const doneEntries = entries.filter((entry) => entry.status === "done");
-  const lastResult = doneEntries.at(-1)?.result;
-  /** Most recent AI-mode result (source + ai_result/tesseract_result). */
-  const lastAiResult = doneEntries.at(-1)?.aiResult ?? null;
-
-  return { entries, activeId, enqueue, clear, remove, lastResult, lastAiResult };
+  const run = useCallback(async (id: string) => {
+    const task = tasks.current.get(id);
+    if (!task || task.running) return;
+    task.running = true;
+    setActiveId(id);
+    update(id,{status:"uploading",progress:0,error:undefined,errorStatus:undefined});
+    try {
+      if (!task.file.type.startsWith("image/")) throw Object.assign(new Error("Unsupported image"),{status:415});
+      if (task.file.size > 20 * 1024 * 1024) throw Object.assign(new Error("Image too large"),{status:413});
+      const progress = (percent: number) => update(id,{progress:percent,status:percent >= 100 ? "processing" : "uploading"});
+      const result = task.aiScan
+        ? AI_MOCK_ENABLED ? mockAiScanResponseForFile(task.file.name)
+          : await uploadReceiptWithAi(task.file,progress,task.key)
+        : await uploadReceipt(task.file,progress,task.key);
+      update(id,{status:"done",progress:100,result,...(task.aiScan ? {aiResult:result as AiScanUploadResponse} : {})});
+    } catch (err) {
+      update(id,{status:"error",error:err instanceof Error ? err.message : "Upload failed",
+        errorStatus:typeof err === "object" && err !== null && "status" in err ? Number(err.status) : undefined});
+    } finally {
+      void mutate("/api/v1/quota").catch(() => undefined);
+      task.running = false;
+      setActiveId(current => current === id ? null : current);
+    }
+  },[update]);
+  const enqueue = useCallback((files: FileList | File[], options: EnqueueOptions = {}) => {
+    const newEntries = Array.from(files).map(file => {
+      const id = crypto.randomUUID();
+      tasks.current.set(id,{file,aiScan:!!options.aiScan && AI_SCAN_ENABLED,key:crypto.randomUUID(),running:false});
+      return {id,fileName:file.name,progress:0,status:"queued" as const};
+    });
+    setEntries(prev=>[...prev,...newEntries]);
+    newEntries.forEach(entry=>void run(entry.id));
+  },[run]);
+  const remove = useCallback((id: string) => {
+    if (tasks.current.get(id)?.running) return;
+    tasks.current.delete(id);
+    setEntries(prev=>prev.filter(entry=>entry.id !== id));
+  },[]);
+  const clear = useCallback(() => {
+    for (const [id,task] of tasks.current) if (!task.running) tasks.current.delete(id);
+    setEntries(prev=>prev.filter(entry=>tasks.current.has(entry.id)));
+  },[]);
+  const retry = useCallback((id: string) => void run(id),[run]);
+  const last = entries.filter(entry=>entry.status === "done").at(-1);
+  return {entries,activeId,enqueue,clear,remove,retry,lastResult:last?.result,lastAiResult:last?.aiResult ?? null};
 }

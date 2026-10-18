@@ -25,5 +25,5 @@ export default function Money({ amount, currency, className }: MoneyProps) {
       </span>
     );
   }
-  return <span className={className}>{formatMoney(amount, currency)}</span>;
+  return <span data-testid="money-amount" className={className}>{formatMoney(amount, currency)}</span>;
 }

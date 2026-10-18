@@ -6,7 +6,7 @@ import { useTranslation } from "@/lib/i18n";
 const CURRENCIES = ["HUF", "EUR", "USD", "GBP", "CHF", "CZK", "PLN", "RON", "JPY", "CAD", "AUD"];
 
 /** The household's default currency: dashboard totals and budgets use it. */
-export default function CurrencySelector({ value, onSaved }: { value: string; onSaved?: () => void }) {
+export default function CurrencySelector({ value, onSaved, onChange }: { value: string; onSaved?: () => void; onChange?: (value: string) => void }) {
   const { t } = useTranslation();
   const [currency, setCurrency] = useState(value);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -14,6 +14,7 @@ export default function CurrencySelector({ value, onSaved }: { value: string; on
 
   async function change(next: string) {
     setCurrency(next);
+    onChange?.(next);
     setStatus("saving");
     try {
       await savePreferences({ base_currency: next });

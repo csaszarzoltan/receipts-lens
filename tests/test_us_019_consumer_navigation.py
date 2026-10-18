@@ -131,12 +131,13 @@ def test_us_019_role_labels_are_household_names() -> None:
 @pytest.mark.test_id("TEST-NAV-005")
 @pytest.mark.requirements("REQ-US-019-01")
 @pytest.mark.scenario("A szerződéshez tartozó viselkedés.")
-def test_us_019_sidebars_render_business_section_entry_point() -> None:
-    sidebar = _read("components/Sidebar.tsx")
-    mobile = _read("components/MobileNav.tsx")
-    assert "BUSINESS_NAV_ITEMS" in sidebar and "Business" in sidebar, (
-        "Sidebar must render a Business section entry point"
-    )
-    assert "BUSINESS_NAV_ITEMS" in mobile and "Business" in mobile, (
-        "MobileNav must render a Business section entry point"
-    )
+def test_us_019_business_section_remains_accessible_through_more_hub() -> None:
+    # REQ-UX-08 moves secondary functions into /more on desktop and mobile.
+    nav = _read("lib/nav.ts")
+    primary = _extract_items(nav, "PRIMARY_NAV_ITEMS")
+    more_index = primary.index(("/more", "moreSections"))
+    mobile = re.search(r"export const MOBILE_TABS[^=]*= (.*?);", nav, re.DOTALL)
+    assert mobile and f"PRIMARY_NAV_ITEMS[{more_index}]" in mobile.group(1)
+    hub = _read("components/NavigationHub.tsx")
+    assert "BUSINESS_NAV_ITEMS" in hub and "businessWorkspace" in hub
+    assert '<NavigationHub kind="more"' in _read("app/(app)/more/page.tsx")

@@ -298,6 +298,7 @@ def _run_in_threads(count: int) -> list[dict[str, Any]]:
 
     def _worker(index: int) -> None:
         try:
+            start.wait(timeout=TIMEOUT)
             outcome = _run_scheduler()
         except BaseException as exc:  # noqa: BLE001 - re-raised in the main thread
             with guard:
@@ -310,7 +311,7 @@ def _run_in_threads(count: int) -> list[dict[str, Any]]:
         threading.Thread(target=_worker, args=(i,), name=f"sched-{i}", daemon=True)
         for i in range(count)
     ]
-    start = threading.Barrier(count, timeout=TIMEOUT)
+    start = threading.Barrier(count + 1, timeout=TIMEOUT)
     for thread in threads:
         thread.start()
     # Release all workers into daily_scheduler at the same moment, so the

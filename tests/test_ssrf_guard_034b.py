@@ -122,13 +122,16 @@ def test_multicast_and_unspecified_are_blocked() -> None:
 @pytest.mark.test_id("test_hostname_canonicalisation_blocks_bypasses")
 @pytest.mark.requirements("SSRF-4")
 @pytest.mark.scenario("A SSRF-4 finding lezárása bizonyítva: az SSRF-guard elveszíti a feltüntetett megkerülési módot.")
-def test_hostname_canonicalisation_blocks_bypasses(url: str) -> None:
+def test_hostname_canonicalisation_blocks_bypasses(url: str, monkeypatch) -> None:
     """SSRF-4: kisbetűsítés, trailing dot, wildcard-DNS és numerikus IP-forma.
 
     A ``LOCALHOST`` és a ``localhost.`` a substring-alapú ellenőrzést kikerüli,
     a ``*.nip.io`` wildcard DNS-t használ, a 0177/0x7f... pedig a
     ``ipaddress``-ot megtéveszti.
     """
+    # Model wildcard DNS resolving to loopback; no live nip.io lookup needed.
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *args, **kwargs:
+                        [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 80))])
     with pytest.raises(ValueError):
         validate_image_url(url)
 

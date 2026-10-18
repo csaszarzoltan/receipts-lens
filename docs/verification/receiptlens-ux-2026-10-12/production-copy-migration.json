@@ -1,0 +1,11 @@
+{
+  "source_access": "read-only",
+  "private_copy_removed": true,
+  "legacy_tables_checked": 46,
+  "receipts_preserved": 72,
+  "legacy_rows_unchanged": true,
+  "integrity_ok": true,
+  "migration_recorded_once": true,
+  "upload_commands_created": true,
+  "restart_preserves_data": true
+}

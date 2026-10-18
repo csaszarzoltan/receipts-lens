@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:ux": "node tests/ux-regressions.cjs",
+    "test:ux:e2e": "python3 ../scripts/run-ux-browser-check.py"
   },
   "dependencies": {
     "next": "14.2.35",

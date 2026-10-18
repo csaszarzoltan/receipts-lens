@@ -638,13 +638,10 @@ class TestOnboardingBehavior:
             "Onboarding component must check preferences.onboarding_done"
         )
 
-    def test_onboarding_has_steps(self) -> None:
-        content = _read_ts("components/Onboarding.tsx")
-        has_steps = any(
-            term in content
-            for term in ["step", "Step", "steps", "Steps", "welcome", "Welcome", "upload"]
-        )
-        assert has_steps, "Onboarding must have multiple guided steps"
+    def test_onboarding_offers_shared_receipt_workflow(self) -> None:
+        # REQ-UX-10 supersedes the former three introductory slides.
+        for relative in ("components/Onboarding.tsx", "app/onboarding/page.tsx"):
+            assert "<OnboardingFlow" in _read_ts(relative)
 
     def test_onboarding_has_skip(self) -> None:
         content = _read_ts("components/Onboarding.tsx")

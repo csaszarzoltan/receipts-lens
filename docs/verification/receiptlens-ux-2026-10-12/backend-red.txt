@@ -1,0 +1,132 @@
+FFFFFF                                                                   [100%]
+=================================== FAILURES ===================================
+_______________ test_req_ux04_ac_ux04_filters_before_pagination ________________
+
+    def test_req_ux04_ac_ux04_filters_before_pagination():
+        s=ProductService(); a=Actor('search-ux','admin')
+        for i in range(55):
+            r=s.create_receipt(a,receipt(),str(i))
+            s.correct(a,r['receipt_id'],{'date':'2026-09-01'},1,False)
+        r=s.create_receipt(a,receipt(),'target')
+        s._db.execute("UPDATE receipts SET payload=json_set(payload,'$.category','Food') WHERE receipt_id=?",(r['receipt_id'],)); s._db.commit()
+>       result=s.search_receipts(a,category='Food',date_from='2026-10-01',date_to='2026-10-31',limit=1)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: ProductService.search_receipts() got an unexpected keyword argument 'category'
+
+tests/test_ux_plan.py:29: TypeError
+__________ test_req_ux06_ac_ux06_atomic_persisted_replay_and_conflict __________
+
+tmp_path = PosixPath('/tmp/pytest-of-zoltan/pytest-329/test_req_ux06_ac_ux06_atomic_p0')
+
+    def test_req_ux06_ac_ux06_atomic_persisted_replay_and_conflict(tmp_path):
+        path=tmp_path/'uploads.sqlite'; s=ProductService(path); a=Actor('upload-ux','admin')
+        calls=[]
+        def create():
+            calls.append(1); return s.create_receipt(a,receipt(),'receipt.png')
+>       first=s.idempotent_upload(a,'same-key','fingerprint',create)
+              ^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'ProductService' object has no attribute 'idempotent_upload'
+
+tests/test_ux_plan.py:42: AttributeError
+____________ test_req_ux06_ac_ux06_failure_rolls_back_nested_writes ____________
+
+tmp_path = PosixPath('/tmp/pytest-of-zoltan/pytest-329/test_req_ux06_ac_ux06_failure_0')
+
+    def test_req_ux06_ac_ux06_failure_rolls_back_nested_writes(tmp_path):
+        s=ProductService(tmp_path/'rollback.sqlite'); a=Actor('failure-ux','admin')
+        def fail():
+            s.create_receipt(a,receipt(),'receipt.png')
+            raise RuntimeError('after receipt created')
+>       with pytest.raises(RuntimeError): s.idempotent_upload(a,'retry','fp',fail)
+                                          ^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'ProductService' object has no attribute 'idempotent_upload'
+
+tests/test_ux_plan.py:56: AttributeError
+__________________ test_req_ux06_ac_ux06_parallel_connections __________________
+
+tmp_path = PosixPath('/tmp/pytest-of-zoltan/pytest-329/test_req_ux06_ac_ux06_parallel0')
+
+    def test_req_ux06_ac_ux06_parallel_connections(tmp_path):
+        path=tmp_path/'parallel.sqlite'; a=Actor('parallel-ux','admin')
+        services=[ProductService(path),ProductService(path)]
+        def run(s):
+            return s.idempotent_upload(a,'parallel','fp',lambda:s.create_receipt(a,receipt(),'image'))
+>       with ThreadPoolExecutor(2) as pool: results=list(pool.map(run,services))
+                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_ux_plan.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/concurrent/futures/_base.py:619: in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/concurrent/futures/_base.py:317: in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+../.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/concurrent/futures/_base.py:449: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+../.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/concurrent/futures/_base.py:401: in __get_result
+    raise self._exception
+../.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/concurrent/futures/thread.py:58: in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+s = <app.product_service.ProductService object at 0x72035991b990>
+
+    def run(s):
+>       return s.idempotent_upload(a,'parallel','fp',lambda:s.create_receipt(a,receipt(),'image'))
+               ^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'ProductService' object has no attribute 'idempotent_upload'
+
+tests/test_ux_plan.py:65: AttributeError
+____________ test_req_ux06_ac_ux06_http_replay_does_not_repeat_ocr _____________
+
+    def test_req_ux06_ac_ux06_http_replay_does_not_repeat_ocr():
+        s=ProductService(); w=AdvancedWorkspace(s); actor=Actor('http-ux','admin')
+        async def upload(data=b'image'):
+            file=UploadFile(BytesIO(data),filename='same.png',headers=Headers({'content-type':'image/png'}))
+            return await product_api.upload_receipt(file=file,ai_scan=None,current=actor,idempotency_key='http-replay')
+        with patch.object(product_api,'service',s),patch.object(product_api,'advanced',w),patch('app.product_api.parse_receipt_with_confidence',return_value=receipt()) as ocr:
+>           first=asyncio.run(upload()); replay=asyncio.run(upload())
+                  ^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_ux_plan.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/asyncio/runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+../.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/asyncio/base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+data = b'image'
+
+    async def upload(data=b'image'):
+        file=UploadFile(BytesIO(data),filename='same.png',headers=Headers({'content-type':'image/png'}))
+>       return await product_api.upload_receipt(file=file,ai_scan=None,current=actor,idempotency_key='http-replay')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: upload_receipt() got an unexpected keyword argument 'idempotency_key'
+
+tests/test_ux_plan.py:75: TypeError
+__________ test_req_ux19_ac_ux19_empty_dashboard_currency_is_explicit __________
+
+    def test_req_ux19_ac_ux19_empty_dashboard_currency_is_explicit():
+        s=ProductService(); w=AdvancedWorkspace(s)
+        with patch.object(product_api,'service',s),patch.object(product_api,'advanced',w):
+            empty=consumer_dashboard.build_consumer_dashboard('currency-ux',date(2026,10,12))
+>           assert empty['household']['currency'] is None
+E           AssertionError: assert 'USD' is None
+
+tests/test_ux_plan.py:88: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_ux_plan.py::test_req_ux04_ac_ux04_filters_before_pagination
+FAILED tests/test_ux_plan.py::test_req_ux06_ac_ux06_atomic_persisted_replay_and_conflict
+FAILED tests/test_ux_plan.py::test_req_ux06_ac_ux06_failure_rolls_back_nested_writes
+FAILED tests/test_ux_plan.py::test_req_ux06_ac_ux06_parallel_connections - At...
+FAILED tests/test_ux_plan.py::test_req_ux06_ac_ux06_http_replay_does_not_repeat_ocr
+FAILED tests/test_ux_plan.py::test_req_ux19_ac_ux19_empty_dashboard_currency_is_explicit

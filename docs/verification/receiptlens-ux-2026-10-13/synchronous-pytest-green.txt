@@ -1,0 +1,101 @@
+........................................................................ [  7%]
+........................................................................ [ 15%]
+........................................................................ [ 23%]
+........................................................................ [ 31%]
+........................................................................ [ 38%]
+........................................................................ [ 46%]
+........................................................................ [ 54%]
+........................................................................ [ 62%]
+........................................................................ [ 69%]
+.............................................................Timeout (0:00:20)!
+Thread 0x000079804a583740 (most recent call first):
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/threading.py", line 331 in wait
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/threading.py", line 362 in wait_for
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/threading.py", line 732 in _wait
+  File "/home/zoltan/.local/share/uv/python/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/threading.py", line 697 in wait
+  File "/home/zoltan/receipts-lens/tests/test_price_alert_concurrency.py", line 319 in _run_in_threads
+  File "/home/zoltan/receipts-lens/tests/test_price_alert_concurrency.py", line 349 in test_concurrent_runs_send_price_alert_exactly_once
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/python.py", line 167 in pytest_pyfunc_call
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/python.py", line 1707 in runtest
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 184 in pytest_runtest_call
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 250 in <lambda>
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 361 in from_call
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 249 in call_and_report
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 139 in runtestprotocol
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/runner.py", line 118 in pytest_runtest_protocol
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/main.py", line 408 in pytest_runtestloop
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/main.py", line 384 in _main
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/main.py", line 330 in wrap_session
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/main.py", line 377 in pytest_cmdline_main
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py", line 229 in _main
+  File "/home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py", line 253 in _console_main
+  File "/home/zoltan/receipts-lens/.venv/bin/pytest", line 8 in <module>
+........... [ 77%]
+.....................................................................sss [ 85%]
+ssss.................................................................... [ 93%]
+.................................................................        [100%]
+=============================== warnings summary ===============================
+tests/test_c3_pilot_red.py: 4 warnings
+tests/test_ocr.py: 2 warnings
+tests/test_ocr_coverage.py: 6 warnings
+tests/test_ocr_exceptions.py: 2 warnings
+tests/test_preprocessing.py: 11 warnings
+tests/test_vision_ocr.py: 14 warnings
+  /home/zoltan/receipts-lens/app/preprocessing.py:157: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    pixels = list(image.getdata())
+
+tests/test_c3_pilot_red.py: 42 warnings
+tests/test_ocr.py: 42 warnings
+tests/test_ocr_coverage.py: 126 warnings
+tests/test_ocr_exceptions.py: 42 warnings
+tests/test_preprocessing.py: 194 warnings
+tests/test_vision_ocr.py: 294 warnings
+  /home/zoltan/receipts-lens/app/preprocessing.py:102: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    pixels = list(rotated.getdata())
+
+tests/test_frontend.py::TestTypeScriptTypes::test_interface_exists[Receipt]
+tests/test_frontend.py::TestApiClient::test_api_function_exists[getHealth]
+tests/test_frontend_ai_scan.py::TestAiScanTypes::test_ocr_source_type_exists
+tests/test_frontend_ai_scan.py::TestAiScanApiClient::test_upload_receipt_with_ai_exists
+tests/test_frontend_ai_scan.py::TestUploadPageIntegration::test_upload_uses_ai_scan_toggle
+tests/test_frontend_ai_scan.py::TestUseUploadHook::test_hook_accepts_ai_scan
+  /home/zoltan/receipts-lens/.venv/lib/python3.11/site-packages/_pytest/fixtures.py:1313: PytestRemovedIn10Warning: Class-scoped fixture defined as instance method is deprecated.
+  Instance attributes set in this fixture will NOT be visible to test methods,
+  as each test gets a new instance while the fixture runs only once per class.
+  Use @classmethod decorator and set attributes on cls instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#class-scoped-fixture-as-instance-method
+    fixturefunc = resolve_fixture_function(fixturedef, request)
+
+tests/test_preprocessing.py::TestPreprocessImage::test_receipt_image_processed
+  /home/zoltan/receipts-lens/tests/test_preprocessing.py:150: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    pixels = list(result.getdata())
+
+tests/test_preprocessing.py::TestAdaptiveThreshold::test_binarized_output
+  /home/zoltan/receipts-lens/tests/test_preprocessing.py:289: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    pixels = list(result.getdata())
+
+tests/test_preprocessing.py::TestAdaptiveThreshold::test_white_stays_white
+  /home/zoltan/receipts-lens/tests/test_preprocessing.py:298: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    pixels = list(result.getdata())
+
+tests/test_preprocessing.py::TestAdaptiveThreshold::test_black_stays_black
+  /home/zoltan/receipts-lens/tests/test_preprocessing.py:308: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    pixels = list(result.getdata())
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+922 passed, 7 skipped, 789 warnings in 66.21s (0:01:06)

@@ -1,0 +1,10 @@
+Listing tests:
+  ux-plan.spec.ts:25:5 › REQ-UX-01/02/06/07/18 AC-UX-01/02/06/07/18 file button, distinct payload, safe retry
+  ux-plan.spec.ts:47:5 › REQ-UX-05 AC-UX-05 transient auth failure keeps token and offers retry
+  ux-plan.spec.ts:56:5 › REQ-UX-08/12/15 AC-UX-08/12/15 mobile navigation and dialog keyboard
+  ux-plan.spec.ts:65:5 › REQ-UX-04/14 AC-UX-04/14 filters are sent to API and stored in URL
+  ux-plan.spec.ts:72:5 › REQ-UX-07/15 AC-UX-07/15 upload has no axe violations at mobile and desktop
+  ux-plan.spec.ts:79:5 › REQ-UX-09/19 AC-UX-09/19 empty household has one first action and no USD total
+  ux-plan.spec.ts:88:5 › REQ-UX-10/12 AC-UX-10/12 onboarding is shared and keyboard focus returns
+  ux-plan.spec.ts:105:5 › REQ-UX-17 AC-UX-17 notification links target receipt and cadence setting persists
+Total: 8 tests in 1 file

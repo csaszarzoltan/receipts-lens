@@ -8,7 +8,8 @@
  * Backend sync: preferences.language (GET/PUT /product/preferences)
  * mirrors the same Locale values. Default is \"en\".
  */
-import { useCallback, useEffect, useState } from "react";
+import { uxMessages } from "./uxMessages";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { preferredLocaleCode } from "@/lib/utils";
 
 export const SUPPORTED_LOCALES = ["en", "hu", "de", "fr", "es", "it", "pt", "nl", "pl", "ro"] as const;
@@ -778,7 +779,7 @@ export const messages = {
     appName: "ReceiptLens",
     tagline: "Nyugták beolvasása. Kiadáskövetés. Előre gondolkodás.",
     dashboard: "Áttekintés",
-    receipts: "Vásárlások",
+    receipts: "Nyugták",
     upload: "Nyugta hozzáadása",
     review: "Ellenőrzés",
     approvals: "Jóváhagyások",
@@ -830,7 +831,7 @@ export const messages = {
     confidence: "Megbízhatóság",
     loading: "Betöltés…",
     error: "Hiba történt",
-    retry: "Újra",
+    retry: "Újrapróbálás",
     save: "Mentés",
     cancel: "Mégse",
     delete: "Törlés",
@@ -1436,7 +1437,7 @@ export const messages = {
     retentionDaysLabel: "Megőrzési napok",
     subscriptionSummaryLabel: "Előfizetés-összegzés",
     automationsDesc: "Szabályok amelyek nyugta feltöltésekor automatikusan futnak.",
-    newRuleLabel: "Uj szabály",
+    newRuleLabel: "Új szabály",
     activeLabel: "Aktív",
     inactiveLabel: "Inaktív",
     priorityLabel: "Prioritás",
@@ -1446,7 +1447,7 @@ export const messages = {
     fieldLabel: "Mező",
     matchesLabel: "Egyezik",
     previewMatchingLabel: "Egyező nyugták előnézete",
-    newRuleDefault: "Uj szabály",
+    newRuleDefault: "Új szabály",
     groceryExample: "pl. Élelmiszer boltok → Élelmiszer",
     lidlExample: "pl. Lidl",
     exportsDesc: "CSV, QuickBooks és Xero kapcsolatok plusz export előzmények.",
@@ -6042,10 +6043,11 @@ export const messages = {
   },
 } as const;
 
-export type MessageKey = keyof (typeof messages)["en"];
+export type MessageKey = keyof (typeof messages)["en"] | keyof typeof uxMessages.en;
 
 export function t(key: MessageKey, locale: Locale = "en"): string {
-  return (messages[locale] as Record<string, string>)?.[key] ?? (messages.en as Record<string, string>)[key] ?? key;
+  const extra = uxMessages[locale as keyof typeof uxMessages] as Record<string, string> | undefined;
+  return extra?.[key] ?? (uxMessages.en as Record<string, string>)[key] ?? (messages[locale] as Record<string, string>)?.[key] ?? (messages.en as Record<string, string>)[key] ?? key;
 }
 
 const LOCALE_KEY = "receiptlens.locale";
@@ -6072,28 +6074,22 @@ export function setLocale(locale: Locale): void {
  * without a full page reload. Without this broadcast only the component that
  * called setLocale would update.
  */
-export function useTranslation() {
-  const [locale, setLocaleState] = useState<Locale>(() => getLocale());
+function subscribeLocale(listener: () => void) {
+  window.addEventListener("receiptlens:locale", listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    window.removeEventListener("receiptlens:locale", listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+const serverLocale = (): Locale => "en";
 
-  useEffect(() => {
-    function onLocaleChange(event: Event) {
-      const next = (event as CustomEvent<Locale>).detail;
-      if (next && isValidLocale(next)) setLocaleState(next);
-    }
-    function onStorage(event: StorageEvent) {
-      if (event.key === LOCALE_KEY && event.newValue && isValidLocale(event.newValue)) setLocaleState(event.newValue);
-    }
-    window.addEventListener("receiptlens:locale", onLocaleChange as EventListener);
-    window.addEventListener("storage", onStorage);
-    return () => {
-      window.removeEventListener("receiptlens:locale", onLocaleChange as EventListener);
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
+export function useTranslation() {
+  const locale = useSyncExternalStore(subscribeLocale, getLocale, serverLocale);
+  useEffect(() => { document.documentElement.lang = locale; }, [locale]);
 
   const changeLocale = useCallback((next: Locale) => {
     setLocale(next);
-    setLocaleState(next);
     try { window.dispatchEvent(new CustomEvent("receiptlens:locale", { detail: next })); } catch {}
   }, []);
 

@@ -1,0 +1,16 @@
+
+Running 10 tests using 1 worker
+
+  ✓   1 e2e/ux-plan.spec.ts:25:5 › REQ-UX-01/02/06/07/18 AC-UX-01/02/06/07/18 file button, distinct payload, safe retry (1.5s)
+  ✓   2 e2e/ux-plan.spec.ts:47:5 › REQ-UX-05 AC-UX-05 transient auth failure keeps token and offers retry (376ms)
+  ✓   3 e2e/ux-plan.spec.ts:56:5 › REQ-UX-08/12/15 AC-UX-08/12/15 mobile navigation and dialog keyboard (753ms)
+  ✓   4 e2e/ux-plan.spec.ts:67:5 › REQ-UX-04/14 AC-UX-04/14 filters are sent to API and stored in URL (404ms)
+  ✓   5 e2e/ux-plan.spec.ts:74:5 › REQ-UX-07/15 AC-UX-07/15 upload has no axe violations at mobile and desktop (4.0s)
+  ✓   6 e2e/ux-plan.spec.ts:81:5 › REQ-UX-09/19 AC-UX-09/19 empty household has one first action and no USD total (591ms)
+  ✓   7 e2e/ux-plan.spec.ts:90:5 › REQ-UX-10/12 AC-UX-10/12 onboarding is shared and keyboard focus returns (1.6s)
+  ✓   8 e2e/ux-plan.spec.ts:107:5 › REQ-UX-17 AC-UX-17 notification links target receipt and cadence setting persists (655ms)
+  ✓   9 e2e/ux-plan.spec.ts:116:5 › REQ-UX-12/18 camera keyboard dialog releases synthetic video on Escape (1.8s)
+  ✓  10 e2e/ux-plan.spec.ts:140:5 › REQ-UX-09/13 dashboard retains household members and savings opportunities (569ms)
+
+  10 passed (16.7s)
+playwright exit=0

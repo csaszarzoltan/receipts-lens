@@ -1,0 +1,10 @@
+sssssss............................................................      [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_security_egress_allowlist.py:119: P2-1 egress allowlist / DNS-rebinding mitigation not implemented yet (deferred). See analysis/analysis-brief.md section 4 P2-1 and section 7.
+SKIPPED [1] tests/test_security_egress_allowlist.py:133: P2-1 egress allowlist / DNS-rebinding mitigation not implemented yet (deferred). See analysis/analysis-brief.md section 4 P2-1 and section 7.
+SKIPPED [1] tests/test_security_egress_allowlist.py:142: P2-1 egress allowlist / DNS-rebinding mitigation not implemented yet (deferred). See analysis/analysis-brief.md section 4 P2-1 and section 7.
+SKIPPED [1] tests/test_security_egress_allowlist.py:150: P2-1 egress allowlist / DNS-rebinding mitigation not implemented yet (deferred). See analysis/analysis-brief.md section 4 P2-1 and section 7.
+SKIPPED [1] tests/test_security_egress_allowlist.py:159: P2-1 egress allowlist / DNS-rebinding mitigation not implemented yet (deferred). See analysis/analysis-brief.md section 4 P2-1 and section 7.
+SKIPPED [1] tests/test_security_egress_allowlist.py:173: P2-1 egress allowlist / DNS-rebinding mitigation not implemented yet (deferred). See analysis/analysis-brief.md section 4 P2-1 and section 7.
+SKIPPED [1] tests/test_security_egress_allowlist.py:203: P2-1 egress allowlist / DNS-rebinding mitigation not implemented yet (deferred). See analysis/analysis-brief.md section 4 P2-1 and section 7.
+60 passed, 7 skipped in 1.16s

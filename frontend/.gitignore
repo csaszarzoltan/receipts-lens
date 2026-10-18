@@ -3,6 +3,8 @@
 
 # next.js build output
 /.next/
+/.next.before-restore-*/
+/.next.restore-stage-*/
 
 # production
 /build

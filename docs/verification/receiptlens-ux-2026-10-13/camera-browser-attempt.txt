@@ -1,0 +1,100 @@
+
+> receipts-lens-frontend@1.4.0 test:ux:e2e
+> python3 ../scripts/run-ux-browser-check.py
+
+Building an isolated frontend copy; live .next is untouched.
+
+> receipts-lens-frontend@1.4.0 build
+> next build
+
+  ▲ Next.js 14.2.35
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/52) ...
+   Generating static pages (13/52) 
+   Generating static pages (26/52) 
+   Generating static pages (39/52) 
+ ✓ Generating static pages (52/52)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    1.87 kB         176 kB
+├ ○ /_not-found                          880 B          88.4 kB
+├ ƒ /accountant/[token]                  155 B          87.7 kB
+├ ○ /accounting                          2.46 kB         177 kB
+├ ○ /accounting/period-close             752 B          88.3 kB
+├ ○ /approvals                           3.55 kB         178 kB
+├ ○ /auth/google/callback                1.94 kB         167 kB
+├ ○ /auth/invite                         2.85 kB         180 kB
+├ ○ /auth/magic-link                     2.84 kB         180 kB
+├ ○ /automations                         3.17 kB         178 kB
+├ ƒ /automations/[id]                    1.95 kB          93 kB
+├ ƒ /automations/[id]/runs               945 B           107 kB
+├ ƒ /automations/[id]/runs/[runId]       1.15 kB        98.4 kB
+├ ○ /budget                              3.59 kB         285 kB
+├ ○ /chat                                2.73 kB         180 kB
+├ ○ /cost-splits                         750 B          88.2 kB
+├ ○ /dashboard                           4.74 kB         188 kB
+├ ○ /duplicates                          1.78 kB         177 kB
+├ ○ /exports                             3.16 kB         178 kB
+├ ○ /exports/prepare                     2.03 kB         177 kB
+├ ƒ /exports/runs/[id]                   1.12 kB        98.4 kB
+├ ○ /finances                            1.7 kB          176 kB
+├ ○ /forecast                            3.34 kB         285 kB
+├ ○ /inbox                               1.84 kB         177 kB
+├ ○ /insights                            1.82 kB         185 kB
+├ ○ /integrations                        3.85 kB         188 kB
+├ ƒ /integrations/[id]                   2.4 kB          186 kB
+├ ○ /login                               3.37 kB         181 kB
+├ ○ /manifest.webmanifest                0 B                0 B
+├ ○ /missing-receipts                    742 B          88.2 kB
+├ ○ /more                                1.7 kB          176 kB
+├ ○ /onboarding                          410 B           194 kB
+├ ○ /price-tracking                      745 B          88.2 kB
+├ ○ /quality-inbox                       744 B          88.2 kB
+├ ○ /receipts                            4.45 kB         188 kB
+├ ƒ /receipts/[id]                       5.18 kB         189 kB
+├ ○ /receipts/capture                    752 B          88.3 kB
+├ ○ /receipts/offline                    755 B          88.3 kB
+├ ○ /reconciliation                      753 B          88.3 kB
+├ ○ /reconciliation/refunds              743 B          88.2 kB
+├ ○ /register                            155 B          87.7 kB
+├ ○ /reports                             2.64 kB         293 kB
+├ ○ /review                              4.8 kB          188 kB
+├ ○ /savings-goals                       758 B          88.3 kB
+├ ○ /settings                            727 B           175 kB
+├ ○ /settings/diagnostics                1.57 kB         176 kB
+├ ○ /settings/diagnostics/quality        1.25 kB        98.6 kB
+├ ○ /settings/members                    2.23 kB         177 kB
+├ ○ /settings/notifications              1.29 kB         185 kB
+├ ○ /settings/permissions                2.04 kB         177 kB
+├ ○ /settings/privacy                    1.91 kB         171 kB
+├ ○ /settings/profile                    1.58 kB         176 kB
+├ ○ /statement                           2.83 kB         186 kB
+├ ○ /subscriptions                       3.4 kB          178 kB
+├ ○ /tax                                 2.32 kB         177 kB
+├ ○ /upload                              5.21 kB         194 kB
+└ ○ /warranties                          4 kB            188 kB
++ First Load JS shared by all            87.5 kB
+  ├ chunks/4082-1564c441bad8d97d.js      31.9 kB
+  ├ chunks/ca81c2cf-2556e35c18526690.js  53.6 kB
+  └ other shared chunks (total)          1.96 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+Error: Process from config.webServer was not able to start. Exit code: 1
+
+Traceback (most recent call last):
+  File "/home/zoltan/receipts-lens/frontend/../scripts/run-ux-browser-check.py", line 30, in <module>
+    main()
+  File "/home/zoltan/receipts-lens/frontend/../scripts/run-ux-browser-check.py", line 24, in main
+    subprocess.run(["node", "node_modules/@playwright/test/cli.js", "test",
+  File "/home/zoltan/.hermes/hermes-agent/.hermes-runtime/python/generation-1785929628-1846677-f0ca52f6/cpython-3.11.15-linux-x86_64-gnu/lib/python3.11/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['node', 'node_modules/@playwright/test/cli.js', 'test', '--config', 'playwright.ux.config.ts']' returned non-zero exit status 1.

@@ -16,9 +16,55 @@ import threading
 import uuid
 from collections import Counter
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any
+from types import TracebackType
+from typing import Any, Self
+
+from app.product_migrations import migrate_upload_commands
+
+
+class ProductConnection(sqlite3.Connection):
+    """Serialize writes and commit nested service calls at the outer boundary."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.transaction_lock = threading.RLock()
+        self.context_depth = 0
+        self.context_failed = False
+
+    def __enter__(self) -> Self:
+        self.transaction_lock.acquire()
+        if self.context_depth == 0:
+            self.context_failed = False
+        self.context_depth += 1
+        return self
+
+    def execute(self, sql: str, parameters: Any = (), /) -> sqlite3.Cursor:
+        # Other threads sharing this connection must not observe an upload's
+        # uncommitted receipt before its asset and command are saved.
+        with self.transaction_lock:
+            return super().execute(sql, parameters)
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None,
+                 traceback: TracebackType | None) -> bool:
+        self.context_failed |= exc_type is not None
+        self.context_depth -= 1
+        try:
+            if self.context_depth == 0:
+                if self.context_failed:
+                    self.rollback()
+                    if exc_type is None:
+                        raise RuntimeError("Nested product transaction failed")
+                else:
+                    try:
+                        self.commit()
+                    except BaseException:
+                        self.rollback()
+                        raise
+        finally:
+            self.transaction_lock.release()
+        return False
 
 
 class ProductConflict(RuntimeError):
@@ -99,13 +145,43 @@ class ProductService:
     _BUSY_TIMEOUT_MS = 5_000
 
     def __init__(self, database: str | Path = ":memory:") -> None:
-        self._db = sqlite3.connect(str(database), check_same_thread=False)
+        self._db = sqlite3.connect(str(database), check_same_thread=False, factory=ProductConnection)
         # Wait briefly for a concurrent writer rather than failing instantly.
         # Journal mode is left at sqlite's default, unchanged.
         self._db.execute(f"PRAGMA busy_timeout = {self._BUSY_TIMEOUT_MS}")
         self._db.row_factory = sqlite3.Row
-        self._lock = threading.RLock()
+        self._lock = self._db.transaction_lock
         self._create_schema()
+        migrate_upload_commands(self._db)
+
+    def idempotent_upload(self, actor: Actor, key: str, fingerprint: str,
+                          create: Any) -> dict[str, Any]:
+        """Persist the command and all nested receipt writes in one transaction.
+
+        Successful commands do not expire. A rolled-back attempt can be retried.
+        BEGIN IMMEDIATE serializes competing connections/processes, including
+        commands arriving after a restart. No image or credentials are stored
+        in this command table.
+        """
+        if not 1 <= len(key) <= 200 or key != key.strip():
+            raise ValueError("Idempotency-Key must contain 1..200 characters without outer whitespace")
+        with self._lock, self._db:
+            self._db.execute("BEGIN IMMEDIATE")
+            row = self._db.execute(
+                "SELECT fingerprint,result FROM upload_commands WHERE tenant_id=? AND command_key=?",
+                (actor.tenant_id, key),
+            ).fetchone()
+            if row:
+                if row["fingerprint"] != fingerprint:
+                    raise ProductConflict("Idempotency-Key was already used for another upload")
+                result = json.loads(row["result"])
+                if result.get("purged"):
+                    raise ProductConflict("The original upload was removed by the retention policy")
+                return result
+            result = create()
+            self._db.execute("INSERT INTO upload_commands VALUES (?,?,?,?,?)",
+                             (actor.tenant_id, key, fingerprint, json.dumps(result), self._now()))
+            return result
 
     def _create_schema(self) -> None:
         with self._db:
@@ -249,6 +325,30 @@ class ProductService:
             payload["currency_source"] = "user"
             payload["currency_assumed"] = False
 
+    @staticmethod
+    def _mark_category_user(payload: dict[str, Any], changes: dict[str, Any]) -> None:
+        if "category" not in changes:
+            return
+        category = changes["category"]
+        if category is not None and (not isinstance(category, str) or not category.strip() or len(category) > 100):
+            raise ValueError("category must be a non-empty name of at most 100 characters")
+        payload["category"] = category.strip() if category else None
+        payload["category_source"] = "user"
+
+    def suggest_category(self, actor: Actor, vendor: str | None) -> str | None:
+        if not vendor:
+            return None
+        rows = self._db.execute(
+            "SELECT payload FROM receipts WHERE tenant_id=? AND status='completed' "
+            "ORDER BY created_at DESC, receipt_id", (actor.tenant_id,),
+        ).fetchall()
+        for row in rows:
+            payload = json.loads(row[0])
+            if (str(payload.get("vendor") or "").strip().casefold() == vendor.strip().casefold()
+                    and payload.get("category_source") == "user" and payload.get("category")):
+                return str(payload["category"])
+        return None
+
     def create_receipt(self, actor: Actor, parsed: Any, filename: str) -> dict[str, Any]:
         payload = self._receipt_payload(parsed)
         # Callers that pass no provenance supplied the currency themselves.
@@ -288,7 +388,8 @@ class ProductService:
 
     def list_reviews(self, actor: Actor, confidence_field: str | None = None,
                      confidence_lt: float | None = None, readiness: str | None = None,
-                     sort: str = "created_asc", limit: int = 50, offset: int = 0) -> dict[str, Any]:
+                     sort: str = "created_asc", limit: int = 50, offset: int = 0,
+                     receipt_id: str | None = None) -> dict[str, Any]:
         allowed_fields = {"vendor", "date", "total", "tax", "currency", "line_items"}
         if confidence_field is not None and confidence_field not in allowed_fields:
             raise ValueError("unsupported confidence field")
@@ -299,6 +400,8 @@ class ProductService:
         rows = self._db.execute("SELECT * FROM receipts WHERE tenant_id=? ORDER BY created_at", (actor.tenant_id,)).fetchall()
         items=[]
         for row in rows:
+            if receipt_id and row["receipt_id"] != receipt_id:
+                continue
             payload=json.loads(row["payload"]); confidence=payload.get("confidence") or {}
             value=confidence.get(confidence_field) if confidence_field else None
             if not self._review_row_matches(row, payload, confidence, confidence_field, confidence_lt, readiness):
@@ -319,10 +422,11 @@ class ProductService:
             row = self._db.execute("SELECT * FROM receipts WHERE tenant_id=? AND receipt_id=?", (actor.tenant_id, receipt_id)).fetchone()
             if not row: raise KeyError(receipt_id)
             if row["version"] != expected_version: raise ProductConflict("stale receipt version")
-            allowed = {"vendor", "date", "total", "tax", "currency", "line_items"}
+            allowed = {"vendor", "date", "total", "tax", "currency", "line_items", "category"}
             if not changes or set(changes) - allowed: raise ValueError("unsupported or empty correction")
             payload = json.loads(row["payload"]); payload.update(changes)
             self._mark_currency_user(payload, changes)
+            self._mark_category_user(payload, changes)
             status = "completed" if complete else "needs_review"; version = expected_version + 1
             self._db.execute("UPDATE receipts SET payload=?,status=?,version=? WHERE receipt_id=?", (json.dumps(payload, sort_keys=True), status, version, receipt_id))
             self._db.execute("UPDATE jobs SET status=? WHERE tenant_id=? AND receipt_id=?", (status, actor.tenant_id, receipt_id))
@@ -664,20 +768,36 @@ class ProductService:
                         status: str | None = None, tag: str | None = None,
                         min_total: float | None = None, max_total: float | None = None,
                         limit: int = 50, offset: int = 0,
-                        readiness: str | None = None) -> dict[str, Any]:
+                        readiness: str | None = None, category: str | None = None,
+                        date_from: str | None = None, date_to: str | None = None) -> dict[str, Any]:
         """Search tenant receipts with stable pagination and early readiness."""
         if not 1 <= limit <= 200 or offset < 0:
             raise ValueError("limit must be 1..200 and offset must be non-negative")
         if readiness not in {None, "", "blocked", "warning", "exportable"}:
             raise ValueError("unsupported readiness filter")
+        for value in (date_from, date_to):
+            if value and date.fromisoformat(value).isoformat() != value:
+                raise ValueError("dates must use YYYY-MM-DD")
+        if date_from and date_to and date_from > date_to:
+            raise ValueError("date_from must not be after date_to")
         rows = self._db.execute(
             "SELECT r.*,m.tags,m.project,m.cost_center FROM receipts r "
             "LEFT JOIN receipt_metadata m ON m.receipt_id=r.receipt_id "
             "WHERE r.tenant_id=? ORDER BY r.created_at DESC, r.receipt_id", (actor.tenant_id,)
         ).fetchall()
         items=[]
+        categories: set[str] = set()
         for row in rows:
             payload=json.loads(row["payload"])
+            if payload.get("category"):
+                categories.add(payload["category"])
+            if category and payload.get("category") != category:
+                continue
+            receipt_date = payload.get("date") or ""
+            if date_from and receipt_date < date_from:
+                continue
+            if date_to and (not receipt_date or receipt_date > date_to):
+                continue
             tags=json.loads(row["tags"] or "[]")
             result_readiness = self.receipt_readiness(payload, row["status"], row["cost_center"])
             if not self._search_row_matches(
@@ -689,7 +809,8 @@ class ProductService:
                           "version":row["version"],"created_at":row["created_at"],
                           "receipt":payload,"metadata":{"tags":tags,"project":row["project"],
                           "cost_center":row["cost_center"]}, "readiness": result_readiness})
-        return {"items":items[offset:offset+limit],"total":len(items),"limit":limit,"offset":offset}
+        return {"items":items[offset:offset+limit],"total":len(items),"limit":limit,
+                "offset":offset,"categories":sorted(categories)}
 
     def get_receipt(self, actor: Actor, receipt_id: str) -> dict[str, Any]:
         """Return one tenant receipt in the same shape as search_receipts items."""
@@ -705,6 +826,7 @@ class ProductService:
             "receipt_id": row["receipt_id"], "status": row["status"],
             "version": row["version"], "created_at": row["created_at"],
             "receipt": payload,
+            "suggested_category": self.suggest_category(actor, payload.get("vendor")),
             "metadata": {"tags": tags, "project": row["project"],
                          "cost_center": row["cost_center"]},
             "readiness": self.receipt_readiness(payload, row["status"],
@@ -801,6 +923,12 @@ class ProductService:
         ids=[r[0] for r in rows]
         with self._db:
             for rid in ids:
+                # Keep a tombstone, not a second copy of purged financial data.
+                self._db.execute(
+                    "UPDATE upload_commands SET result=? WHERE tenant_id=? "
+                    "AND json_extract(result,'$.receipt_id')=?",
+                    (json.dumps({"receipt_id": rid, "purged": True}), actor.tenant_id, rid),
+                )
                 self._db.execute("DELETE FROM receipt_metadata WHERE tenant_id=? AND receipt_id=?",(actor.tenant_id,rid))
                 self._db.execute("DELETE FROM receipt_assets WHERE tenant_id=? AND receipt_id=?",(actor.tenant_id,rid))
                 self._db.execute("DELETE FROM activity_history WHERE tenant_id=? AND subject_id=?",(actor.tenant_id,rid))
@@ -885,6 +1013,7 @@ class ProductService:
         payload = json.loads(row["payload"])
         payload.update(fields)
         self._mark_currency_user(payload, fields)
+        self._mark_category_user(payload, fields)
         if clean_items is not None:
             payload["line_items"] = clean_items
         status = "completed" if complete else row["status"]
@@ -930,7 +1059,7 @@ class ProductService:
         """
         if not self.can_write(actor):
             raise PermissionError("write role required (owner/adult)")
-        allowed = {"vendor", "date", "total", "tax", "currency"}
+        allowed = {"vendor", "date", "total", "tax", "currency", "category"}
         fields = dict(fields or {})
         if set(fields) - allowed:
             raise ValueError("unsupported receipt field")

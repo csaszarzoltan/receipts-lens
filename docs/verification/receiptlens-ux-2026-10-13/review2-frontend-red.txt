@@ -1,0 +1,183 @@
+
+> receipts-lens-frontend@1.4.0 test:ux
+> node tests/ux-regressions.cjs
+
+TAP version 13
+# Subtest: REQ-UX-02/06 AC-UX-02/06 duplicate filenames and retry preserve file and key
+ok 1 - REQ-UX-02/06 AC-UX-02/06 duplicate filenames and retry preserve file and key
+  ---
+  duration_ms: 265.097785
+  type: 'test'
+  ...
+# Subtest: REQ-UX-03 AC-UX-03 unknown and zero confidence
+ok 2 - REQ-UX-03 AC-UX-03 unknown and zero confidence
+  ---
+  duration_ms: 17.465795
+  type: 'test'
+  ...
+# Subtest: REQ-UX-08 AC-UX-08 five mobile destinations include capture and retain receipts
+ok 3 - REQ-UX-08 AC-UX-08 five mobile destinations include capture and retain receipts
+  ---
+  duration_ms: 35.504239
+  type: 'test'
+  ...
+# Subtest: REQ-UX-01 AC-UX-01 file chooser is a real working button and disabled respects keyboard
+ok 4 - REQ-UX-01 AC-UX-01 file chooser is a real working button and disabled respects keyboard
+  ---
+  duration_ms: 90.078902
+  type: 'test'
+  ...
+# Subtest: REQ-UX-07/11/18 AC-UX-07/11/18 queue uses translated copy and review destination
+ok 5 - REQ-UX-07/11/18 AC-UX-07/11/18 queue uses translated copy and review destination
+  ---
+  duration_ms: 24.38028
+  type: 'test'
+  ...
+# Subtest: REQ-UX-09/13/19 AC-UX-09/13/19 empty dashboard focuses on first receipt; missing currency is explicit
+ok 6 - REQ-UX-09/13/19 AC-UX-09/13/19 empty dashboard focuses on first receipt; missing currency is explicit
+  ---
+  duration_ms: 56.647352
+  type: 'test'
+  ...
+# Subtest: REQ-UX-05 AC-UX-05 retryable session error preserves token while 401 clears it
+ok 7 - REQ-UX-05 AC-UX-05 retryable session error preserves token while 401 clears it
+  ---
+  duration_ms: 44.487514
+  type: 'test'
+  ...
+# Subtest: REQ-UX-12 AC-UX-12 dialog traps Tab, handles Escape and returns focus
+ok 8 - REQ-UX-12 AC-UX-12 dialog traps Tab, handles Escape and returns focus
+  ---
+  duration_ms: 27.235935
+  type: 'test'
+  ...
+# Subtest: REQ-UX-10 AC-UX-10 shared onboarding saves currency and never switches to a demo household
+ok 9 - REQ-UX-10 AC-UX-10 shared onboarding saves currency and never switches to a demo household
+  ---
+  duration_ms: 49.69562
+  type: 'test'
+  ...
+# Subtest: REQ-UX-14 AC-UX-14 category/date filters reach API and status labels remain distinct
+ok 10 - REQ-UX-14 AC-UX-14 category/date filters reach API and status labels remain distinct
+  ---
+  duration_ms: 44.288535
+  type: 'test'
+  ...
+# Subtest: REQ-UX-15 AC-UX-15 primary navigation uses five translated destinations with touch-sized controls
+ok 11 - REQ-UX-15 AC-UX-15 primary navigation uses five translated destinations with touch-sized controls
+  ---
+  duration_ms: 26.432969
+  type: 'test'
+  ...
+# Subtest: REQ-UX-13 AC-UX-13 incomplete monthly and daily totals visibly keep missing counts
+ok 12 - REQ-UX-13 AC-UX-13 incomplete monthly and daily totals visibly keep missing counts
+  ---
+  duration_ms: 38.362049
+  type: 'test'
+  ...
+# Subtest: REQ-UX-17 AC-UX-17 notifications deep-link to exact receipt and expose write failure
+ok 13 - REQ-UX-17 AC-UX-17 notifications deep-link to exact receipt and expose write failure
+  ---
+  duration_ms: 37.566953
+  type: 'test'
+  ...
+# Subtest: REQ-UX-07 AC-UX-07 hydration starts with server locale, then adopts stored locale
+ok 14 - REQ-UX-07 AC-UX-07 hydration starts with server locale, then adopts stored locale
+  ---
+  duration_ms: 236.594212
+  type: 'test'
+  ...
+# Subtest: REQ-UX-06 AC-UX-06 settling uploads refreshes the quota cache
+ok 15 - REQ-UX-06 AC-UX-06 settling uploads refreshes the quota cache
+  ---
+  duration_ms: 34.890031
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 camera double activation makes only one media request
+ok 16 - REQ-UX-18 camera double activation makes only one media request
+  ---
+  duration_ms: 49.061463
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 cancelled camera request never opens and releases late stream
+ok 17 - REQ-UX-18 cancelled camera request never opens and releases late stream
+  ---
+  duration_ms: 50.340396
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 camera resolution after unmount releases tracks
+ok 18 - REQ-UX-18 camera resolution after unmount releases tracks
+  ---
+  duration_ms: 48.381308
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 duplicate capture is prevented and cancelled encoding cannot upload
+ok 19 - REQ-UX-18 duplicate capture is prevented and cancelled encoding cannot upload
+  ---
+  duration_ms: 35.518307
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 capture waits for preview and emits only one JPEG
+ok 20 - REQ-UX-18 capture waits for preview and emits only one JPEG
+  ---
+  duration_ms: 46.960249
+  type: 'test'
+  ...
+# Subtest: REQ-UX-18 failed image encoding keeps camera open and allows retry
+ok 21 - REQ-UX-18 failed image encoding keeps camera open and allows retry
+  ---
+  duration_ms: 29.804833
+  type: 'test'
+  ...
+# Subtest: REQ-UX-12 camera opener stays focusable while busy for focus return
+not ok 22 - REQ-UX-12 camera opener stays focusable while busy for focus return
+  ---
+  duration_ms: 42.66462
+  type: 'test'
+  location: '/home/zoltan/receipts-lens/frontend/tests/ux-regressions.cjs:164:1'
+  failureType: 'testCodeFailure'
+  error: 'Expected "actual" to be strictly unequal to: true'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: true
+  operator: 'notStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (/home/zoltan/receipts-lens/frontend/tests/ux-regressions.cjs:167:64)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: REQ-UX-09/13 dashboard preserves household and savings for existing receipts
+not ok 23 - REQ-UX-09/13 dashboard preserves household and savings for existing receipts
+  ---
+  duration_ms: 26.445392
+  type: 'test'
+  location: '/home/zoltan/receipts-lens/frontend/tests/ux-regressions.cjs:173:1'
+  failureType: 'testCodeFailure'
+  error: 'household data remains visible'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/home/zoltan/receipts-lens/frontend/tests/ux-regressions.cjs:180:94)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 21
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1379.720595

@@ -1,0 +1,21 @@
+{
+  "kind": "preparation snapshot, not a committed release",
+  "source": "/home/zoltan/receipts-lens/releases/ux-prep-1791907771421899193/source",
+  "base_commit": "3fc1bfa8fc8131199ce9bf23419f3633ef85651b",
+  "overlay_file_count": 109,
+  "excluded_files_match_head": {
+    "app/subscription_alerts.py": "ac78a2f3f1ed535acf6b5a996cc75a32a75085309a1792a28f7c06abd6df851c",
+    "app/subscriptions_api.py": "4a88a74855ff527a56e2e48b055e857981e4e273c816ba762922c6e4c8743b40"
+  },
+  "live_worktree_unchanged": true,
+  "rollback_source": "/home/zoltan/receipts-lens/releases/ux-prep-1791907771421899193/rollback-head",
+  "rollback_frontend_build_id": "rJcgSoF6Mv6tt1gbtBrLN",
+  "candidate_frontend_build_id": "lgKE6U8x4DF1nmPkJ7nYC",
+  "scoped_checks": {
+    "backend": "64 passed, 4 deselected",
+    "frontend": "23 passed",
+    "typecheck": "passed",
+    "production_build": "passed",
+    "full_scoped_suite": "not yet run"
+  }
+}

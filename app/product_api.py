@@ -1,8 +1,10 @@
 """HTTP and HTML adapters for the six ReceiptLens product features."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -139,64 +141,89 @@ async def upload_receipt(
     file: UploadFile = File(...),
     ai_scan: str | None = Form(default=None, description="Enable AI-mode OCR (vision LLM with Tesseract fallback)"),
     current: Actor = Depends(actor),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> dict[str, Any]:
     if not service.can_write(current):
         raise HTTPException(403, "Read-only role cannot upload receipts")
-    # Quota gate (ADR-005): Free 25/mo, Pro unlimited — check before OCR.
-    from app.quota import quota_store
-    from app.subscriptions_api import is_pro
-
-    quota = quota_store.incr_and_check(current.tenant_id, pro=is_pro(current.tenant_id))
-    if not quota["allowed"]:
-        raise HTTPException(
-            402,
-            {
-                "code": "quota_exceeded",
-                "message": "Free limit reached — upgrade to Pro for unlimited scans ($5/mo).",
-                "quota": quota,
-            },
-        )
-    if file.content_type and not file.content_type.startswith("image/"): raise HTTPException(415, "An image file is required")
+    if file.content_type and not file.content_type.startswith("image/"):
+        raise HTTPException(415, "An image file is required")
     data = await file.read()
-    if not data: raise HTTPException(422, "The uploaded file is empty")
+    if not data:
+        raise HTTPException(422, "The uploaded file is empty")
+    if len(data) > 20 * 1024 * 1024:
+        raise HTTPException(413, "The image must not exceed 20 MB")
     ai_mode = _as_bool(ai_scan)
-    try:
-        if ai_mode:
-            parsed = parse_receipt_with_vision(data)
-        else:
-            parsed = parse_receipt_with_confidence(data)
-    except Exception as exc:
-        if not ai_mode:
-            raise HTTPException(422, "Receipt processing failed") from exc
-        # Vision path raised unexpectedly; fall back to the classic pipeline so
-        # the user still gets an extraction (frontend shows the friendly notice).
+
+    def process() -> dict[str, Any]:
+        # Quota gate (ADR-005): Free 25/mo, Pro unlimited — check before OCR.
+        from app.quota import quota_store
+        from app.subscriptions_api import is_pro
+
+        quota = quota_store.incr_and_check(current.tenant_id, pro=is_pro(current.tenant_id))
+        if not quota["allowed"]:
+            raise HTTPException(
+                402,
+                {
+                    "code": "quota_exceeded",
+                    "message": "Free limit reached — upgrade to Pro for unlimited scans ($5/mo).",
+                    "quota": quota,
+                },
+            )
         try:
-            parsed = parse_receipt_with_confidence(data)
-        except Exception as fallback_exc:
-            raise HTTPException(422, "Receipt processing failed") from fallback_exc
-    result = service.create_receipt(current, parsed, file.filename or "receipt")
-    advanced.store_asset(current.tenant_id, result["receipt_id"], data,
-                         file.content_type or "application/octet-stream",
-                         file.filename or "receipt", extract_ocr_boxes(data))
-    advanced.record_history(current, result["receipt_id"], "receipt.created", None,
-                            result["receipt"])
-    applied = advanced.apply_rules(current, result["receipt_id"], result["receipt"])
-    result["applied_rules"] = applied
-    if result["status"] == "needs_review":
-        advanced.notify(current.tenant_id, "review", "Receipt needs review",
-                        file.filename or "The uploaded receipt", result["receipt_id"])
-    if ai_mode:
-        source = str((parsed.confidence or {}).get("source") or SOURCE_TESSERACT)
-        result["source"] = source
-        if source == SOURCE_VISION:
-            result["ai_result"] = _ai_extraction(parsed)
+            if ai_mode:
+                parsed = parse_receipt_with_vision(data)
+            else:
+                parsed = parse_receipt_with_confidence(data)
+        except Exception as exc:
+            if not ai_mode:
+                raise HTTPException(422, "Receipt processing failed") from exc
+            # Vision path raised unexpectedly; fall back to the classic pipeline so
+            # the user still gets an extraction (frontend shows the friendly notice).
             try:
-                result["tesseract_result"] = _ai_extraction(parse_receipt_with_confidence(data))
-            except Exception:  # noqa: BLE001 - comparison OCR is best-effort
-                result["tesseract_result"] = None
-        else:
-            result["tesseract_result"] = _ai_extraction(parsed)
-    return result
+                parsed = parse_receipt_with_confidence(data)
+            except Exception as fallback_exc:
+                raise HTTPException(422, "Receipt processing failed") from fallback_exc
+        result = service.create_receipt(current, parsed, file.filename or "receipt")
+        advanced.store_asset(current.tenant_id, result["receipt_id"], data,
+                             file.content_type or "application/octet-stream",
+                             file.filename or "receipt", extract_ocr_boxes(data))
+        advanced.record_history(current, result["receipt_id"], "receipt.created", None,
+                                result["receipt"])
+        applied = advanced.apply_rules(current, result["receipt_id"], result["receipt"])
+        result["applied_rules"] = applied
+        if result["status"] == "needs_review":
+            advanced.notify(current.tenant_id, "review", "Receipt needs review",
+                            file.filename or "The uploaded receipt", result["receipt_id"])
+        if ai_mode:
+            source = str((parsed.confidence or {}).get("source") or SOURCE_TESSERACT)
+            result["source"] = source
+            if source == SOURCE_VISION:
+                result["ai_result"] = _ai_extraction(parsed)
+                try:
+                    result["tesseract_result"] = _ai_extraction(parse_receipt_with_confidence(data))
+                except Exception:  # noqa: BLE001 - comparison OCR is best-effort
+                    result["tesseract_result"] = None
+            else:
+                result["tesseract_result"] = _ai_extraction(parsed)
+        return result
+
+    if idempotency_key is None:
+        return process()
+    fingerprint = hashlib.sha256(data + json.dumps({
+        "ai_scan": ai_mode, "content_type": file.content_type,
+        "filename": file.filename,
+    }, sort_keys=True).encode()).hexdigest()
+    try:
+        return service.idempotent_upload(current, idempotency_key, fingerprint, process)
+    except ProductConflict as exc:
+        raise HTTPException(409, {"code": "upload_key_conflict", "message": str(exc)}) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    except sqlite3.OperationalError as exc:
+        if "locked" not in str(exc).lower():
+            raise
+        raise HTTPException(503, {"code": "upload_busy", "message": "Upload busy; retry with the same key"},
+                            headers={"Retry-After": "2"}) from exc
 
 @router.get("/product/jobs")
 def jobs(current: Actor = Depends(actor)) -> dict[str, Any]: return {"items":service.list_jobs(current)}
@@ -219,9 +246,9 @@ def cancel_job(job_id: str, current: Actor = Depends(actor)) -> dict[str, Any]:
 @router.get("/product/review-items")
 def reviews(confidence_field: str | None = None, confidence_lt: float | None = None,
             readiness: str | None = None, sort: str = "created_asc", limit: int = 50,
-            offset: int = 0, current: Actor = Depends(actor)) -> dict[str, Any]:
+            offset: int = 0, receipt_id: str | None = None, current: Actor = Depends(actor)) -> dict[str, Any]:
     try:
-        return service.list_reviews(current, confidence_field, confidence_lt, readiness, sort, limit, offset)
+        return service.list_reviews(current, confidence_field, confidence_lt, readiness, sort, limit, offset, receipt_id)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -355,9 +382,10 @@ class RetentionRequest(BaseModel):
 def search_receipts(query: str | None = None, status: str | None = None,
                     tag: str | None = None, min_total: float | None = None,
                     max_total: float | None = None, limit: int = 50, offset: int = 0,
-                    readiness: str | None = None,
+                    readiness: str | None = None, category: str | None = None,
+                    date_from: str | None = None, date_to: str | None = None,
                     current: Actor = Depends(actor)) -> dict[str, Any]:
-    try: return service.search_receipts(current,query,status,tag,min_total,max_total,limit,offset,readiness)
+    try: return service.search_receipts(current,query,status,tag,min_total,max_total,limit,offset,readiness,category,date_from,date_to)
     except ValueError as exc: raise HTTPException(422,str(exc)) from exc
 
 @router.get("/product/receipts/{receipt_id}")

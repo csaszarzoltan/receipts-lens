@@ -1,0 +1,17 @@
+{
+  "mode": "skip-condition audit using actual in-memory endpoint projections; no HTTP transport",
+  "results": [
+    {
+      "test": "tests/test_subscription_alerts.py::TestSubscriptionsEndpointBehavioral::test_subscription_item_shape",
+      "reason": "No subscriptions to inspect"
+    },
+    {
+      "test": "tests/test_subscription_dashboard.py::TestRenewalTimelineBehavioral::test_has_countdown_info",
+      "reason": "No renewal items to inspect"
+    },
+    {
+      "test": "tests/test_subscription_dashboard.py::TestRenewalTimelineBehavioral::test_items_include_subscription_id",
+      "reason": "No renewal items to inspect"
+    }
+  ]
+}

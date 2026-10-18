@@ -45,7 +45,10 @@ def _mock_response(status_code: int = 200, content: bytes = b"", headers: dict |
     return _Response(status_code=status_code, content=content, headers=headers, is_redirect=is_redirect)
 
 
-def test_allowed_schemes_http_and_https():
+def test_allowed_schemes_http_and_https(monkeypatch):
+    # Scheme acceptance must not depend on the runner's DNS/network access.
+    monkeypatch.setattr("app.ssrf_guard.socket.getaddrinfo", lambda *args, **kwargs:
+                        [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 80))])
     for scheme in ("http", "https"):
         parsed = resolve_and_validate(f"{scheme}://example.com/image.jpg")
         assert parsed.scheme == scheme

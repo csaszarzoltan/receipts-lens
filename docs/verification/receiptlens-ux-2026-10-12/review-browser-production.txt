@@ -1,0 +1,14 @@
+
+Running 8 tests using 1 worker
+
+  ✓  1 e2e/ux-plan.spec.ts:25:5 › REQ-UX-01/02/06/07/18 AC-UX-01/02/06/07/18 file button, distinct payload, safe retry (1.7s)
+  ✓  2 e2e/ux-plan.spec.ts:47:5 › REQ-UX-05 AC-UX-05 transient auth failure keeps token and offers retry (549ms)
+  ✓  3 e2e/ux-plan.spec.ts:56:5 › REQ-UX-08/12/15 AC-UX-08/12/15 mobile navigation and dialog keyboard (918ms)
+  ✓  4 e2e/ux-plan.spec.ts:65:5 › REQ-UX-04/14 AC-UX-04/14 filters are sent to API and stored in URL (613ms)
+  ✓  5 e2e/ux-plan.spec.ts:72:5 › REQ-UX-07/15 AC-UX-07/15 upload has no axe violations at mobile and desktop (4.2s)
+  ✓  6 e2e/ux-plan.spec.ts:79:5 › REQ-UX-09/19 AC-UX-09/19 empty household has one first action and no USD total (790ms)
+  ✓  7 e2e/ux-plan.spec.ts:88:5 › REQ-UX-10/12 AC-UX-10/12 onboarding is shared and keyboard focus returns (1.6s)
+  ✓  8 e2e/ux-plan.spec.ts:105:5 › REQ-UX-17 AC-UX-17 notification links target receipt and cadence setting persists (800ms)
+
+  8 passed (16.1s)
+playwright exit=0

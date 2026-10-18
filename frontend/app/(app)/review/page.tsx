@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
 import { correctReceipt, getReceiptImage, getReviewItems, rereadReviewTotals } from "@/lib/api";
@@ -65,9 +66,10 @@ function Icon({ kind }: { kind: "ok" | "warn" | "info" }) {
 
 function ReviewWorkspace() {
   const { t } = useTranslation();
+  const receiptId = useSearchParams().get("receipt") ?? undefined;
   const { data, error, isLoading, mutate } = useSWR<{ items: ReviewItem[] }>(
-    "/product/review-items",
-    getReviewItems,
+    ["/product/review-items", receiptId],
+    () => getReviewItems(receiptId),
   );
   const items = React.useMemo(() => data?.items ?? [], [data]);
   const pendingReads = items.filter(needsReread).length;
@@ -187,7 +189,7 @@ function ReviewWorkspace() {
           </button>
         ) : null}
       </div>
-      <ul className="space-y-4" aria-label="Review queue">
+      <ul className="space-y-4" aria-label={t("review")}>
         {items.map((item) => (
           <ReviewCard key={item.receipt_id} item={item} reading={reading && needsReread(item)} onDone={() => mutate()} />
         ))}
@@ -233,6 +235,7 @@ function ReviewCard({ item, reading, onDone }: { item: ReviewItem; reading: bool
   const { t } = useTranslation();
   const [saving, setSaving] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  const [saveFailed, setSaveFailed] = React.useState(false);
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
   const weak = isWeakMatch(item);
   const proposed = proposedAmount(item);
@@ -242,13 +245,15 @@ function ReviewCard({ item, reading, onDone }: { item: ReviewItem; reading: bool
 
   React.useEffect(() => {
     let cancelled = false;
+    let objectUrl: string | undefined;
     getReceiptImage(item.receipt_id)
       .then((blob) => {
-        if (!cancelled) setImageUrl(URL.createObjectURL(blob));
+        if (!cancelled) { objectUrl = URL.createObjectURL(blob); setImageUrl(objectUrl); }
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [item.receipt_id]);
 
@@ -266,6 +271,7 @@ function ReviewCard({ item, reading, onDone }: { item: ReviewItem; reading: bool
     setInvalid(false);
     setSaving(true);
     setMessage(null);
+    setSaveFailed(false);
     try {
       await correctReceipt(
         item.receipt_id,
@@ -275,7 +281,8 @@ function ReviewCard({ item, reading, onDone }: { item: ReviewItem; reading: bool
       setMessage(t("markedComplete"));
       onDone();
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : t("failedComplete"));
+      setSaveFailed(true);
+      setMessage(t("failedComplete"));
     } finally {
       setSaving(false);
     }
@@ -395,7 +402,7 @@ function ReviewCard({ item, reading, onDone }: { item: ReviewItem; reading: bool
               {t("openFullDetail")}
             </Link>
             {message ? (
-              <span className="text-xs text-emerald-700 dark:text-emerald-400" role="status">
+              <span className={saveFailed ? "text-sm text-rose-700 dark:text-rose-300" : "text-sm text-emerald-700 dark:text-emerald-300"} role={saveFailed ? "alert" : "status"}>
                 {message}
               </span>
             ) : null}
@@ -416,7 +423,7 @@ export default function ReviewPage() {
           {t("reviewDesc")}
         </p>
       </div>
-      <ReviewWorkspace />
+      <Suspense fallback={<SkeletonCard className="h-64" />}><ReviewWorkspace /></Suspense>
     </div>
   );
 }

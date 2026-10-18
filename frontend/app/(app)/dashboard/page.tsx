@@ -1,291 +1,52 @@
 "use client";
+import Link from 'next/link';
+import useSWR from 'swr';
+import {getConsumerDashboard,searchReceipts,getPreferences} from '@/lib/api';
+import type {ConsumerDashboard,HouseholdStatus} from '@/lib/types';
+import {useTranslation} from '@/lib/i18n';
+import {categoryLabel} from '@/lib/categories';
+import {formatDate,formatMoney,defaultCurrencyForLocale} from '@/lib/utils';
+import {PageSkeleton} from '@/components/Skeleton';
+import Money from '@/components/Money';
+import UnpricedNote from '@/components/UnpricedNote';
+import CurrencySelector from '@/components/CurrencySelector';
+import SampleReceipt from '@/components/SampleReceipt';
+import DeadlinesCard from '@/components/DeadlinesCard';
+import StatusBadge from '@/components/StatusBadge';
+import SavingsBlockCard from '@/components/SavingsBlockCard';
 
-import Link from "next/link";
-import useSWR from "swr";
-import { getConsumerDashboard } from "@/lib/api";
-import type {
-  ConsumerDashboard,
-  HouseholdStatus,
-  RecentReceipt,
-} from "@/lib/types";
-import { PageSkeleton } from "@/components/Skeleton";
-import EmptyState from "@/components/EmptyState";
-import SavingsBlockCard from "@/components/SavingsBlockCard";
-import Money from "@/components/Money";
-import UnpricedNote from "@/components/UnpricedNote";
-import DeadlinesCard from "@/components/DeadlinesCard";
-import { formatDate, formatMoney, formatMonth } from "@/lib/utils";
-import { categoryLabel } from "@/lib/categories";
-import { useTranslation } from "@/lib/i18n";
-
-/**
- * Consumer dashboard (F1.2 — docs/plans/consumer-pivot-2026-08-13.md §3.4).
- *
- * Seven blocks, each shows live backend data (GET /api/v1/consumer/dashboard):
- *   1. „{t("dailyRemaining")}" — daily remaining (budget countdown)
- *   2. Monthly spending by category — „where my money went"
- *   3. {t("priceAlerts")} (existing subscription engine)
- *   4. {t("cancellableSubscriptions")}
- *   5. {t("householdStatus")} (household budget + members)
- *   6. {t("recentReceipts")}
- *   7. {t("savingsOpportunities")} (SavingsBlockCard)
- *
- * Consumer language: no business jargon. in the empty state the block
- * onboarding/first-step CTA-ra mutat.
- */
-/** A zero that comes from receipts with no confirmed total is "unknown", not 0.00. */
-function spentOrUnknown(spent: number, unpriced: number | undefined): number | null {
-  return spent === 0 && (unpriced ?? 0) > 0 ? null : spent;
+export default function ConsumerDashboardPage(){
+ const {t,locale}=useTranslation();
+ const {data,error,isLoading,mutate}=useSWR<ConsumerDashboard>('/api/v1/consumer/dashboard',getConsumerDashboard);
+ const {data:counts}=useSWR('dashboard-receipt-count',()=>searchReceipts({limit:1}));
+ const {data:review}=useSWR('dashboard-review-count',()=>searchReceipts({status:'needs_review',limit:1}));
+ const {data:prefs,mutate:refreshPrefs}=useSWR('/product/preferences',getPreferences);
+ if(isLoading)return <PageSkeleton/>;
+ if(error||!data)return <div role="alert" className="card p-6"><h1 className="text-2xl font-bold">{t('overviewTitle')}</h1><p className="my-4">{t('couldNotLoad')}</p><button type="button" className="btn-primary" onClick={()=>mutate()}>{t('retry')}</button></div>;
+ const monthly=data.monthly_by_category,daily=data.daily_remaining;
+ const empty=counts?.total===0 || !counts&&data.recent_receipts.length===0;
+ const unknown=monthly.total_spent===0&&(monthly.unpriced_receipts??0)>0;
+ const currencyPicker=<section className="card p-5"><h2 className="text-lg font-semibold">{t('chooseCurrency')}</h2><p className="mb-4 mt-2 text-sm text-slate-600 dark:text-slate-400">{t('chooseCurrencyHint')}</p><CurrencySelector value={prefs?.base_currency_source==='saved'?prefs.base_currency:defaultCurrencyForLocale(locale)} onSaved={()=>{refreshPrefs();mutate()}}/></section>;
+ return <div className="space-y-6">
+  <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">{t('overviewTitle')}</h1><p className="mt-1 text-slate-600 dark:text-slate-400">{t('overviewSubtitle')}</p></div>{!empty&&<Link href="/upload" className="btn-primary">{t('addReceipt')}</Link>}</div>
+  {empty?<><section className="card p-6 sm:p-8"><h2 className="text-xl font-semibold">{t('firstReceiptTitle')}</h2><p className="mt-3 max-w-lg text-slate-600 dark:text-slate-400">{t('firstReceiptHint')}</p><Link href="/upload" className="btn-primary mt-6">{t('startWithReceipt')}</Link></section><SampleReceipt/>{!monthly.currency&&currencyPicker}</>:<>
+   <section data-testid="spending-summary" className="card p-6" aria-label={t('monthlySpending')}><p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('recordedSpending')} · {monthly.month}</p><p className="mt-2 text-4xl font-semibold tracking-tight"><Money amount={unknown?null:monthly.total_spent} currency={monthly.currency}/></p><p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{t('recordedSpendingHint')}</p><UnpricedNote count={monthly.unpriced_receipts}/>{Object.entries(monthly.other_currency_totals??{}).length>0&&<div className="mt-3 text-sm"><p>{t('otherCurrenciesHint')}</p>{Object.entries(monthly.other_currency_totals??{}).map(([code,value])=><p key={code}><Money amount={value} currency={code}/></p>)}</div>}</section>
+   {!!review?.total&&<section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"><h2 className="font-semibold">{review.total} {t('reviewCount')}</h2><Link href="/review" className="btn-primary">{t('checkReceipt')}</Link></section>}
+   <section className="card p-5"><div className="flex items-center justify-between gap-3"><h2 className="text-lg font-semibold">{t('recentReceipts')}</h2><Link href="/receipts" className="text-brand-700 underline dark:text-brand-300">{t('allReceiptsLink')}</Link></div><ul className="mt-3 divide-y divide-slate-200 dark:divide-slate-800">{data.recent_receipts.map(r=><li key={r.receipt_id}><Link href={`/receipts/${r.receipt_id}`} className="flex min-h-20 flex-wrap items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="break-words font-medium">{r.merchant||t('unknownVendorLabel')}</p><p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{formatDate(r.date)}</p></div><div className="text-right"><Money amount={r.total} currency={r.currency}/><div className="mt-1"><StatusBadge status={r.status}/></div></div></Link></li>)}</ul></section>
+   <div className="grid gap-4 lg:grid-cols-2"><section className="card p-5"><h2 className="text-lg font-semibold">{t('monthlySpending')}</h2><ul className="mt-3 space-y-3">{monthly.categories.map(c=><li key={c.key} className="flex items-center justify-between gap-3"><span>{categoryLabel(t,c.key)}</span><Money amount={c.total} currency={monthly.currency}/></li>)}</ul><Link href="/reports" className="btn-secondary mt-4">{t('openReports')}</Link></section>
+   <section className="card p-5"><h2 className="text-lg font-semibold">{daily?t('dailyRemaining'):t('noBudgetSet')}</h2>{daily?<><p className="mt-3 text-3xl font-semibold"><Money amount={daily.daily_remaining} currency={daily.currency}/></p><p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{t('incompleteDailyHint')}</p><UnpricedNote count={daily.unpriced_receipts}/><p className="mt-2 text-sm">{t('remaining')}: <Money amount={daily.remaining_this_month} currency={daily.currency}/></p>{(Object.keys(daily.other_currency_totals??{}).length>0||!!daily.other_budget_currencies?.length)&&<p className="mt-2 text-sm text-amber-800 dark:text-amber-300">{t('otherCurrenciesHint')}</p>}</>:<p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{t('noBudgetSetHint')}</p>}<Link href="/budget" className="btn-secondary mt-4">{t('budget')}</Link></section></div>
+   {!monthly.currency&&currencyPicker}
+   <HouseholdBlock household={data.household}/>
+   <SavingsBlockCard savings={data.savings}/>
+   <DeadlinesCard/>
+   {data.price_alerts.length>0&&<section className="card p-5"><h2 className="text-lg font-semibold">{t('priceAlerts')}</h2><ul className="mt-3 space-y-3">{data.price_alerts.map(a=><li key={a.merchant}><Link href="/subscriptions" className="block rounded-lg bg-amber-50 p-4 text-amber-950 dark:bg-amber-950 dark:text-amber-100">{a.merchant} · <Money amount={a.monthly_cost} currency={a.currency}/></Link></li>)}</ul></section>}
+   {data.cancellable_subscriptions.length>0&&<section className="card p-5"><h2 className="text-lg font-semibold">{t('cancellableSubscriptions')}</h2><Link href="/subscriptions" className="btn-secondary mt-4">{t('subscriptions')}</Link></section>}
+  </>}
+ </div>;
 }
 
-export default function ConsumerDashboardPage() {
-  const { t } = useTranslation();
-  const { data, error, isLoading } = useSWR<ConsumerDashboard>(
-    "/api/v1/consumer/dashboard",
-    getConsumerDashboard,
-  );
-
-  if (isLoading) return <PageSkeleton />;
-
-  if (error || !data) {
-    return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-          {t("overviewTitle")}
-        </h1>
-        <EmptyState
-          icon="⚠️"
-          title={t("error")}
-          description={t("retry")}
-          action={{ label: t("retry"), href: "/dashboard" }}
-        />
-      </div>
-    );
-  }
-
-  const { daily_remaining, monthly_by_category, price_alerts, cancellable_subscriptions, household, recent_receipts, savings } = data;
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {t("overviewTitle")}
-          </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {t("overviewSubtitle")}
-          </p>
-        </div>
-        <Link href="/upload" className="btn-primary">
-          {t("addReceipt")}
-        </Link>
-      </div>
-
-      {/* 1. {t("dailyRemaining")} */}
-      <section aria-label={t("dailyRemaining")} className="grid gap-4 lg:grid-cols-2">
-        {daily_remaining ? (
-          <div className="card p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                {t("dailyRemaining")}
-              </h2>
-              <span className="text-xl" aria-hidden="true">
-                💶
-              </span>
-            </div>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-brand-600 dark:text-brand-400">
-              {formatMoney(daily_remaining.daily_remaining, daily_remaining.currency)}
-            </p>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {daily_remaining.days_left} {t("dailyRemainingHint")}
-              {t("remaining")} {formatMoney(daily_remaining.remaining_this_month, daily_remaining.currency)}{" "}
-              
-            </p>
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-              <div
-                className="h-full rounded-full bg-brand-500 transition-all"
-                style={{ width: `${Math.min(100, daily_remaining.pct_used)}%` }}
-              />
-            </div>
-            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-               {daily_remaining.pct_used}%</p>
-          </div>
-        ) : (
-          <EmptyState
-            icon="🎯"
-            title={t("noBudgetSet")}
-            description={t("noBudgetSetHint")}
-            action={{ label: t("budgetCreateButton"), href: "/budget" }}
-          />
-        )}
-
-        {/* 5. {t("householdStatus")} */}
-        <HouseholdBlock household={household} />
-      </section>
-
-     
-      <section className="card p-5" aria-label={t("monthlySpending")}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              {t("monthlySpending")}
-            </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {formatMonth(monthly_by_category.month)} · {t("totalSpentLabel")}{" "}
-              <Money
-                amount={spentOrUnknown(monthly_by_category.total_spent, monthly_by_category.unpriced_receipts)}
-                currency={monthly_by_category.currency}
-              />
-              .
-            </p>
-            <UnpricedNote count={monthly_by_category.unpriced_receipts} />
-          </div>
-          <Link
-            href="/reports"
-            className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
-          >
-            {t("openReports")}
-          </Link>
-        </div>
-        {monthly_by_category.categories.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState
-              icon="🧾"
-              title={t("noReceipts")}
-              description={t("noReceiptYetHint")}
-              action={{ label: t("uploadFirst"), href: "/upload" }}
-            />
-          </div>
-        ) : (
-          <ul className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
-            {monthly_by_category.categories.map((category) => (
-              <li
-                key={category.key}
-                className="flex items-center justify-between gap-3 py-3"
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className="h-3 w-3 rounded-full bg-brand-500"
-                    aria-hidden="true"
-                  />
-                  <span className="font-medium text-slate-800 dark:text-slate-100">
-                    {categoryLabel(t, category.key)}
-                  </span>
-                  <span className="text-xs text-slate-600 dark:text-slate-400">
-                    {category.count} {t("receiptsCountLabel")}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-slate-500 dark:text-slate-400">
-                    {category.pct}%
-                  </span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
-                    {formatMoney(category.total, monthly_by_category.currency)}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* 3. {t("priceAlerts")} */}
-      <section className="card p-5" aria-label={t("priceAlerts")}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-            {t("priceAlerts")}
-          </h2>
-          <span className="text-xl" aria-hidden="true">
-            📈
-          </span>
-        </div>
-        {price_alerts.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState
-              icon="✅"
-              title={t("allClear")}
-              description={t("noPriceAlerts")}
-            />
-          </div>
-        ) : (
-          <ul className="mt-4 space-y-3">
-            {price_alerts.map((alert) => (
-              <li
-                key={alert.merchant}
-                className="rounded-lg border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-950/40"
-              >
-                <p className="font-medium text-slate-900 dark:text-slate-100">
-                  {alert.message}
-                </p>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                   {formatMoney(alert.monthly_cost, alert.currency)} — {t("warning")}
-                  
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <DeadlinesCard />
-
-      {/* 4. {t("cancellableSubscriptions")} */}
-      <section className="card p-5" aria-label={t("cancellableSubscriptions")}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              {t("cancellableSubscriptions")}
-            </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {t("cancellationGuideHint")}
-            </p>
-          </div>
-          <Link
-            href="/subscriptions"
-            className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
-          >
-            {t("allPurchases")}
-          </Link>
-        </div>
-        {cancellable_subscriptions.length === 0 ? (
-          <div className="mt-4">
-            <EmptyState
-              icon="🔁"
-              title={t("noSubscriptionsFound")}
-              description={t("noSubscriptions")}
-            />
-          </div>
-        ) : (
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {cancellable_subscriptions.map((subscription) => (
-              <li key={subscription.id} className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-medium text-slate-900 dark:text-slate-100">
-                    {subscription.merchant}
-                  </h3>
-                  {subscription.price_increase ? (
-                    <span className="inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-                      {t("warning")}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                  {subscription.currency ? formatMoney(subscription.monthly_cost, subscription.currency) : subscription.monthly_cost.toFixed(2)}/mo · {t("statusPending")}:{" "}
-                  {formatDate(subscription.renewal_date)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* 6. {t("recentReceipts")} */}
-      <RecentReceiptsBlock receipts={recent_receipts} />
-
-      {/* 7. {t("savingsOpportunities")} */}
-      <SavingsBlockCard savings={savings} />
-    </div>
-  );
+function spentOrUnknown(spent: number, unpriced: number | undefined): number | null {
+  return spent === 0 && (unpriced ?? 0) > 0 ? null : spent;
 }
 
 function HouseholdBlock({ household }: { household: HouseholdStatus }) {
@@ -358,57 +119,5 @@ function HouseholdBlock({ household }: { household: HouseholdStatus }) {
         </p>
       )}
     </div>
-  );
-}
-
-function RecentReceiptsBlock({ receipts }: { receipts: RecentReceipt[] }) {
-  const { t } = useTranslation();
-  return (
-    <section className="card p-5" aria-label={t("recentReceipts")}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          {t("recentReceipts")}
-        </h2>
-        <Link
-          href="/receipts"
-          className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
-        >
-          {t("allPurchases")}
-        </Link>
-      </div>
-      {receipts.length === 0 ? (
-        <div className="mt-4">
-          <EmptyState
-            icon="🧾"
-            title={t("noReceipts")}
-            description={t("noReceiptsHint")}
-            action={{ label: t("addReceipt"), href: "/upload" }}
-          />
-        </div>
-      ) : (
-        <ul className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
-          {receipts.map((receipt) => (
-            <li key={receipt.receipt_id}>
-              <Link
-                href={`/receipts/${receipt.receipt_id}`}
-                className="flex items-center justify-between gap-3 py-3 hover:bg-slate-50 dark:hover:bg-slate-900"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-800 dark:text-slate-100">
-                    {receipt.merchant}
-                  </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {formatDate(receipt.date)}
-                  </p>
-                </div>
-                <span className="shrink-0 font-semibold text-slate-900 dark:text-slate-100">
-                  {formatMoney(receipt.total, receipt.currency)}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }

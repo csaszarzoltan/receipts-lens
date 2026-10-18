@@ -56,3 +56,7 @@ logs/
 frontend/.prod-smoke/
 .env.e2e
 .claude/
+
+# Private UX release preparation: database backups and isolated source/builds.
+/backups/ux-release-*/
+/releases/ux-prep-*/

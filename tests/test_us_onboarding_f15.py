@@ -1,169 +1,50 @@
+"""F1.5 onboarding contract, superseded by the approved REQ-UX-10/18 flow.
+
+The 2026-10-12 plan replaces the three introductory slides with an immediate
+receipt workflow. Save, error, picker and camera behavior is tested by the
+frontend regression runner; this bridge runs those behaviors from pytest too.
 """
-BDD regression contract for F1.5 — the consumer 3-step onboarding flow
-(docs/plans/consumer-pivot-2026-08-13.md, §4 / F1.5).
-
-Scope: frontend contract tests. The flow lives in the Next.js frontend
-(app/onboarding/page.tsx + components/Onboarding.tsx), so this module
-asserts the source-of-truth artifacts that encode the acceptance criteria:
-
-  1. The onboarding consists of exactly 3 steps, with a sticky progress
-     indicator and forward/back navigation, and is always skippable.
-  2. Step 1 shows the one-sentence positioning promise (§3.1):
-     "Fotózd le a nyugtát. Mi megmutatjuk, hol folyik el a pénzed — és hol
-     takaríthatsz meg."
-  3. Finishing navigates to the consumer dashboard (/dashboard).
-  4. State persistence: preferences.onboarding_done gates the flow — a user
-     who already completed onboarding is not shown it again.
-  5. Step 2 offers camera / upload access (capture input or camera button).
-
-Backend wire format is untouched by this feature (schema change is F1.3).
-"""
-from __future__ import annotations
-
+import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-FRONTEND = REPO_ROOT / "frontend"
-
-# Plan §3.1 — the one-sentence positioning promise. Both surfaces render it
-# through the i18n key (page.tsx/modal resolve it at render time).
-PROMISE = "onboardingPromise"
-
-# Acceptance 3 — the post-onboarding destination.
-DASHBOARD_HREF = "/dashboard"
+ROOT = Path(__file__).resolve().parents[1]
+FRONTEND = ROOT / "frontend"
 
 
-def _read(rel: str) -> str:
-    path = FRONTEND / rel
-    assert path.exists(), f"{rel} missing — F1.5 onboarding contract depends on it"
-    return path.read_text(encoding="utf-8")
+@pytest.fixture(scope="module")
+def onboarding_behaviors():
+    node = shutil.which("node")
+    if not node or not (FRONTEND / "node_modules/typescript").is_dir():
+        pytest.skip("Frontend dependencies and Node are required for behavioral checks")
+    result = subprocess.run([node, str(FRONTEND / "tests/ux-regressions.cjs")],
+                            cwd=ROOT, capture_output=True, text=True, timeout=30, check=False)
+    assert result.returncode == 0, result.stdout + result.stderr
+    return result.stdout
 
 
-@pytest.mark.test_id("TEST-ONB-001")
-@pytest.mark.requirements("REQ-US-F15-01")
-@pytest.mark.scenario("The dedicated onboarding route exists (app/onboarding/page.tsx).")
-def test_f15_onboarding_page_exists() -> None:
-    """The dedicated onboarding route exists (app/onboarding/page.tsx)."""
-    assert (FRONTEND / "app/onboarding/page.tsx").exists()
+@pytest.mark.requirements("REQ-UX-10")
+def test_onboarding_page_and_modal_use_same_receipt_flow():
+    for relative in ("app/onboarding/page.tsx", "components/Onboarding.tsx"):
+        source = (FRONTEND / relative).read_text()
+        assert "<OnboardingFlow" in source
 
 
-@pytest.mark.test_id("TEST-ONB-002")
-@pytest.mark.requirements("REQ-US-F15-01")
-@pytest.mark.scenario("Acceptance 1: the flow is 3 steps — value promise, camera/upload, first receipt — with a sticky indicator and ")
-def test_f15_exactly_three_steps() -> None:
-    """Acceptance 1: the flow is 3 steps — value promise, camera/upload,
-    first receipt — with a sticky indicator and forward/back navigation."""
-    page = _read("app/onboarding/page.tsx")
-    modal = _read("components/Onboarding.tsx")
-
-    for src, label in ((page, "onboarding page"), (modal, "onboarding modal")):
-        # Exactly three step definitions (icon/title/body tuples, via i18n keys).
-        assert "onboardingStepWhat" in src, f"{label}: step 1 (Mi ez?) missing"
-        assert "onboardingStepCamera" in src, f"{label}: step 2 (camera access) missing"
-        assert "onboardingStepFirst" in src, f"{label}: step 3 (first receipt) missing"
-
-        # Sticky progress indicator (back/forward state preserved across steps).
-        # The counter label resolves at render time via the i18n key.
-        assert "aria-label" in src and "onboardingStepOf" in src, f"{label}: step counter missing"
-        assert "setStep((value) => value - 1)" in src, f"{label}: Back navigation missing"
-        assert "setStep((value) => value + 1)" in src, f"{label}: Next navigation missing"
+@pytest.mark.requirements("REQ-UX-10")
+def test_onboarding_saves_currency_and_preserves_page_on_save_failure(onboarding_behaviors):
+    assert re.search(r"^ok \d+ - REQ-UX-10 .*shared onboarding saves currency",
+                     onboarding_behaviors, re.MULTILINE)
 
 
-@pytest.mark.test_id("TEST-ONB-003")
-@pytest.mark.requirements("REQ-US-F15-01")
-@pytest.mark.scenario("Acceptance 2: step 1 shows the one-sentence positioning promise (§3.1).")
-def test_f15_step1_shows_positioning_promise() -> None:
-    """Acceptance 2: step 1 shows the one-sentence positioning promise (§3.1)."""
-    page = _read("app/onboarding/page.tsx")
-    modal = _read("components/Onboarding.tsx")
-
-    assert PROMISE in page, (
-        "onboarding page step 1 must show the positioning promise verbatim"
-    )
-    assert PROMISE in modal, (
-        "onboarding modal step 1 must show the positioning promise verbatim"
-    )
-
-
-@pytest.mark.test_id("TEST-ONB-004")
-@pytest.mark.requirements("REQ-US-F15-01")
-@pytest.mark.scenario("Acceptance 3: after the flow, the user lands on /dashboard.")
-def test_f15_finish_navigates_to_consumer_dashboard() -> None:
-    """Acceptance 3: after the flow, the user lands on /dashboard."""
-    page = _read("app/onboarding/page.tsx")
-    modal = _read("components/Onboarding.tsx")
-
-    assert f'router.push("{DASHBOARD_HREF}")' in page, (
-        "onboarding page must navigate to /dashboard on finish"
-    )
-    assert f'router.push("{DASHBOARD_HREF}")' in modal, (
-        "onboarding modal must navigate to /dashboard on finish"
-    )
-
-
-@pytest.mark.test_id("TEST-ONB-005")
-@pytest.mark.requirements("REQ-US-F15-01")
-@pytest.mark.scenario("Acceptance 4: onboarding_done gates the flow — completed users never see it again (persistence is the preferen")
-def test_f15_state_persistence_prevents_replay() -> None:
-    """Acceptance 4: onboarding_done gates the flow — completed users never
-    see it again (persistence is the preferences API)."""
-    page = _read("app/onboarding/page.tsx")
-    modal = _read("components/Onboarding.tsx")
-
-    # Both surfaces must persist completion through the preferences API.
-    assert "savePreferences({ onboarding_done: true })" in page, (
-        "onboarding page must persist onboarding_done via savePreferences"
-    )
-    assert "savePreferences({ onboarding_done: true })" in modal, (
-        "onboarding modal must persist onboarding_done via savePreferences"
-    )
-    # The modal must not render for users who already completed onboarding.
-    assert "onboarding_done" in modal and "getPreferences" in modal, (
-        "onboarding modal must gate on preferences.onboarding_done"
-    )
-    # The dedicated page must redirect already-onboarded users to the
-    # dashboard instead of replaying the flow.
-    assert "getPreferences" in page and 'router.replace("/dashboard")' in page, (
-        "onboarding page must redirect completed users to the dashboard"
-    )
-
-
-@pytest.mark.test_id("TEST-ONB-006")
-@pytest.mark.requirements("REQ-US-F15-01")
-@pytest.mark.scenario("Acceptance (step 2): camera capture + gallery upload access for the first receipt. The dedicated page owns the")
-def test_f15_step2_offers_camera_and_upload_access() -> None:
-    """Acceptance (step 2): camera capture + gallery upload access for the
-    first receipt. The dedicated page owns the picker (camera capture input
-    with a visible camera button and a gallery fallback)."""
-    page = _read("app/onboarding/page.tsx")
-
-    assert "capture=\"environment\"" in page, (
-        "onboarding page must offer camera capture via <input capture>"
-    )
-    assert "onboardingTakePhoto" in page, (
-        "onboarding page must surface a camera button on step 2"
-    )
-    assert "onboardingUploadFromDevice" in page, (
-        "onboarding page must offer gallery upload on step 2"
-    )
-
-
-@pytest.mark.test_id("TEST-ONB-007")
-@pytest.mark.requirements("REQ-US-F15-01")
-@pytest.mark.scenario("Acceptance (step 3): the first receipt is submitted and the extracted result is presented (vendor + total + co")
-def test_f15_step3_shows_first_receipt_result() -> None:
-    """Acceptance (step 3): the first receipt is submitted and the extracted
-    result is presented (vendor + total + confidence) before navigating on."""
-    page = _read("app/onboarding/page.tsx")
-
-    assert "uploadReceipt" in page, (
-        "step 3 must submit the first receipt through the real upload API"
-    )
-    assert "onboardingProcessing" in page, (
-        "step 3 must show an in-flight processing state"
-    )
-    assert "vendor" in page and "total" in page, (
-        "step 3 must render the extracted vendor and total"
-    )
+@pytest.mark.requirements("REQ-UX-01", "REQ-UX-18")
+def test_first_receipt_picker_and_camera_behaviors(onboarding_behaviors):
+    for behavior in ("file chooser is a real working button",
+                     "camera double activation makes only one media request",
+                     "cancelled camera request never opens and releases late stream",
+                     "capture waits for preview and emits only one JPEG",
+                     "failed image encoding keeps camera open and allows retry"):
+        assert re.search(r"^ok \d+ - .*" + re.escape(behavior),
+                         onboarding_behaviors, re.MULTILINE)

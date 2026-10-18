@@ -35,13 +35,14 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/settings", labelKey: "settings", icon: "⚙️", group: "account" },
 ];
 
-/** Sidebar sections in display order, each with its items in NAV_ITEMS order. */
-export const NAV_SECTIONS: { group: NavGroup; labelKey?: MessageKey; items: NavItem[] }[] = [
-  { group: "home", items: NAV_ITEMS.filter((i) => i.group === "home") },
-  { group: "capture", labelKey: "navGroupCapture", items: NAV_ITEMS.filter((i) => i.group === "capture") },
-  { group: "analyse", labelKey: "navGroupAnalyze", items: NAV_ITEMS.filter((i) => i.group === "analyse") },
-  { group: "account", items: NAV_ITEMS.filter((i) => i.group === "account") },
+/** Stable routes are retained; only primary destinations are simplified. */
+export const PRIMARY_NAV_ITEMS: NavItem[] = [
+  {href:"/dashboard", labelKey:"overviewTitle", icon:"", group:"home"},
+  {href:"/receipts", labelKey:"receipts", icon:"", group:"capture"},
+  {href:"/finances", labelKey:"finances", icon:"", group:"analyse"},
+  {href:"/more", labelKey:"moreSections", icon:"", group:"account"},
 ];
+export const NAV_SECTIONS = [{group:"home" as NavGroup, items:PRIMARY_NAV_ITEMS}];
 
 /**
  * Business section (F1.1) — B2B labels translated via i18n.
@@ -60,4 +61,4 @@ export function getNavLabel(item: NavItem, locale?: Locale): string {
 }
 
 /** Primary mobile bottom-tab items (first five consumer destinations). */
-export const MOBILE_TABS: NavItem[] = NAV_ITEMS.slice(0, 5);
+export const MOBILE_TABS: NavItem[] = [PRIMARY_NAV_ITEMS[0], PRIMARY_NAV_ITEMS[1], {href:"/upload",labelKey:"addReceipt",icon:""}, PRIMARY_NAV_ITEMS[2], PRIMARY_NAV_ITEMS[3]];

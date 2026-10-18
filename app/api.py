@@ -328,7 +328,10 @@ def consumer_dashboard(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     tenant_id = _resolve_tenant_from_auth(authorization, x_tenant_id, x_role)
-    return build_consumer_dashboard(tenant_id, period=period)
+    role = x_role or "admin"
+    if authorization and authorization.lower().startswith("bearer "):
+        role = service.resolve_session(authorization.split(" ", 1)[1].strip())["role"]
+    return build_consumer_dashboard(tenant_id, period=period, role=role)
 
 # ---------------------------------------------------------------------------
 # Configurable limits (plumbed into fetch_image_bytes defaults)
