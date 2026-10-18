@@ -54,6 +54,8 @@ def test_read_marking_does_not_write_back_to_the_database():
     stored = strip_provenance(service, rid)
 
     service.get_receipt(actor, rid)
+    service.search_receipts(actor, status="completed")
+    service.search_receipts(actor, status="needs_review")
     row = service._db.execute("SELECT payload FROM receipts WHERE receipt_id=?", (rid,)).fetchone()
     assert json.loads(row[0]) == stored
 
