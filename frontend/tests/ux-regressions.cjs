@@ -7,7 +7,7 @@ test('REQ-UX-03 AC-UX-03 unknown and zero confidence',()=>{const m=load('lib/con
 test('REQ-UX-08 AC-UX-08 five mobile destinations include capture and retain receipts',()=>{const m=load('lib/nav.ts',{'./i18n':i18n});assert.equal(m.MOBILE_TABS.length,5);assert.deepEqual(Array.from(m.MOBILE_TABS,x=>x.href),['/dashboard','/receipts','/upload','/finances','/more']);});
 
 function nodes(element) {if(element===null||element===undefined||typeof element==='boolean')return[];if(Array.isArray(element))return element.flatMap(nodes);if(typeof element!=='object')return[element];return[element,...nodes(element.props?.children)];}
-function uiMocks(h,extra={}) {return {'react':h.react,'@/lib/i18n':i18n,'next/link':'a','@/components/SavingsBlockCard':'savings','@/lib/utils':{cx:(...x)=>x.filter(Boolean).join(' '),formatDate:x=>x,formatMoney:x=>String(x),defaultCurrencyForLocale:()=> 'HUF'},...extra};}
+function uiMocks(h,extra={}) {return {'react':h.react,'@/lib/i18n':i18n,'@/lib/imageQuality':{assessImageQuality:async()=>({ok:true}),assessCanvas:()=>({ok:true})},'next/link':'a','@/components/SavingsBlockCard':'savings','@/lib/utils':{cx:(...x)=>x.filter(Boolean).join(' '),formatDate:x=>x,formatMoney:x=>String(x),defaultCurrencyForLocale:()=> 'HUF'},...extra};}
 test('REQ-UX-01 AC-UX-01 file chooser is a real working button and disabled respects keyboard',()=>{
  const h=hooks();const m=load('components/DropZone.tsx',uiMocks(h,{'@/lib/hooks/useDialogFocus':{useDialogFocus:()=>({current:null})}}));
  const tree=h.render(()=>m.default({onFiles:()=>{}}));const flat=nodes(tree);let clicked=0;
@@ -181,4 +181,27 @@ test('REQ-UX-09/13 dashboard preserves household and savings for existing receip
  const rendered=nodes(h.render(()=>block.type(block.props)));assert.ok(rendered.includes('member@example.test'));
  for(const amount of [1000,250,750])assert.ok(rendered.some(x=>x?.type==='money'&&x.props.amount===amount&&x.props.currency==='HUF'));
  assert.ok(all.some(x=>x?.type==='savings'&&x.props.savings===savings));
+});
+
+function pixels(w,h,fn){const d=new Uint8ClampedArray(w*h*4);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const v=fn(x,y),i=(y*w+x)*4;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}return d;}
+function boxBlur(d,w,h,r){const o=new Uint8ClampedArray(d.length);for(let y=0;y<h;y++)for(let x=0;x<w;x++){let s=0,c=0;for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<w&&yy<h){s+=d[(yy*w+xx)*4];c++}}const v=s/c,i=(y*w+x)*4;o[i]=o[i+1]=o[i+2]=v;o[i+3]=255}return o;}
+test('REQ-I1 AC1 assessPixels flags blurred and dark photos and accepts a sharp one',()=>{
+ const m=load('lib/imageQuality.ts');const W=120,H=120;
+ const sharp=pixels(W,H,(x,y)=>(Math.floor(x/2)+Math.floor(y/6))%2?235:25);
+ const blurred=boxBlur(sharp,W,H,6);const dark=pixels(W,H,(x,y)=>(Math.floor(x/2)%2?30:5));
+ assert.deepEqual({ok:m.assessPixels(sharp,W,H).ok},{ok:true});
+ assert.equal(m.assessPixels(blurred,W,H).ok,false);assert.equal(m.assessPixels(blurred,W,H).reason,'blurry');
+ assert.equal(m.assessPixels(dark,W,H).reason,'dark');
+ assert.equal(m.assessPixels(new Uint8ClampedArray(4),1,1).ok,true,'unmeasurable input never blocks');
+});
+test('REQ-I1 AC2 blurry picked file is held until the user chooses; sharp files upload at once',async()=>{
+ const h=hooks();const files=[];const results={'blur.jpg':{ok:false,reason:'blurry'},'sharp.jpg':{ok:true}};
+ const m=load('components/DropZone.tsx',uiMocks(h,{'@/lib/hooks/useDialogFocus':{useDialogFocus:()=>({current:null})},'@/lib/imageQuality':{assessImageQuality:async f=>results[f.name],assessCanvas:()=>({ok:true})}}));
+ const render=()=>nodes(h.render(()=>m.default({onFiles:l=>files.push(...l.map(f=>f.name))})));
+ const input=render().find(x=>x?.type==='input'&&x.props['data-testid']==='dropzone-input');
+ input.props.onChange({target:{files:[{name:'blur.jpg'},{name:'sharp.jpg'}],value:''}});await new Promise(r=>setTimeout(r,0));
+ assert.deepEqual(files,['sharp.jpg'],'only the sharp file is uploaded');
+ const all=render();assert.ok(all.includes('qualityTitle'),'warning shown');
+ const anyway=all.find(x=>x?.type==='button'&&x.props.children==='dropUploadAnyway');assert.ok(anyway);assert.ok(all.some(x=>x?.type==='button'&&x.props.children==='dropRetake'));
+ anyway.props.onClick();assert.deepEqual(files,['sharp.jpg','blur.jpg']);assert.ok(!render().includes('qualityTitle'));
 });
