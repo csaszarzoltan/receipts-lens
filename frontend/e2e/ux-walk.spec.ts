@@ -102,6 +102,7 @@ for (const [name, url, ready] of [
 test('I2 keyboard only: the file button opens the chooser and the mismatch review is reachable', async ({ page }) => {
   await reviewSeed(page);
   await page.goto('/upload');
+  await page.waitForLoadState('networkidle'); // the keypress must not land before hydration attaches handlers
   const button = page.getByRole('button', { name: 'Fájl kiválasztása', exact: true });
   await button.focus();
   await expect(button).toBeFocused();
@@ -117,4 +118,41 @@ test('I2 keyboard only: the file button opens the chooser and the mismatch revie
     await page.keyboard.press('Tab');
   }
   expect(focusable.some(x => x.includes('Összeg megerősítése') || x.includes('Rendben'))).toBe(true);
+});
+
+/** Width and height of the first JPEG inside a multipart body (SOF marker). */
+function jpegSize(body: Buffer): { width: number; height: number } {
+  let i = body.indexOf(Buffer.from([0xff, 0xd8]));
+  i += 2;
+  while (i < body.length - 9) {
+    if (body[i] !== 0xff) { i++; continue; }
+    const marker = body[i + 1];
+    if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+      return { height: body.readUInt16BE(i + 5), width: body.readUInt16BE(i + 7) };
+    }
+    i += 2 + body.readUInt16BE(i + 2);
+  }
+  throw new Error('no JPEG size found');
+}
+
+test('I5 a receipt photographed on a dark table is cropped to the paper; a full-frame receipt is untouched', async ({ page }) => {
+  await seed(page);
+  const sizes: { width: number; height: number; name: string }[] = [];
+  await page.route('**/product/receipts/upload', async route => {
+    if (route.request().method() === 'OPTIONS') { await fulfill(route, {}); return; }
+    const body = route.request().postDataBuffer()!;
+    sizes.push({ ...jpegSize(body), name: /filename="([^"]+)"/.exec(body.toString('latin1'))?.[1] ?? '' });
+    await fulfill(route, { status: 201, json: { receipt_id: 'r' + sizes.length, status: 'completed', receipt: { vendor: 'Coop', total: 1200, currency: 'HUF' } } });
+  });
+  await page.goto('/upload');
+  const input = page.getByTestId('dropzone-input');
+  await input.setInputFiles({ name: 'table.jpg', mimeType: 'image/jpeg', buffer: fixture('test-receipt-coop-on-table.jpg') });
+  await expect.poll(() => sizes.length).toBe(1);
+  expect(sizes[0].width).toBeLessThan(800);   // original is 1100 wide, the paper is 600 wide
+  expect(sizes[0].height).toBeLessThan(950);  // original is 1100 high, the paper is 800 high
+  expect(sizes[0].width).toBeGreaterThanOrEqual(600);
+  expect(sizes[0].height).toBeGreaterThanOrEqual(800);
+  await input.setInputFiles({ name: 'full.jpg', mimeType: 'image/jpeg', buffer: fixture('test-receipt-coop.jpg') });
+  await expect.poll(() => sizes.length).toBe(2);
+  expect(sizes[1]).toMatchObject({ width: 600, height: 800, name: 'full.jpg' });
 });

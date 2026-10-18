@@ -5,6 +5,7 @@ import { useDialogFocus } from "@/lib/hooks/useDialogFocus";
 import { cx } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { assessCanvas, assessImageQuality, type QualityIssue } from "@/lib/imageQuality";
+import { autoCropFile, receiptBoxFromCanvas } from "@/lib/imageCrop";
 
 interface DropZoneProps {
   onFiles: (files: File[]) => void;
@@ -55,14 +56,19 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
     if (!mounted.current) return;
     const good = files.filter((_, i) => results[i].ok);
     const bad = files.filter((_, i) => !results[i].ok);
-    if (good.length) onFiles(good);
+    if (good.length) {
+      const cropped = await Promise.all(good.map(autoCropFile));
+      if (!mounted.current) return;
+      onFiles(cropped);
+    }
     if (bad.length) setHeld({ files: bad, reason: results.find(r => !r.ok)?.reason ?? "blurry" });
   }
 
   function uploadHeldAnyway() {
     if (!held) return;
-    onFiles(held.files);
+    const files = held.files;
     setHeld(null);
+    void Promise.all(files.map(autoCropFile)).then(cropped => { if (mounted.current) onFiles(cropped); });
   }
 
   function retakeHeld() {
@@ -154,7 +160,18 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
       if (!context) { failed(); return; }
       context.drawImage(video, 0, 0);
       const quality = assessCanvas(canvas);
-      canvas.toBlob((blob) => {
+      const box = receiptBoxFromCanvas(canvas);
+      let target: HTMLCanvasElement = canvas;
+      if (box) {
+        const cropped = document.createElement("canvas");
+        cropped.width = box.width; cropped.height = box.height;
+        const croppedContext = cropped.getContext("2d");
+        if (croppedContext) {
+          croppedContext.drawImage(canvas, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
+          target = cropped;
+        }
+      }
+      target.toBlob((blob) => {
         if (!mounted.current || session !== cameraSession.current) return;
         if (!blob) { failed(); return; }
         const file = new File([blob], `receipt-${Date.now()}.jpg`, { type: "image/jpeg" });
