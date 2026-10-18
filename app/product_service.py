@@ -364,6 +364,13 @@ class ProductService:
         payload["category"] = category.strip() if category else None
         payload["category_source"] = "user"
 
+    @staticmethod
+    def _with_currency_provenance(payload: dict[str, Any]) -> dict[str, Any]:
+        """Mark rows saved before currency provenance existed as unverified; the stored row is untouched."""
+        if "currency_source" in payload:
+            return payload
+        return {**payload, "currency_source": "unverified", "currency_assumed": True}
+
     def suggest_category(self, actor: Actor, vendor: str | None) -> str | None:
         if not vendor:
             return None
@@ -436,7 +443,7 @@ class ProductService:
             if not self._review_row_matches(row, payload, confidence, confidence_field, confidence_lt, readiness):
                 continue
             items.append({"receipt_id":row["receipt_id"],"status":row["status"],"readiness":row["status"],
-                          "version":row["version"],"receipt":payload,"lowest_confidence":min([v for v in confidence.values() if isinstance(v,(int,float))],default=None),
+                          "version":row["version"],"receipt":self._with_currency_provenance(payload),"lowest_confidence":min([v for v in confidence.values() if isinstance(v,(int,float))],default=None),
                           "selected_confidence":value,"created_at":row["created_at"],
                           "checks":line_sum_check(payload)})
         if sort == "amount_desc": items.sort(key=lambda x: float(x["receipt"].get("total") or 0), reverse=True)
@@ -836,7 +843,7 @@ class ProductService:
                 continue
             items.append({"receipt_id":row["receipt_id"],"status":row["status"],
                           "version":row["version"],"created_at":row["created_at"],
-                          "receipt":payload,"metadata":{"tags":tags,"project":row["project"],
+                          "receipt":self._with_currency_provenance(payload),"metadata":{"tags":tags,"project":row["project"],
                           "cost_center":row["cost_center"]}, "readiness": result_readiness})
         return {"items":items[offset:offset+limit],"total":len(items),"limit":limit,
                 "offset":offset,"categories":sorted(categories)}
@@ -854,7 +861,7 @@ class ProductService:
         return {
             "receipt_id": row["receipt_id"], "status": row["status"],
             "version": row["version"], "created_at": row["created_at"],
-            "receipt": payload,
+            "receipt": self._with_currency_provenance(payload),
             "suggested_category": self.suggest_category(actor, payload.get("vendor")),
             "metadata": {"tags": tags, "project": row["project"],
                          "cost_center": row["cost_center"]},

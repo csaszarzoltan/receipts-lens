@@ -224,3 +224,14 @@ test('REQ-I5 AC1 findReceiptBox crops to the paper and leaves unclear photos alo
  assert.equal(m.findReceiptBox(pixels(W,H,(x,y)=>x<20&&y<20?230:40),W,H),null,'tiny bright patch is not a receipt');
  assert.equal(m.findReceiptBox(new Uint8ClampedArray(4),1,1),null);
 });
+
+test('REQ-I6 AC-I6 unverified currency shows an amber badge and an editable currency on the review card',()=>{
+ const h=hooks();const m=load('components/CurrencyField.tsx',{'react':h.react,'@/lib/i18n':i18n,'@/lib/api':{updateReceiptWorkspace:async()=>({})},'@/lib/utils':{defaultCurrencyForLocale:()=>'HUF'}});
+ const tree=h.render(()=>m.default({receiptId:'r1',currency:'USD',source:'unverified',assumed:true,version:1,onSaved:()=>{}}));const all=nodes(tree);
+ assert.ok(all.includes('currencyAssumedUnverified'));assert.ok(all.some(x=>x?.props?.['data-testid']==='currency-field'));
+ const source=fs.readFileSync(path.join(__dirname,'..','app/(app)/review/page.tsx'),'utf8');
+ assert.match(source,/<CurrencyField[\s\S]*?receiptId=\{item\.receipt_id\}/);assert.match(source,/item\.receipt\.currency_assumed/);
+});
+test('REQ-I6 AC-I6 every locale has the unverified-currency message',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'..','lib/i18n.ts'),'utf8');assert.equal((source.match(/currencyAssumedUnverified:/g)||[]).length,10);
+});

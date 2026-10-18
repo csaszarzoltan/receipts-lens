@@ -6,6 +6,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { correctReceipt, getReceiptImage, getReviewItems, rereadReviewTotals } from "@/lib/api";
 import type { ReviewItem } from "@/lib/types";
+import CurrencyField from "@/components/CurrencyField";
 import EmptyState from "@/components/EmptyState";
 import StatusBadge from "@/components/StatusBadge";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
@@ -374,6 +375,18 @@ function ReviewCard({ item, reading, onDone }: { item: ReviewItem; reading: bool
             <p id={`${inputId}-hint`} className={cx("mt-2 text-xs font-medium", invalid ? "text-rose-700 dark:text-rose-300" : stateTone)}>
               {invalid ? t("reviewInvalidAmount") : stateLabel}
             </p>
+            {item.receipt.currency_assumed ? (
+              <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
+                <CurrencyField
+                  receiptId={item.receipt_id}
+                  currency={item.receipt.currency ?? null}
+                  source={item.receipt.currency_source}
+                  assumed
+                  version={item.version}
+                  onSaved={onDone}
+                />
+              </div>
+            ) : null}
           </div>
 
           {hasLineMismatch(item) ? null : <CheckLine item={item} />}
