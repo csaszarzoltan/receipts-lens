@@ -205,3 +205,10 @@ test('REQ-I1 AC2 blurry picked file is held until the user chooses; sharp files 
  const anyway=all.find(x=>x?.type==='button'&&x.props.children==='dropUploadAnyway');assert.ok(anyway);assert.ok(all.some(x=>x?.type==='button'&&x.props.children==='dropRetake'));
  anyway.props.onClick();assert.deepEqual(files,['sharp.jpg','blur.jpg']);assert.ok(!render().includes('qualityTitle'));
 });
+
+test('REQ-I4 AC1 receipts whose lines do not add up come first in the review queue, order otherwise stable',()=>{
+ const m=load('lib/reviewOrder.ts');const mk=(id,lm)=>({receipt_id:id,receipt:{},checks:lm===undefined?undefined:{lines_match:lm,line_sum:1}});
+ const out=m.sortReviewItems([mk('a',true),mk('b',false),mk('c',null),mk('d',false),mk('e')]).map(x=>x.receipt_id);
+ assert.deepEqual(Array.from(out),['b','d','a','c','e']);
+ assert.equal(m.hasLineMismatch(mk('x',false)),true);assert.equal(m.hasLineMismatch(mk('x',null)),false);
+});

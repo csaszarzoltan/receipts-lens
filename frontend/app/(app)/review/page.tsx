@@ -11,6 +11,7 @@ import StatusBadge from "@/components/StatusBadge";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { SkeletonCard } from "@/components/Skeleton";
 import { cx, formatDate, formatMoney, parseAmount } from "@/lib/utils";
+import { hasLineMismatch, sortReviewItems } from "@/lib/reviewOrder";
 import { useTranslation } from "@/lib/i18n";
 
 /** Receipts with an uncertain OCR extraction land in review. */
@@ -71,7 +72,7 @@ function ReviewWorkspace() {
     ["/product/review-items", receiptId],
     () => getReviewItems(receiptId),
   );
-  const items = React.useMemo(() => data?.items ?? [], [data]);
+  const items = React.useMemo(() => sortReviewItems(data?.items ?? []), [data]);
   const pendingReads = items.filter(needsReread).length;
   const [reading, setReading] = React.useState(false);
   const readingRef = React.useRef(false);
@@ -198,7 +199,7 @@ function ReviewWorkspace() {
   );
 }
 
-function CheckLine({ item }: { item: ReviewItem }) {
+function CheckLine({ item, emphasis = false }: { item: ReviewItem; emphasis?: boolean }) {
   const { t } = useTranslation();
   const checks = item.checks;
   const currency = item.receipt.currency;
@@ -221,7 +222,13 @@ function CheckLine({ item }: { item: ReviewItem }) {
     );
   }
   return (
-    <p className="flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300">
+    <p
+      className={cx(
+        "flex items-start gap-2 text-sm text-amber-800 dark:text-amber-300",
+        emphasis && "rounded-lg border border-amber-300 bg-amber-50 p-3 font-medium dark:border-amber-800 dark:bg-amber-950/40",
+      )}
+      data-testid={emphasis ? "review-mismatch" : undefined}
+    >
       <span className="mt-0.5 shrink-0"><Icon kind="warn" /></span>
       <span>
         {t("reviewLinesDiffer")} <strong className="tabular-nums">{formatMoney(checks.line_sum, currency)}</strong>,{" "}
@@ -321,6 +328,7 @@ function ReviewCard({ item, reading, onDone }: { item: ReviewItem; reading: bool
           )}
         </div>
         <div className="flex flex-col gap-4 p-5">
+          {hasLineMismatch(item) ? <CheckLine item={item} emphasis /> : null}
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -368,7 +376,7 @@ function ReviewCard({ item, reading, onDone }: { item: ReviewItem; reading: bool
             </p>
           </div>
 
-          <CheckLine item={item} />
+          {hasLineMismatch(item) ? null : <CheckLine item={item} />}
 
           <div className="flex flex-wrap items-start gap-x-3 gap-y-2 text-sm text-slate-600 dark:text-slate-400">
             <ConfidenceBadge
