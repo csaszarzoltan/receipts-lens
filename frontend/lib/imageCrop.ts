@@ -97,6 +97,8 @@ export async function autoCropFile(file: File): Promise<File> {
       out.width = box.width; out.height = box.height;
       const ctx = out.getContext("2d");
       if (!ctx) return file;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, box.width, box.height);
       ctx.drawImage(bitmap, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
       const blob = await new Promise<Blob | null>(resolve => out.toBlob(resolve, "image/jpeg", 0.92));
       if (!blob || blob.size === 0) return file;
