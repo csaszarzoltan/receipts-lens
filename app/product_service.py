@@ -155,33 +155,62 @@ class ProductService:
         migrate_upload_commands(self._db)
 
     def idempotent_upload(self, actor: Actor, key: str, fingerprint: str,
-                          create: Any) -> dict[str, Any]:
+                          create: Any, *, prepare: Any = None, discard: Any = None) -> dict[str, Any]:
         """Persist the command and all nested receipt writes in one transaction.
 
         Successful commands do not expire. A rolled-back attempt can be retried.
         BEGIN IMMEDIATE serializes competing connections/processes, including
         commands arriving after a restart. No image or credentials are stored
         in this command table.
+
+        ``prepare`` (optional) runs the slow, write-free part (OCR) before the
+        write lock is taken and its result is passed to ``create``. ``discard``
+        is called once when prepared work ends up unused: the key was already
+        stored, or the transaction failed, so the caller can give back a quota unit.
         """
         if not 1 <= len(key) <= 200 or key != key.strip():
             raise ValueError("Idempotency-Key must contain 1..200 characters without outer whitespace")
-        with self._lock, self._db:
-            self._db.execute("BEGIN IMMEDIATE")
-            row = self._db.execute(
-                "SELECT fingerprint,result FROM upload_commands WHERE tenant_id=? AND command_key=?",
-                (actor.tenant_id, key),
-            ).fetchone()
-            if row:
-                if row["fingerprint"] != fingerprint:
-                    raise ProductConflict("Idempotency-Key was already used for another upload")
-                result = json.loads(row["result"])
-                if result.get("purged"):
-                    raise ProductConflict("The original upload was removed by the retention policy")
+        prepared: Any = None
+        has_prepared = False
+        released = False
+
+        def release() -> None:
+            nonlocal released
+            if has_prepared and not released:
+                released = True
+                if discard:
+                    discard()
+
+        if prepare:
+            with self._lock:
+                row = self._db.execute(
+                    "SELECT fingerprint,result FROM upload_commands WHERE tenant_id=? AND command_key=?",
+                    (actor.tenant_id, key)).fetchone()
+            if row is None:
+                prepared = prepare()
+                has_prepared = True
+        try:
+            with self._lock, self._db:
+                self._db.execute("BEGIN IMMEDIATE")
+                row = self._db.execute(
+                    "SELECT fingerprint,result FROM upload_commands WHERE tenant_id=? AND command_key=?",
+                    (actor.tenant_id, key),
+                ).fetchone()
+                if row:
+                    release()
+                    if row["fingerprint"] != fingerprint:
+                        raise ProductConflict("Idempotency-Key was already used for another upload")
+                    result = json.loads(row["result"])
+                    if result.get("purged"):
+                        raise ProductConflict("The original upload was removed by the retention policy")
+                    return result
+                result = create(prepared) if prepare else create()
+                self._db.execute("INSERT INTO upload_commands VALUES (?,?,?,?,?)",
+                                 (actor.tenant_id, key, fingerprint, json.dumps(result), self._now()))
                 return result
-            result = create()
-            self._db.execute("INSERT INTO upload_commands VALUES (?,?,?,?,?)",
-                             (actor.tenant_id, key, fingerprint, json.dumps(result), self._now()))
-            return result
+        except BaseException:
+            release()
+            raise
 
     def _create_schema(self) -> None:
         with self._db:

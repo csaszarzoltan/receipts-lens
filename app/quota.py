@@ -27,6 +27,13 @@ class QuotaStore:
             "period": k.rsplit(":", 1)[1],
         }
 
+    def refund(self, t):
+        """Give back one unit taken by incr_and_check for an attempt that stored nothing."""
+        with self.lock:
+            k = self.key(t)
+            if self.counts.get(k, 0) > 0:
+                self.counts[k] -= 1
+
     def get_quota(self, t, pro=False):
         k = self.key(t)
         u = self.counts.get(k, 0)

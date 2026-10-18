@@ -154,39 +154,63 @@ async def upload_receipt(
         raise HTTPException(413, "The image must not exceed 20 MB")
     ai_mode = _as_bool(ai_scan)
 
-    def process() -> dict[str, Any]:
-        # Quota gate (ADR-005): Free 25/mo, Pro unlimited — check before OCR.
-        from app.quota import quota_store
-        from app.subscriptions_api import is_pro
+    from app.quota import quota_store
+    from app.subscriptions_api import is_pro
 
+    charged = {"on": False}
+
+    def refund() -> None:
+        if charged["on"]:
+            charged["on"] = False
+            quota_store.refund(current.tenant_id)
+
+    def prepare() -> dict[str, Any]:
+        """Quota gate and all OCR work: no database writes, so it runs outside the write lock."""
+        # Quota gate (ADR-005): Free 25/mo, Pro unlimited - check before OCR.
         quota = quota_store.incr_and_check(current.tenant_id, pro=is_pro(current.tenant_id))
-        if not quota["allowed"]:
-            raise HTTPException(
-                402,
-                {
-                    "code": "quota_exceeded",
-                    "message": "Free limit reached — upgrade to Pro for unlimited scans ($5/mo).",
-                    "quota": quota,
-                },
-            )
+        charged["on"] = True
         try:
-            if ai_mode:
-                parsed = parse_receipt_with_vision(data)
-            else:
-                parsed = parse_receipt_with_confidence(data)
-        except Exception as exc:
-            if not ai_mode:
-                raise HTTPException(422, "Receipt processing failed") from exc
-            # Vision path raised unexpectedly; fall back to the classic pipeline so
-            # the user still gets an extraction (frontend shows the friendly notice).
+            if not quota["allowed"]:
+                raise HTTPException(
+                    402,
+                    {
+                        "code": "quota_exceeded",
+                        "message": "Free limit reached — upgrade to Pro for unlimited scans ($5/mo).",
+                        "quota": quota,
+                    },
+                )
             try:
-                parsed = parse_receipt_with_confidence(data)
-            except Exception as fallback_exc:
-                raise HTTPException(422, "Receipt processing failed") from fallback_exc
+                if ai_mode:
+                    parsed = parse_receipt_with_vision(data)
+                else:
+                    parsed = parse_receipt_with_confidence(data)
+            except Exception as exc:
+                if not ai_mode:
+                    raise HTTPException(422, "Receipt processing failed") from exc
+                # Vision path raised unexpectedly; fall back to the classic pipeline so
+                # the user still gets an extraction (frontend shows the friendly notice).
+                try:
+                    parsed = parse_receipt_with_confidence(data)
+                except Exception as fallback_exc:
+                    raise HTTPException(422, "Receipt processing failed") from fallback_exc
+            tesseract = None
+            if ai_mode and str((parsed.confidence or {}).get("source") or SOURCE_TESSERACT) == SOURCE_VISION:
+                try:
+                    tesseract = _ai_extraction(parse_receipt_with_confidence(data))
+                except Exception:  # noqa: BLE001 - comparison OCR is best-effort
+                    tesseract = None
+            return {"parsed": parsed, "boxes": extract_ocr_boxes(data), "tesseract": tesseract}
+        except BaseException:
+            refund()
+            raise
+
+    def process(prepared: dict[str, Any]) -> dict[str, Any]:
+        """Database writes only; runs inside the idempotency transaction."""
+        parsed = prepared["parsed"]
         result = service.create_receipt(current, parsed, file.filename or "receipt")
         advanced.store_asset(current.tenant_id, result["receipt_id"], data,
                              file.content_type or "application/octet-stream",
-                             file.filename or "receipt", extract_ocr_boxes(data))
+                             file.filename or "receipt", prepared["boxes"])
         advanced.record_history(current, result["receipt_id"], "receipt.created", None,
                                 result["receipt"])
         applied = advanced.apply_rules(current, result["receipt_id"], result["receipt"])
@@ -199,22 +223,22 @@ async def upload_receipt(
             result["source"] = source
             if source == SOURCE_VISION:
                 result["ai_result"] = _ai_extraction(parsed)
-                try:
-                    result["tesseract_result"] = _ai_extraction(parse_receipt_with_confidence(data))
-                except Exception:  # noqa: BLE001 - comparison OCR is best-effort
-                    result["tesseract_result"] = None
+                result["tesseract_result"] = prepared["tesseract"]
             else:
                 result["tesseract_result"] = _ai_extraction(parsed)
         return result
 
     if idempotency_key is None:
-        return process()
+        # Without a key nothing can be rolled back as a unit, so only a failed
+        # prepare() (nothing stored yet) gives the quota unit back.
+        return process(prepare())
     fingerprint = hashlib.sha256(data + json.dumps({
         "ai_scan": ai_mode, "content_type": file.content_type,
         "filename": file.filename,
     }, sort_keys=True).encode()).hexdigest()
     try:
-        return service.idempotent_upload(current, idempotency_key, fingerprint, process)
+        return service.idempotent_upload(current, idempotency_key, fingerprint, process,
+                                         prepare=prepare, discard=refund)
     except ProductConflict as exc:
         raise HTTPException(409, {"code": "upload_key_conflict", "message": str(exc)}) from exc
     except ValueError as exc:
