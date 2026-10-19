@@ -3,6 +3,8 @@ export const uxMessages = {
   en: {
     dropCameraOpening: 'Opening camera…',
     dropCaptureFailed: 'Could not capture the photo. Try again.',
+    qualityTitle: 'This photo may be hard to read', qualityBlurry: 'The photo looks blurry.', qualityDark: 'The photo looks too dark.',
+    qualityHint: 'Retake it in better light, holding the camera steady, or upload it anyway.', dropRetake: 'Retake', dropUploadAnyway: 'Upload anyway',
     skipToContent: 'Skip to content',
     mobileAddReceipt: '+ Add',
     finances: 'My finances', moreSections: 'More', businessWorkspace: 'Business workspace',
@@ -38,6 +40,8 @@ export const uxMessages = {
   hu: {
     dropCameraOpening: 'Kamera megnyitása…',
     dropCaptureFailed: 'Nem sikerült elkészíteni a fotót. Próbáld újra.',
+    qualityTitle: 'Ez a fotó nehezen olvasható lehet', qualityBlurry: 'A fotó elmosódottnak tűnik.', qualityDark: 'A fotó túl sötétnek tűnik.',
+    qualityHint: 'Fotózd újra jobb fényben, stabilan tartva a telefont, vagy töltsd fel így is.', dropRetake: 'Újra fotózom', dropUploadAnyway: 'Így is feltöltöm',
     skipToContent: 'Ugrás a tartalomhoz',
     mobileAddReceipt: '+ Hozzáadás',
     finances: 'Pénzügyeim', moreSections: 'Továbbiak', businessWorkspace: 'Üzleti munkaterület',

@@ -11,6 +11,7 @@ const SOURCE_KEY: Partial<Record<CurrencySource, MessageKey>> = {
   inferred_merchant: "currencyAssumedMerchant",
   inferred_tenant: "currencyAssumedTenant",
   default: "currencyAssumedDefault",
+  unverified: "currencyAssumedUnverified",
 };
 
 interface CurrencyFieldProps {
@@ -29,6 +30,7 @@ export default function CurrencyField({ receiptId, currency, source, assumed, ve
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  const selectId = `currency-${receiptId}`;
   const badgeKey = assumed ? SOURCE_KEY[source ?? "default"] ?? "currencyAssumedDefault" : null;
   const userSet = source === "user";
 
@@ -49,11 +51,11 @@ export default function CurrencyField({ receiptId, currency, source, assumed, ve
   return (
     <div className="space-y-1" data-testid="currency-field">
       <div className="flex flex-wrap items-center gap-2">
-        <label htmlFor="receipt-currency" className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">
+        <label htmlFor={selectId} className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">
           {t("currencyLabel")}
         </label>
         <select
-          id="receipt-currency"
+          id={selectId}
           className="input py-1 text-sm"
           value={value}
           onChange={(e) => setValue(e.target.value)}

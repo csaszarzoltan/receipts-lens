@@ -155,33 +155,62 @@ class ProductService:
         migrate_upload_commands(self._db)
 
     def idempotent_upload(self, actor: Actor, key: str, fingerprint: str,
-                          create: Any) -> dict[str, Any]:
+                          create: Any, *, prepare: Any = None, discard: Any = None) -> dict[str, Any]:
         """Persist the command and all nested receipt writes in one transaction.
 
         Successful commands do not expire. A rolled-back attempt can be retried.
         BEGIN IMMEDIATE serializes competing connections/processes, including
         commands arriving after a restart. No image or credentials are stored
         in this command table.
+
+        ``prepare`` (optional) runs the slow, write-free part (OCR) before the
+        write lock is taken and its result is passed to ``create``. ``discard``
+        is called once when prepared work ends up unused: the key was already
+        stored, or the transaction failed, so the caller can give back a quota unit.
         """
         if not 1 <= len(key) <= 200 or key != key.strip():
             raise ValueError("Idempotency-Key must contain 1..200 characters without outer whitespace")
-        with self._lock, self._db:
-            self._db.execute("BEGIN IMMEDIATE")
-            row = self._db.execute(
-                "SELECT fingerprint,result FROM upload_commands WHERE tenant_id=? AND command_key=?",
-                (actor.tenant_id, key),
-            ).fetchone()
-            if row:
-                if row["fingerprint"] != fingerprint:
-                    raise ProductConflict("Idempotency-Key was already used for another upload")
-                result = json.loads(row["result"])
-                if result.get("purged"):
-                    raise ProductConflict("The original upload was removed by the retention policy")
+        prepared: Any = None
+        has_prepared = False
+        released = False
+
+        def release() -> None:
+            nonlocal released
+            if has_prepared and not released:
+                released = True
+                if discard:
+                    discard()
+
+        if prepare:
+            with self._lock:
+                row = self._db.execute(
+                    "SELECT fingerprint,result FROM upload_commands WHERE tenant_id=? AND command_key=?",
+                    (actor.tenant_id, key)).fetchone()
+            if row is None:
+                prepared = prepare()
+                has_prepared = True
+        try:
+            with self._lock, self._db:
+                self._db.execute("BEGIN IMMEDIATE")
+                row = self._db.execute(
+                    "SELECT fingerprint,result FROM upload_commands WHERE tenant_id=? AND command_key=?",
+                    (actor.tenant_id, key),
+                ).fetchone()
+                if row:
+                    release()
+                    if row["fingerprint"] != fingerprint:
+                        raise ProductConflict("Idempotency-Key was already used for another upload")
+                    result = json.loads(row["result"])
+                    if result.get("purged"):
+                        raise ProductConflict("The original upload was removed by the retention policy")
+                    return result
+                result = create(prepared) if prepare else create()
+                self._db.execute("INSERT INTO upload_commands VALUES (?,?,?,?,?)",
+                                 (actor.tenant_id, key, fingerprint, json.dumps(result), self._now()))
                 return result
-            result = create()
-            self._db.execute("INSERT INTO upload_commands VALUES (?,?,?,?,?)",
-                             (actor.tenant_id, key, fingerprint, json.dumps(result), self._now()))
-            return result
+        except BaseException:
+            release()
+            raise
 
     def _create_schema(self) -> None:
         with self._db:
@@ -335,6 +364,13 @@ class ProductService:
         payload["category"] = category.strip() if category else None
         payload["category_source"] = "user"
 
+    @staticmethod
+    def _with_currency_provenance(payload: dict[str, Any]) -> dict[str, Any]:
+        """Mark rows saved before currency provenance existed as unverified; the stored row is untouched."""
+        if "currency_source" in payload:
+            return payload
+        return {**payload, "currency_source": "unverified", "currency_assumed": True}
+
     def suggest_category(self, actor: Actor, vendor: str | None) -> str | None:
         if not vendor:
             return None
@@ -407,7 +443,7 @@ class ProductService:
             if not self._review_row_matches(row, payload, confidence, confidence_field, confidence_lt, readiness):
                 continue
             items.append({"receipt_id":row["receipt_id"],"status":row["status"],"readiness":row["status"],
-                          "version":row["version"],"receipt":payload,"lowest_confidence":min([v for v in confidence.values() if isinstance(v,(int,float))],default=None),
+                          "version":row["version"],"receipt":self._with_currency_provenance(payload),"lowest_confidence":min([v for v in confidence.values() if isinstance(v,(int,float))],default=None),
                           "selected_confidence":value,"created_at":row["created_at"],
                           "checks":line_sum_check(payload)})
         if sort == "amount_desc": items.sort(key=lambda x: float(x["receipt"].get("total") or 0), reverse=True)
@@ -807,7 +843,7 @@ class ProductService:
                 continue
             items.append({"receipt_id":row["receipt_id"],"status":row["status"],
                           "version":row["version"],"created_at":row["created_at"],
-                          "receipt":payload,"metadata":{"tags":tags,"project":row["project"],
+                          "receipt":self._with_currency_provenance(payload),"metadata":{"tags":tags,"project":row["project"],
                           "cost_center":row["cost_center"]}, "readiness": result_readiness})
         return {"items":items[offset:offset+limit],"total":len(items),"limit":limit,
                 "offset":offset,"categories":sorted(categories)}
@@ -825,7 +861,7 @@ class ProductService:
         return {
             "receipt_id": row["receipt_id"], "status": row["status"],
             "version": row["version"], "created_at": row["created_at"],
-            "receipt": payload,
+            "receipt": self._with_currency_provenance(payload),
             "suggested_category": self.suggest_category(actor, payload.get("vendor")),
             "metadata": {"tags": tags, "project": row["project"],
                          "cost_center": row["cost_center"]},

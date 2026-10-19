@@ -82,6 +82,7 @@ export type CurrencySource =
   | "default"
   | "inferred_merchant"
   | "inferred_tenant"
+  | "unverified"
   | "user";
 
 export type ReceiptStatus =

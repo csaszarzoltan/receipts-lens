@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useDialogFocus } from "@/lib/hooks/useDialogFocus";
 import { cx } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { assessCanvas, assessImageQuality, type QualityIssue } from "@/lib/imageQuality";
+import { autoCropFile, receiptBoxFromCanvas } from "@/lib/imageCrop";
 
 interface DropZoneProps {
   onFiles: (files: File[]) => void;
@@ -33,6 +35,8 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
   const cameraSession = useRef(0);
   const pendingRef = useRef(false);
   const captureRef = useRef(false);
+  const [held, setHeld] = useState<{ files: File[]; reason: QualityIssue } | null>(null);
+  const heldCapture = useRef<{ file: File; reason: QualityIssue } | null>(null);
 
   const dialogRef = useDialogFocus(cameraOpen, stopCamera);
   useEffect(() => {
@@ -45,9 +49,39 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
     };
   }, []);
 
-  function handleFiles(list: FileList | null) {
+  async function handleFiles(list: FileList | null) {
     if (!list || list.length === 0) return;
-    onFiles(Array.from(list));
+    const files = Array.from(list);
+    const results = await Promise.all(files.map(assessImageQuality));
+    if (!mounted.current) return;
+    const good = files.filter((_, i) => results[i].ok);
+    const bad = files.filter((_, i) => !results[i].ok);
+    if (good.length) {
+      const cropped = await Promise.all(good.map(autoCropFile));
+      if (!mounted.current) return;
+      onFiles(cropped);
+    }
+    if (bad.length) setHeld({ files: bad, reason: results.find(r => !r.ok)?.reason ?? "blurry" });
+  }
+
+  function uploadHeldAnyway() {
+    if (!held) return;
+    const files = held.files;
+    setHeld(null);
+    void Promise.all(files.map(autoCropFile)).then(cropped => { if (mounted.current) onFiles(cropped); });
+  }
+
+  function retakeHeld() {
+    setHeld(null);
+    void openCamera();
+  }
+
+  function uploadCaptureAnyway() {
+    const pending = heldCapture.current;
+    if (!pending) return;
+    heldCapture.current = null;
+    stopCamera();
+    onFiles([pending.file]);
   }
 
   async function openCamera() {
@@ -93,6 +127,7 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
   }
 
   function stopCamera() {
+    heldCapture.current = null;
     cameraSession.current++;
     pendingRef.current = false;
     captureRef.current = false;
@@ -124,10 +159,31 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
       const context = canvas.getContext("2d");
       if (!context) { failed(); return; }
       context.drawImage(video, 0, 0);
-      canvas.toBlob((blob) => {
+      const quality = assessCanvas(canvas);
+      const box = receiptBoxFromCanvas(canvas);
+      let target: HTMLCanvasElement = canvas;
+      if (box) {
+        const cropped = document.createElement("canvas");
+        cropped.width = box.width; cropped.height = box.height;
+        const croppedContext = cropped.getContext("2d");
+        if (croppedContext) {
+          croppedContext.drawImage(canvas, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
+          target = cropped;
+        }
+      }
+      target.toBlob((blob) => {
         if (!mounted.current || session !== cameraSession.current) return;
         if (!blob) { failed(); return; }
         const file = new File([blob], `receipt-${Date.now()}.jpg`, { type: "image/jpeg" });
+        if (!quality.ok && quality.reason) {
+          // Keep the camera open: retaking is one tap, uploading anyway is explicit.
+          heldCapture.current = { file, reason: quality.reason };
+          captureRef.current = false;
+          setCapturing(false);
+          setCameraError(t(quality.reason === "dark" ? "qualityDark" : "qualityBlurry") + " " + t("qualityHint"));
+          return;
+        }
+        heldCapture.current = null;
         stopCamera();
         onFiles([file]);
       }, "image/jpeg", 0.92);
@@ -210,6 +266,18 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
         data-testid="camera-input"
       />
 
+      {held ? (
+        <div role="alert" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+          <p className="font-medium">{t("qualityTitle")}</p>
+          <p className="mt-1">{t(held.reason === "dark" ? "qualityDark" : "qualityBlurry")} {t("qualityHint")}</p>
+          <p className="mt-1 text-xs">{held.files.map(file => file.name).join(", ")}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={retakeHeld} className="btn-primary">{t("dropRetake")}</button>
+            <button type="button" onClick={uploadHeldAnyway} className="btn-secondary">{t("dropUploadAnyway")}</button>
+          </div>
+        </div>
+      ) : null}
+
       {cameraError && !cameraOpen ? (
         <p className="mt-2 text-sm text-amber-700 dark:text-amber-400" role="alert">
           {cameraError}
@@ -243,6 +311,11 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
             >
               {t("dropCancel")}
             </button>
+            {heldCapture.current ? (
+              <button type="button" onClick={uploadCaptureAnyway} className="inline-flex min-h-12 items-center rounded-full bg-amber-500 px-6 font-medium text-slate-900">
+                {t("dropUploadAnyway")}
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}

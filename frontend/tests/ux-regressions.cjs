@@ -7,7 +7,7 @@ test('REQ-UX-03 AC-UX-03 unknown and zero confidence',()=>{const m=load('lib/con
 test('REQ-UX-08 AC-UX-08 five mobile destinations include capture and retain receipts',()=>{const m=load('lib/nav.ts',{'./i18n':i18n});assert.equal(m.MOBILE_TABS.length,5);assert.deepEqual(Array.from(m.MOBILE_TABS,x=>x.href),['/dashboard','/receipts','/upload','/finances','/more']);});
 
 function nodes(element) {if(element===null||element===undefined||typeof element==='boolean')return[];if(Array.isArray(element))return element.flatMap(nodes);if(typeof element!=='object')return[element];return[element,...nodes(element.props?.children)];}
-function uiMocks(h,extra={}) {return {'react':h.react,'@/lib/i18n':i18n,'next/link':'a','@/components/SavingsBlockCard':'savings','@/lib/utils':{cx:(...x)=>x.filter(Boolean).join(' '),formatDate:x=>x,formatMoney:x=>String(x),defaultCurrencyForLocale:()=> 'HUF'},...extra};}
+function uiMocks(h,extra={}) {return {'react':h.react,'@/lib/i18n':i18n,'@/lib/imageQuality':{assessImageQuality:async()=>({ok:true}),assessCanvas:()=>({ok:true})},'@/lib/imageCrop':{autoCropFile:async f=>f,receiptBoxFromCanvas:()=>null},'next/link':'a','@/components/SavingsBlockCard':'savings','@/lib/utils':{cx:(...x)=>x.filter(Boolean).join(' '),formatDate:x=>x,formatMoney:x=>String(x),defaultCurrencyForLocale:()=> 'HUF'},...extra};}
 test('REQ-UX-01 AC-UX-01 file chooser is a real working button and disabled respects keyboard',()=>{
  const h=hooks();const m=load('components/DropZone.tsx',uiMocks(h,{'@/lib/hooks/useDialogFocus':{useDialogFocus:()=>({current:null})}}));
  const tree=h.render(()=>m.default({onFiles:()=>{}}));const flat=nodes(tree);let clicked=0;
@@ -181,4 +181,57 @@ test('REQ-UX-09/13 dashboard preserves household and savings for existing receip
  const rendered=nodes(h.render(()=>block.type(block.props)));assert.ok(rendered.includes('member@example.test'));
  for(const amount of [1000,250,750])assert.ok(rendered.some(x=>x?.type==='money'&&x.props.amount===amount&&x.props.currency==='HUF'));
  assert.ok(all.some(x=>x?.type==='savings'&&x.props.savings===savings));
+});
+
+function pixels(w,h,fn){const d=new Uint8ClampedArray(w*h*4);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const v=fn(x,y),i=(y*w+x)*4;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}return d;}
+function boxBlur(d,w,h,r){const o=new Uint8ClampedArray(d.length);for(let y=0;y<h;y++)for(let x=0;x<w;x++){let s=0,c=0;for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const xx=x+dx,yy=y+dy;if(xx>=0&&yy>=0&&xx<w&&yy<h){s+=d[(yy*w+xx)*4];c++}}const v=s/c,i=(y*w+x)*4;o[i]=o[i+1]=o[i+2]=v;o[i+3]=255}return o;}
+test('REQ-I1 AC1 assessPixels flags blurred and dark photos and accepts a sharp one',()=>{
+ const m=load('lib/imageQuality.ts');const W=120,H=120;
+ const sharp=pixels(W,H,(x,y)=>(Math.floor(x/2)+Math.floor(y/6))%2?235:25);
+ const blurred=boxBlur(sharp,W,H,6);const dark=pixels(W,H,(x,y)=>(Math.floor(x/2)%2?30:5));
+ assert.deepEqual({ok:m.assessPixels(sharp,W,H).ok},{ok:true});
+ assert.equal(m.assessPixels(blurred,W,H).ok,false);assert.equal(m.assessPixels(blurred,W,H).reason,'blurry');
+ assert.equal(m.assessPixels(dark,W,H).reason,'dark');
+ assert.equal(m.assessPixels(new Uint8ClampedArray(4),1,1).ok,true,'unmeasurable input never blocks');
+});
+test('REQ-I1 AC2 blurry picked file is held until the user chooses; sharp files upload at once',async()=>{
+ const h=hooks();const files=[];const results={'blur.jpg':{ok:false,reason:'blurry'},'sharp.jpg':{ok:true}};
+ const m=load('components/DropZone.tsx',uiMocks(h,{'@/lib/hooks/useDialogFocus':{useDialogFocus:()=>({current:null})},'@/lib/imageQuality':{assessImageQuality:async f=>results[f.name],assessCanvas:()=>({ok:true})},'@/lib/imageCrop':{autoCropFile:async f=>f,receiptBoxFromCanvas:()=>null}}));
+ const render=()=>nodes(h.render(()=>m.default({onFiles:l=>files.push(...l.map(f=>f.name))})));
+ const input=render().find(x=>x?.type==='input'&&x.props['data-testid']==='dropzone-input');
+ input.props.onChange({target:{files:[{name:'blur.jpg'},{name:'sharp.jpg'}],value:''}});await new Promise(r=>setTimeout(r,0));
+ assert.deepEqual(files,['sharp.jpg'],'only the sharp file is uploaded');
+ const all=render();assert.ok(all.includes('qualityTitle'),'warning shown');
+ const anyway=all.find(x=>x?.type==='button'&&x.props.children==='dropUploadAnyway');assert.ok(anyway);assert.ok(all.some(x=>x?.type==='button'&&x.props.children==='dropRetake'));
+ anyway.props.onClick();await new Promise(r=>setTimeout(r,0));assert.deepEqual(files,['sharp.jpg','blur.jpg']);assert.ok(!render().includes('qualityTitle'));
+});
+
+test('REQ-I4 AC1 receipts whose lines do not add up come first in the review queue, order otherwise stable',()=>{
+ const m=load('lib/reviewOrder.ts');const mk=(id,lm)=>({receipt_id:id,receipt:{},checks:lm===undefined?undefined:{lines_match:lm,line_sum:1}});
+ const out=m.sortReviewItems([mk('a',true),mk('b',false),mk('c',null),mk('d',false),mk('e')]).map(x=>x.receipt_id);
+ assert.deepEqual(Array.from(out),['b','d','a','c','e']);
+ assert.equal(m.hasLineMismatch(mk('x',false)),true);assert.equal(m.hasLineMismatch(mk('x',null)),false);
+});
+
+test('REQ-I5 AC1 findReceiptBox crops to the paper and leaves unclear photos alone',()=>{
+ const m=load('lib/imageCrop.ts');const W=200,H=300;
+ const onTable=pixels(W,H,(x,y)=>x>=50&&x<150&&y>=40&&y<260?225:40);
+ const box=m.findReceiptBox(onTable,W,H);assert.ok(box,'box found');
+ assert.ok(box.x<=50&&box.x>=40,'left edge near 50 incl. margin: '+box.x);assert.ok(box.x+box.width>=150&&box.x+box.width<=160);
+ assert.ok(box.y<=40&&box.y>=28);assert.ok(box.y+box.height>=260&&box.y+box.height<=272);
+ assert.equal(m.findReceiptBox(pixels(W,H,()=>230),W,H),null,'all paper: nothing to crop');
+ assert.equal(m.findReceiptBox(pixels(W,H,(x)=>x%2?200:150),W,H),null,'low contrast: left alone');
+ assert.equal(m.findReceiptBox(pixels(W,H,(x,y)=>x<20&&y<20?230:40),W,H),null,'tiny bright patch is not a receipt');
+ assert.equal(m.findReceiptBox(new Uint8ClampedArray(4),1,1),null);
+});
+
+test('REQ-I6 AC-I6 unverified currency shows an amber badge and an editable currency on the review card',()=>{
+ const h=hooks();const m=load('components/CurrencyField.tsx',{'react':h.react,'@/lib/i18n':i18n,'@/lib/api':{updateReceiptWorkspace:async()=>({})},'@/lib/utils':{defaultCurrencyForLocale:()=>'HUF'}});
+ const tree=h.render(()=>m.default({receiptId:'r1',currency:'USD',source:'unverified',assumed:true,version:1,onSaved:()=>{}}));const all=nodes(tree);
+ assert.ok(all.includes('currencyAssumedUnverified'));assert.ok(all.some(x=>x?.props?.['data-testid']==='currency-field'));
+ const source=fs.readFileSync(path.join(__dirname,'..','app/(app)/review/page.tsx'),'utf8');
+ assert.match(source,/<CurrencyField[\s\S]*?receiptId=\{item\.receipt_id\}/);assert.match(source,/item\.receipt\.currency_assumed/);
+});
+test('REQ-I6 AC-I6 every locale has the unverified-currency message',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'..','lib/i18n.ts'),'utf8');assert.equal((source.match(/currencyAssumedUnverified:/g)||[]).length,10);
 });
