@@ -909,9 +909,10 @@ class ProductService:
                              (actor.tenant_id,receipt_id)).fetchone()
         if not row: raise KeyError(receipt_id)
         payload=json.loads(row["payload"]); total=payload.get("total"); currency=payload.get("currency")
+        # A receipt with no confirmed currency is checked against every policy, so a guess never skips approval.
         policy=self._db.execute("SELECT * FROM approval_policies WHERE tenant_id=? AND active=1 "
-            "AND currency=? AND threshold<=? ORDER BY threshold DESC LIMIT 1",
-            (actor.tenant_id,currency,float(total or 0))).fetchone()
+            "AND (? IS NULL OR currency=?) AND threshold<=? ORDER BY threshold DESC LIMIT 1",
+            (actor.tenant_id,currency,currency,float(total or 0))).fetchone()
         if not policy: return {"receipt_id":receipt_id,"required":False,"status":"not_required"}
         existing=self._db.execute("SELECT * FROM approvals WHERE tenant_id=? AND receipt_id=? AND status='pending'",
                                   (actor.tenant_id,receipt_id)).fetchone()

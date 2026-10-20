@@ -94,3 +94,15 @@ def test_confirming_the_currency_by_hand_stores_it():
     receipt = service.get_receipt(actor, created["receipt_id"])["receipt"]
     assert receipt["currency"] == "HUF"
     assert receipt["currency_source"] == "user"
+
+
+def test_receipt_with_no_confirmed_currency_does_not_skip_approval():
+    """A guessed currency is stored as null; the approval check must still see the receipt."""
+    service = ProductService(":memory:")
+    actor = Actor("tenant-a", "admin")
+    service.create_approval_policy(actor, "Large", 100.0, "USD")
+    guessed = parsed(total=500.0, currency="USD")
+    guessed.currency_source = "default"
+    rid = service.create_receipt(actor, guessed, "a.png")["receipt_id"]
+
+    assert service.request_approval(actor, rid)["status"] == "pending"
