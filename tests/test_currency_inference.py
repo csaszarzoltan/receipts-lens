@@ -88,7 +88,7 @@ def test_unmarked_receipt_of_new_merchant_follows_tenant_history(service):
 def test_unmarked_receipt_without_history_is_default_and_marked(service):
     rid = service.create_receipt(ACTOR, _receipt("FIRST", "USD", "default"), "f.png")["receipt_id"]
     payload = service.get_receipt(ACTOR, rid)["receipt"]
-    assert payload["currency"] == "USD"
+    assert payload["currency"] is None  # I13: a guess is flagged, not stored as a value
     assert payload["currency_source"] == "default"
     assert payload["currency_assumed"] is True
 
