@@ -263,8 +263,8 @@ export async function uploadReceipt(
   file: File,
   onProgress?: (percent: number) => void,
   idempotencyKey?: string,
-): Promise<ReceiptItem & { applied_rules?: unknown }> {
-  return uploadWithProgress<ReceiptItem & { applied_rules?: unknown }>(
+): Promise<ReceiptItem & { applied_rules?: unknown; duplicate_of?: string | null }> {
+  return uploadWithProgress<ReceiptItem & { applied_rules?: unknown; duplicate_of?: string | null }>(
     "/product/receipts/upload",
     file,
     onProgress,

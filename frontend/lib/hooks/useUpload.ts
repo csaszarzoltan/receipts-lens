@@ -11,7 +11,7 @@ export interface UploadQueueEntry {
   fileName: string;
   progress: number;
   status: "queued" | "uploading" | "processing" | "done" | "error";
-  result?: ReceiptItem & { applied_rules?: unknown };
+  result?: ReceiptItem & { applied_rules?: unknown; duplicate_of?: string | null };
   aiResult?: AiScanUploadResponse;
   error?: string;
   errorStatus?: number;

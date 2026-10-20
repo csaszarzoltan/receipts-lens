@@ -272,11 +272,21 @@ class AdvancedWorkspace:
                              json.dumps(after, sort_keys=True) if after is not None else None,
                              actor.role, self._now()))
 
+    def find_same_file(self, tenant_id: str, content: bytes) -> str | None:
+        """The earliest receipt of this tenant whose stored image has identical bytes."""
+        row = self.db.execute(
+            "SELECT receipt_id FROM receipt_assets WHERE tenant_id=? AND sha256=? "
+            "ORDER BY created_at, receipt_id LIMIT 1",
+            (tenant_id, hashlib.sha256(content).hexdigest())).fetchone()
+        return row["receipt_id"] if row else None
+
     def duplicates(self, actor: Any) -> list[dict[str, Any]]:
         rows = self.db.execute("SELECT receipt_id,payload FROM receipts WHERE tenant_id=?",
                                (actor.tenant_id,)).fetchall()
         decided = {(r["left_id"], r["right_id"]) for r in self.db.execute(
             "SELECT left_id,right_id FROM duplicate_decisions WHERE tenant_id=?", (actor.tenant_id,))}
+        hashes = {r["receipt_id"]: r["sha256"] for r in self.db.execute(
+            "SELECT receipt_id,sha256 FROM receipt_assets WHERE tenant_id=?", (actor.tenant_id,))}
         result = []
         for index, left in enumerate(rows):
             a = json.loads(left["payload"])
@@ -291,13 +301,30 @@ class AdvancedWorkspace:
                                     (vendor_a in vendor_b or vendor_b in vendor_a))
                 total_match = a.get("total") is not None and b.get("total") is not None and round(float(a["total"]), 2) == round(float(b["total"]), 2)
                 date_match = bool(a.get("date") and a.get("date") == b.get("date"))
-                score = (int(vendor_match) + int(total_match) + int(date_match)) / 3
-                if total_match and vendor_match:
-                    result.append({"left_id": pair[0], "right_id": pair[1],
-                                   "left": a, "right": b, "confidence": round(score, 2),
-                                   "evidence": {"vendor": vendor_match, "total": total_match,
-                                                "date": date_match}})
+                same_file = bool(hashes.get(left["receipt_id"]) and
+                                 hashes.get(left["receipt_id"]) == hashes.get(right["receipt_id"]))
+                candidate_match = (not total_match and vendor_match and date_match
+                                   and (a.get("total") is None or b.get("total") is None)
+                                   and self._amount(a) is not None and self._amount(a) == self._amount(b))
+                if same_file:
+                    reason, score = "same_file", 1.0
+                elif total_match and vendor_match:
+                    reason, score = "vendor_total", round((int(vendor_match) + int(total_match) + int(date_match)) / 3, 2)
+                elif candidate_match:
+                    reason, score = "candidate_total", 0.67
+                else:
+                    continue
+                result.append({"left_id": pair[0], "right_id": pair[1],
+                               "left": a, "right": b, "confidence": score, "reason": reason,
+                               "evidence": {"vendor": vendor_match, "total": total_match,
+                                            "date": date_match}})
         return result
+
+    @staticmethod
+    def _amount(payload: dict[str, Any]) -> float | None:
+        """The read total, or the unconfirmed candidate when no total was read."""
+        value = payload.get("total") if payload.get("total") is not None else payload.get("total_candidate")
+        return round(float(value), 2) if value is not None else None
 
     def decide_duplicate(self, tenant_id: str, left_id: str, right_id: str,
                          decision: str) -> dict[str, Any]:

@@ -311,6 +311,7 @@ export interface DuplicateCandidate {
   left: Receipt;
   right: Receipt;
   confidence: number;
+  reason?: "same_file" | "vendor_total" | "candidate_total";
 }
 
 // ---------------------------------------------------------------------------

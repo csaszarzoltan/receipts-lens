@@ -208,6 +208,7 @@ async def upload_receipt(
         """Database writes only; runs inside the idempotency transaction."""
         parsed = prepared["parsed"]
         result = service.create_receipt(current, parsed, file.filename or "receipt")
+        result["duplicate_of"] = advanced.find_same_file(current.tenant_id, data)
         advanced.store_asset(current.tenant_id, result["receipt_id"], data,
                              file.content_type or "application/octet-stream",
                              file.filename or "receipt", prepared["boxes"])

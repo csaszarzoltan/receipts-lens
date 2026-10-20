@@ -397,6 +397,9 @@ class ProductService:
             inferred = self._infer_currency(actor.tenant_id, payload.get("vendor"), has_cents)
             if inferred:
                 payload["currency"], payload["currency_source"] = inferred
+            elif source == "default":
+                # An unmarked receipt keeps no currency until the user confirms one.
+                payload["currency"] = None
         confidences = [v for v in payload["confidence"].values() if isinstance(v, (int, float))]
         status = "needs_review" if not confidences or min(confidences) < 0.7 else "completed"
         receipt_id, job_id, now = str(uuid.uuid4()), str(uuid.uuid4()), self._now()

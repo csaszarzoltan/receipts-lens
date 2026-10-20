@@ -1496,3 +1496,19 @@ Write-gated endpoints (`child`/`view_only` get `403`): `POST /product/receipts/u
 ### Dev-mode compatibility (AC6)
 
 `actor()` (product workspace) and `api_v1_actor()` (v1) resolve identity in this order: `Authorization: Bearer` session → legacy `X-Tenant-ID`/`X-Role` headers (dev only) → `401` when nothing valid. In production the headers are rejected entirely (`401 Session required`), so the demo auth can never be used against a live deployment.
+
+## Receipt currency provenance and duplicate fields
+
+Receipt payloads returned by `POST /product/receipts/upload`, `GET /product/receipts`, `GET /product/receipts/{id}`, the review queue and `GET /api/v1/receipts/{id}` carry two fields that say how the currency was decided:
+
+| Field | Values | Meaning |
+|---|---|---|
+| `currency_source` | `marker`, `user`, `inferred_merchant`, `inferred_tenant`, `default`, `unverified` | `marker`: the receipt printed a symbol or code. `user`: set by hand. `inferred_*`: guessed from the household's history. `default`: no marker and no history. `unverified`: the row was saved before provenance existed; it is marked on read and never written back. |
+| `currency_assumed` | boolean | `true` for every source except `marker` and `user`. Do not treat an assumed currency as verified. |
+
+A receipt whose currency is `default` has `currency: null` until the user confirms one (review card or `PATCH /product/receipts/{id}/workspace` with `fields.currency`). Clients must handle a null currency. Legacy rows keep their stored currency and read as `unverified`.
+
+Upload and duplicates:
+
+- `POST /product/receipts/upload` returns `duplicate_of`: the id of the tenant's earliest receipt with a byte-identical file, or `null`. The upload is still stored; the field is a warning, not a rejection.
+- `GET /product/duplicates` items carry `reason`: `same_file` (identical bytes, confidence `1.0`), `vendor_total` (vendor and total match), `candidate_total` (vendor and date match and an unconfirmed `total_candidate` is equal while a total is missing). Matching is per tenant.

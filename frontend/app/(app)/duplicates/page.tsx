@@ -63,6 +63,11 @@ export default function DuplicatesPage() {
                     {Math.round(candidate.confidence * 100)}%
                   </span>
                 </p>
+                {candidate.reason === "same_file" || candidate.reason === "candidate_total" ? (
+                  <p data-testid="duplicate-reason" className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                    {t(candidate.reason === "same_file" ? "duplicateReasonSameFile" : "duplicateReasonCandidateTotal")}
+                  </p>
+                ) : null}
                 <div className="mt-3 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
                     <p className="font-medium text-slate-900 dark:text-slate-100">

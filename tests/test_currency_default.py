@@ -68,3 +68,29 @@ def test_receipt_with_marker_provenance_is_unchanged():
     receipt = service.get_receipt(actor, rid)["receipt"]
     assert receipt["currency_source"] == "marker"
     assert receipt["currency_assumed"] is False
+
+
+def test_receipt_without_a_currency_marker_keeps_no_currency_until_confirmed():
+    """I13: the locale default is a guess; it is flagged and not stored as a value."""
+    service = ProductService(":memory:")
+    actor = Actor("tenant-a", "admin")
+    guessed = parsed(currency="USD")
+    guessed.currency_source = "default"
+
+    receipt = service.create_receipt(actor, guessed, "a.png")["receipt"]
+    assert receipt["currency"] is None
+    assert receipt["currency_source"] == "default"
+    assert receipt["currency_assumed"] is True
+
+
+def test_confirming_the_currency_by_hand_stores_it():
+    service = ProductService(":memory:")
+    actor = Actor("tenant-a", "admin")
+    guessed = parsed(currency="USD")
+    guessed.currency_source = "default"
+    created = service.create_receipt(actor, guessed, "a.png")
+    service.update_receipt_workspace(actor, created["receipt_id"], 1, {"currency": "HUF"}, None, None, False)
+
+    receipt = service.get_receipt(actor, created["receipt_id"])["receipt"]
+    assert receipt["currency"] == "HUF"
+    assert receipt["currency_source"] == "user"
