@@ -73,5 +73,5 @@ COPY app ./app
 EXPOSE 8000
 
 # Run the ASGI app under uvicorn.
-# Respect Railway's PORT env var; fall back to 8000 for local runs.
+# Respect the PORT env var; fall back to 8000 for local runs.
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

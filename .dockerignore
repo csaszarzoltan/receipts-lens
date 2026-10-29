@@ -62,7 +62,4 @@ node_modules/
 package.json
 package-lock.json
 
-# Railway / deployment configs (not needed inside the image)
-railway.toml
-railway.json
 fly.toml

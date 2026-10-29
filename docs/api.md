@@ -17,7 +17,7 @@ uvicorn app.main:app --reload
 Every response from the API carries the following security headers,
 added by an ASGI middleware (`SecurityHeadersMiddleware` in `app/api.py`)
 so they apply regardless of the HTTP server / proxy in front of the app
-(uvicorn, gunicorn, Caddy, Railway, …):
+(uvicorn, gunicorn, Caddy, …):
 
 | Header | Value | Notes |
 |---|---|---|
