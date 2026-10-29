@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
+from app import ocr
 from app.accounting_projection import AccountingProjectionService
 from app.accounting_workspace import AccountingWorkspace
 from app.advanced_workspace import AdvancedWorkspace, extract_ocr_boxes
@@ -529,9 +530,12 @@ class EraseRequest(BaseModel):
 
 @router.post("/product/privacy/erase")
 def erase_tenant(body: EraseRequest, current: Actor = Depends(actor)) -> dict[str, Any]:
-    try: return service.erase_tenant(current, body.confirmation)
+    try: result = service.erase_tenant(current, body.confirmation)
     except PermissionError: raise HTTPException(403,"Admin role required")
     except ValueError as exc: raise HTTPException(422,str(exc)) from exc
+    # Image-derived OCR caches are process memory, not tables, so the erase must clear them too.
+    ocr.clear_caches()
+    return result
 
 @router.get("/product/privacy/export")
 def portability_export(current: Actor = Depends(actor)) -> dict[str, Any]:

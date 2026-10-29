@@ -1024,9 +1024,37 @@ class ProductService:
         approvals=[dict(r) for r in self._db.execute(
             "SELECT approval_id,receipt_id,policy_id,status,decided_by,note,created_at,decided_at "
             "FROM approvals WHERE tenant_id=? ORDER BY created_at",(actor.tenant_id,)).fetchall()]
+        tables=self._export_tables(actor)
         self._audit(actor.tenant_id,"portability.exported",actor.tenant_id)
         return {"schema_version":1,"tenant_id":actor.tenant_id,"exported_at":self._now(),
-                "receipts":receipts,"approvals":approvals}
+                "receipts":receipts,"approvals":approvals,"tables":tables}
+
+    # Columns holding credentials or digests are never exported. Matching is by name,
+    # so a new secret column is excluded by default.
+    EXPORT_SECRET_COLUMN = re.compile(r"token|secret|hash|ciphertext|verifier|password|idem_key|digest", re.IGNORECASE)
+    # Exported above in normalized form, or operational state rather than the user's data
+    # (login sessions, one-time tokens, idempotency records).
+    EXPORT_SKIPPED_TABLES = frozenset({
+        "receipts", "approvals", "product_migrations",
+        "sessions", "auth_tokens", "oauth_states", "upload_commands", "feature_idempotency",
+    })
+
+    def _export_tables(self, actor: Actor) -> dict[str, list[dict[str, Any]]]:
+        """Every other tenant table, row by row, without secret columns or binary blobs."""
+        tables: dict[str, list[dict[str, Any]]] = {}
+        for table in self._tenant_tables():
+            if table in self.EXPORT_SKIPPED_TABLES:
+                continue
+            columns = [col[1] for col in self._db.execute(f'PRAGMA table_info("{table}")')]
+            keep = [col for col in columns if not self.EXPORT_SECRET_COLUMN.search(col)]
+            if not keep:
+                continue
+            rows = self._db.execute(
+                f'SELECT * FROM "{table}" WHERE tenant_id=? ORDER BY rowid', (actor.tenant_id,)).fetchall()
+            tables[table] = [
+                {col: row[col] for col in keep if not isinstance(row[col], bytes)} for row in rows
+            ]
+        return tables
 
     @staticmethod
     def _clean_line_items(line_items: list[dict[str, Any]]) -> list[dict[str, Any]]:

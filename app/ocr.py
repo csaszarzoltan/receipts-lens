@@ -224,6 +224,13 @@ def _cache_put(cache: OrderedDict[Any, Any], key: Any, value: Any) -> None:
             cache.popitem(last=False)
 
 
+def clear_caches() -> None:
+    """Drop cached image-derived data, e.g. after a tenant's data is erased."""
+    with _CACHE_LOCK:
+        _PREPROCESS_CACHE.clear()
+        _TESS_CACHE.clear()
+
+
 def _preprocessed(image_bytes: bytes) -> Any:
     key = hashlib.sha256(image_bytes).hexdigest()
     hit = _cache_get(_PREPROCESS_CACHE, key)

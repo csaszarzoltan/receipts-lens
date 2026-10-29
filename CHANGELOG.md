@@ -10,6 +10,10 @@
 ### Fixed
 - `GET /product/privacy/export` returned at most 200 receipts. It now pages through every receipt.
 - Ruff lint errors (8) that failed the CI lint gate.
+- Household owners (magic-link sessions, role `owner`) got 403 on retention, purge and erase. These actions now accept owner and admin.
+- Erasure clears the in-process OCR caches, which hold image bytes.
+- Export `tables` section: every other tenant table, excluding credentials, digests, binary images and operational state (`sessions`, `auth_tokens`, `oauth_states`, `upload_commands`, `feature_idempotency`).
+- Playwright e2e: shared session helper `frontend/e2e/session.ts`. `smoke.spec.ts` now passes on session auth. `onboarding.spec.ts` and `consumer-dashboard.spec.ts` use session auth too, but still have copy and flow drift (not yet fixed).
 
 ### Verification
 - `tests/test_tenant_erasure.py` (6 tests), `tests/test_market_features.py` (+1 export test over the page boundary), `frontend/tests/ux-regressions.cjs` (38 tests, +1 erase copy test).

@@ -50,10 +50,10 @@ No new dependencies or frameworks were added.
 | R3 | Export silently truncated at 200 receipts | fixed (`265343a`) | Data-completeness bug |
 | R4 | Ruff: 8 errors, so CI lint was red on `main` | fixed (`ba89bf4`) | CI gate |
 | R5 | CI never ran typecheck or UX tests | fixed (`4d8319f`) | Gate gap |
-| R6 | Frontend e2e specs seed header auth (`receiptlens.tenant`/`receiptlens.role`), but `(app)` routes now require a session (`components/AppShell.tsx:30-60`). The privacy page redirects to `/login` with that seeding | open | Stale e2e suite. Updating the specs is a separate task. Goal 5's automated check is therefore not reliable yet |
-| R7 | Export covers receipts and approvals only | open | Goal 4 partially met. Needs a field-level decision (sessions and tokens must be excluded) |
+| R6 | Frontend e2e specs seed header auth, but `(app)` routes now require a session (`components/AppShell.tsx`). The privacy page redirects to `/login` with that seeding | partly fixed | Shared helper `frontend/e2e/session.ts` (dev magic-link login). `smoke.spec.ts` now passes 18/18 on session auth. `onboarding.spec.ts` and `consumer-dashboard.spec.ts` use session auth but still fail on copy and flow drift from the current UI (for example `Mi ez?` vs step-1 title `Kezdj egy nyugtával`, and missing dashboard block labels in the dark-mode test). Those need per-test updates |
+| R7 | Export covered receipts and approvals only | partly fixed | `tables` section now holds every other tenant table, minus credential and digest columns, binary values and operational state. Receipt images are still not exported (binary; needs a separate download). Goal 4 stays partially met |
 | R8 | Export re-runs the full receipt query per 200-item page, so cost is O(n²/200) | open | Acceptable at household scale. Fix with a single paged query if needed |
-| R9 | OCR caches (`app/ocr.py:207-208`, LRU size 4) hold image bytes in process memory and are not cleared on erase | open | Low risk. Bounded memory, but it is residual personal data after erasure |
+| R9 | OCR caches (`app/ocr.py`, LRU size 4) hold image bytes in process memory after erase | fixed | `ocr.clear_caches()` runs after a successful erase (`app/product_api.py`). Test: `tests/test_export_completeness.py::test_ocr_caches_are_cleared_on_erase` |
 | R10 | `app/platform.py` opens its own SQLite file and is not instantiated by app code | open | Not on the tenant data path, so not erased. Confirm whether it is dead code |
 | R11 | `next lint` has no ESLint config, and CI runs no lint for the frontend | open | Needs a decision on the lint setup |
 | R12 | Playwright e2e is not run in CI, and it expects servers on 3010/8078 that CI does not start | open | Needs CI job design |
@@ -93,7 +93,7 @@ The 10 skipped tests were already skipped at baseline. The live checks ran again
 
 - Blockers: none that stop completion.
 - Remote CI has not run this branch yet. Its frontend job is unverified until the PR runs.
-- Open review items R6–R12 (above). R6 (stale e2e auth) and R7 (export scope) matter most.
+- Open review items: R6 (e2e copy and flow drift in two specs), R8, R10, R11, R12. R7 is partly fixed; receipt images are still missing from the export.
 - Next steps, in order: (1) decide the export field list and exclude secrets, closing goal 4; (2) update the Playwright specs to session auth and wire them into CI, closing goal 5; (3) decide the ESLint setup; (4) clear OCR caches on erase.
 
 ## Changes to goals
@@ -102,3 +102,23 @@ The 10 skipped tests were already skipped at baseline. The live checks ran again
 - Goal 2 check now names `tests/test_production_auth_gate.py` and `tests/test_feature_core.py`.
 - Goal 4 check now names the erasure and export tests and carries an explicit "partially met" note with the reason.
 - Goal 5 check says Playwright runs locally and is not yet in CI.
+
+## Second round (after "continue")
+
+Work on open items R6, R7 and R9.
+
+- **R9 (fixed):** `ocr.clear_caches()` runs after a successful erase.
+- **R7 (partly fixed):** the export gains a `tables` section with every other tenant table. Credential and digest columns, binary values and operational tables (`sessions`, `auth_tokens`, `oauth_states`, `upload_commands`, `feature_idempotency`) are excluded. Receipt images remain outside the export.
+- **R6 (partly fixed):** `frontend/e2e/session.ts` logs in through the dev magic-link flow. `smoke.spec.ts` passes 18/18 on session auth. `onboarding.spec.ts` and `consumer-dashboard.spec.ts` use session auth, but still fail on copy and flow drift from the current UI, which needs per-test updates.
+- **Review of the second-round change:** ruff clean. Export tests cover secret exclusion, blob exclusion, operational-table exclusion, and the OCR cache clear. The full suite was re-run. No new critical issue was found.
+
+Tests, second round:
+
+| Command | Result |
+|---|---|
+| `.venv/bin/ruff check app tests` | exit 0 |
+| `.venv/bin/python -m pytest` (full, `-o addopts=""`) | **2023 passed, 10 skipped**, exit 0, 201.52 s |
+| `npm run typecheck` | exit 0 |
+| `npm run test:ux` | 38/38 |
+| `npx playwright test smoke.spec.ts` (scratch config, own dev server on 3011 and API on 8078) | 18/18 passed |
+| `npx playwright test onboarding.spec.ts consumer-dashboard.spec.ts` | 5 failed. Auth now works; failures are copy and flow drift (see R6) |

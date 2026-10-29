@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { createDevSession, seedSession } from "./session";
 
 /**
  * ReceiptLens UI E2E smoke — fast subset.
@@ -9,21 +10,13 @@ import AxeBuilder from "@axe-core/playwright";
  * violations blocking). Uses domcontentloaded + 2s settle for SWR fetches
  * instead of networkidle (which times out on SPAs with polling SWR hooks).
  *
- * Auth: header-based (X-Tenant-ID/X-Role) seeded into localStorage before
- * navigation so (app) routes render without manual login.
+ * Auth: a real dev session (magic-link flow) seeded into localStorage before
+ * navigation, so (app) routes render without manual login. See e2e/session.ts.
  */
 
-const TENANT_KEY = "receiptlens.tenant";
-const ROLE_KEY = "receiptlens.role";
-
 async function seedAuth(page: Page): Promise<void> {
-  await page.addInitScript(
-    ([tenantKey, roleKey]) => {
-      window.localStorage.setItem(tenantKey, "demo");
-      window.localStorage.setItem(roleKey, "admin");
-    },
-    [TENANT_KEY, ROLE_KEY] as const,
-  );
+  const session = await createDevSession(page.request, `smoke-${Date.now()}@example.test`);
+  await seedSession(page, session.token);
 }
 
 async function expectNoErrorOverlay(page: Page): Promise<void> {

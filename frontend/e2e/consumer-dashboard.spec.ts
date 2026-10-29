@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { E2E_API_BASE, createDevSession, seedSession, tenantHeaders } from "./session";
 
 /**
  * F1.2 consumer-dashboard E2E — §3.4 of
@@ -12,18 +13,15 @@ import { test, expect, type Page } from "@playwright/test";
  *      before navigation, html.dark applied, no Unhandled Runtime Error
  *      overlay, blocks still visible.
  *
- * Auth: header-based (X-Tenant-ID/X-Role) seeded into localStorage before
- * navigation — same pattern as smoke.spec.ts.
+ * Auth: a real dev session (see e2e/session.ts). Seeding calls use the
+ * session's own tenant, so the data lands where the dashboard reads it.
  */
 
-const TENANT_KEY = "receiptlens.tenant";
-const ROLE_KEY = "receiptlens.role";
 const THEME_KEY = "receiptlens.theme";
 
 // The backend the frontend under test talks to (NEXT_PUBLIC_API_BASE_URL of
-// the dev server on :3011). Overridable via E2E_API_BASE (same pattern as
-// onboarding.spec.ts).
-const API_BASE = process.env.E2E_API_BASE ?? "http://127.0.0.1:8100";
+// the dev server). Overridable via E2E_API_BASE.
+const API_BASE = E2E_API_BASE;
 
 const BLOCK_LABELS = [
   "Napi maradékkeret", // block 1 — Mennyit költhetek még ma?
@@ -37,22 +35,23 @@ const BLOCK_LABELS = [
 // aria-labelled "Napi maradékkeret" — assert it by heading text instead.
 const BLOCK_HEADINGS = ["Családi keret-státusz"];
 
-async function seedAuth(page: Page, dark = false): Promise<void> {
+/** Log in a fresh household session and return its tenant for the seeding calls. */
+async function seedAuth(page: Page, dark = false): Promise<string> {
+  const session = await createDevSession(page.request, `dashboard-${Date.now()}@example.test`);
+  await seedSession(page, session.token, "hu"); // block labels are Hungarian
   await page.addInitScript(
-    ([tenantKey, roleKey, themeKey, dark]) => {
-      window.localStorage.setItem(tenantKey, "demo");
-      window.localStorage.setItem(roleKey, "admin");
+    ([themeKey, dark]) => {
       window.localStorage.setItem(themeKey, dark ? "dark" : "light");
     },
-    [TENANT_KEY, ROLE_KEY, THEME_KEY, dark] as const,
+    [THEME_KEY, dark] as const,
   );
-  // The demo tenant may already have onboarding_done=true persisted from an
-  // earlier run (the shell modal would overlay /dashboard and hide the
-  // blocks under test). Reset it — same pattern as onboarding.spec.ts.
+  // Reset onboarding_done for the session's household: the shell onboarding modal
+  // would otherwise overlay /dashboard and hide the blocks under test.
   await page.request.put(`${API_BASE}/product/preferences`, {
-    headers: { "X-Tenant-ID": "demo", "X-Role": "admin" },
+    headers: tenantHeaders(session.tenantId),
     data: { payload: { onboarding_done: false } },
   });
+  return session.tenantId;
 }
 
 async function expectNoErrorOverlay(page: Page): Promise<void> {
@@ -69,7 +68,7 @@ async function expectNoErrorOverlay(page: Page): Promise<void> {
 test("dashboard renders all six consumer blocks with live data", async ({
   page,
 }) => {
-  await seedAuth(page);
+  const tenantId = await seedAuth(page);
 
   // Seed live data through the real backend: a monthly household budget
   // (block 1 + 5) and a receipt uploaded through the REAL /product/receipts/
@@ -78,14 +77,14 @@ test("dashboard renders all six consumer blocks with live data", async ({
   // makes the "live numbers" assertion meaningful: it writes to the tenant
   // SQLite store — the same store blocks 1/2/5 aggregate.
   await page.request.post(`${API_BASE}/api/v1/budgets`, {
-    headers: { "X-Tenant-ID": "demo", "X-Role": "admin" },
+    headers: tenantHeaders(tenantId),
     data: { category: "Háztartás", amount: 600, currency: "USD", period: "monthly" },
   });
 
   const upload = await page.request.post(
     `${API_BASE}/product/receipts/upload`,
     {
-      headers: { "X-Tenant-ID": "demo", "X-Role": "admin" },
+      headers: tenantHeaders(tenantId),
       multipart: {
         file: {
           name: "test-receipt-coop.jpg",

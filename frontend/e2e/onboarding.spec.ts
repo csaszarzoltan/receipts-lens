@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { E2E_API_BASE, createDevSession, seedSession, tenantHeaders } from "./session";
 
 /**
  * F1.5 consumer onboarding E2E — full 3-step journey (plan §4 / F1.5).
@@ -20,19 +21,17 @@ import { test, expect, type Page } from "@playwright/test";
 const ONBOARDING_DONE_KEY = "receiptlens.onboarding.seen"; // local echo only
 
 // The backend the frontend talks to (NEXT_PUBLIC_API_BASE_URL of the dev
-// server under test). Overridable so CI can point at any port.
-const API_BASE = process.env.E2E_API_BASE ?? "http://127.0.0.1:8100";
+// server under test). Overridable via E2E_API_BASE.
+const API_BASE = E2E_API_BASE;
 
+/** Fresh household session per test, so the flow under test starts from step 1. */
 async function seedAuth(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    window.localStorage.setItem("receiptlens.tenant", "demo");
-    window.localStorage.setItem("receiptlens.role", "admin");
-  });
-  // The demo tenant may already have onboarding_done=true persisted from an
-  // earlier run (which would redirect /onboarding straight to /dashboard).
-  // Reset it so the flow under test genuinely starts from step 1.
+  const session = await createDevSession(page.request, `onboarding-${Date.now()}@example.test`);
+  await seedSession(page, session.token, "hu"); // assertions use Hungarian copy
+  // A household may already have onboarding_done=true (which would redirect
+  // /onboarding straight to /dashboard). Reset it for the session's tenant.
   await page.request.put(`${API_BASE}/product/preferences`, {
-    headers: { "X-Tenant-ID": "demo", "X-Role": "admin" },
+    headers: tenantHeaders(session.tenantId),
     data: { payload: { onboarding_done: false } },
   });
 }
