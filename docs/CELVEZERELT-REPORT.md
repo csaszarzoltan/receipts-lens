@@ -146,3 +146,29 @@ Tests, second round:
 5. Verify `/health`, the chunks, and a magic-link login to a test address.
 
 **Open, cosmetic:** the live CSP (Caddy) blocks the Google Fonts stylesheet. The font falls back. Fixing it means editing the Caddy config and reloading, so it is out of scope for this round.
+
+## GUI round: theme switch and full GUI test pass
+
+**Reported:** the light-mode switch "does not work".
+
+**Root cause (reproduced on the live build, then on a local production build):** for a new household, the first-run onboarding was a blocking modal on `/dashboard`. Its backdrop is a button that closes the dialog, and it covers the header, so the theme switch was unreachable. A real mouse click only dismissed the dialog. The second click switched the theme. The theme logic itself was correct on every pre-login page, in both directions, and across reloads.
+
+**Fix (PR #3, branch `fix/gui-theme-onboarding`):**
+- The first-run onboarding is an inline, dismissable card above the dashboard content (`components/Onboarding.tsx`, `app/(app)/layout.tsx`). The flow is unchanged.
+- Thirteen hint lines used `text-slate-500` with no dark variant, measuring 3.75–4.23:1 on the dark background, below the 4.5:1 AA minimum. They now use `dark:text-slate-400`. Light mode is unchanged.
+
+**New GUI suite:** `frontend/e2e/gui-full.spec.ts`.
+- Public pages (landing, login, magic link, invite, Google callback): theme switch in both directions, persistence after reload, keyboard use, axe in both themes, under both OS colour schemes.
+- All static app routes (44), in light and dark mode: heading visible, no error overlay, no console errors, no 5xx, no unexpected API 4xx, body theme follows the setting, axe serious/critical clean, no horizontal scroll at 390 px.
+- The only allowed API error is `402 /api/v1/tax/deduction` on `/tax`. That is the Pro gate, and the page shows its upgrade prompt.
+- First-run card: dismissable and not blocking; the header switch works on the first-run dashboard.
+- Mobile navigation at 390 px, and an unknown-id state.
+
+**Results:**
+- Local production build (`next build` + `next start`, isolated copy, scratch DB, local API with a generated credential key): **100 passed**, exit 0.
+- `npm run typecheck`: exit 0. `npm run test:ux`: 38/38.
+- PR #3 CI: `frontend` and `test` both pass.
+
+**Test bugs found and fixed along the way (not app defects):** the theme seed ran on every navigation and undid the stored choice on reload. Measuring `<body>` gave transparent backgrounds, which were read as dark. A stale server on the port served a half-rebuilt `.next`. The mobile nav selector matched the hidden desktop link.
+
+**Deploy status:** PR #3 is **not merged**. The merge was blocked by the permission check ("Merge Without Review"). Live still runs the previous build, so the new-household header problem persists on live until PR #3 is merged. The fix is frontend-only: once merged, rebuild the frontend in an isolated worktree, swap `.next`, and restart `receipts-lens-frontend.service`. The API does not need a restart.
