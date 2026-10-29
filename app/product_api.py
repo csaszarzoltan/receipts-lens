@@ -524,6 +524,15 @@ def purge_expired(current: Actor = Depends(actor)) -> dict[str, Any]:
     try: return service.purge_expired(current)
     except PermissionError: raise HTTPException(403,"Admin role required")
 
+class EraseRequest(BaseModel):
+    confirm_tenant_id: str = Field(min_length=1, max_length=200)
+
+@router.post("/product/privacy/erase")
+def erase_tenant(body: EraseRequest, current: Actor = Depends(actor)) -> dict[str, Any]:
+    try: return service.erase_tenant(current, body.confirm_tenant_id)
+    except PermissionError: raise HTTPException(403,"Admin role required")
+    except ValueError as exc: raise HTTPException(422,str(exc)) from exc
+
 @router.get("/product/privacy/export")
 def portability_export(current: Actor = Depends(actor)) -> dict[str, Any]:
     return service.portability_export(current)

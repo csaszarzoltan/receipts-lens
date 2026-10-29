@@ -981,6 +981,32 @@ class ProductService:
             self._audit(actor.tenant_id,"retention.purged",str(len(ids)))
         return {"purged":len(ids),"retention_days":days,"cutoff":cutoff}
 
+    def erase_tenant(self, actor: Actor, confirm_tenant_id: str) -> dict[str, Any]:
+        """Permanently delete every row that belongs to the actor's tenant.
+
+        Admin only. The caller must repeat the tenant id exactly, so an
+        accidental or forged request without it changes nothing. Tables are
+        discovered from the schema (every table with a ``tenant_id`` column),
+        so tenant tables added later are erased without code changes.
+        Receipt images live in the database, so no files need removing.
+        """
+        if actor.role != "admin": raise PermissionError
+        if confirm_tenant_id != actor.tenant_id:
+            raise ValueError("confirmation does not match the tenant id")
+        deleted: dict[str, int] = {}
+        with self._db:
+            for table in self._tenant_tables():
+                cursor = self._db.execute(f'DELETE FROM "{table}" WHERE tenant_id=?', (actor.tenant_id,))
+                if cursor.rowcount:
+                    deleted[table] = cursor.rowcount
+        return {"tenant_id": actor.tenant_id, "erased": True, "deleted": deleted}
+
+    def _tenant_tables(self) -> list[str]:
+        names = [row[0] for row in self._db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+        return sorted(name for name in names
+                      if any(col[1] == "tenant_id" for col in self._db.execute(f'PRAGMA table_info("{name}")')))
+
     def portability_export(self, actor: Actor) -> dict[str, Any]:
         """Return a deterministic, tenant-scoped machine-readable data export."""
         receipts=self.search_receipts(actor,limit=200)["items"]
