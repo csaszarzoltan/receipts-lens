@@ -7,7 +7,7 @@ test('REQ-UX-03 AC-UX-03 unknown and zero confidence',()=>{const m=load('lib/con
 test('REQ-UX-08 AC-UX-08 five mobile destinations include capture and retain receipts',()=>{const m=load('lib/nav.ts',{'./i18n':i18n});assert.equal(m.MOBILE_TABS.length,5);assert.deepEqual(Array.from(m.MOBILE_TABS,x=>x.href),['/dashboard','/receipts','/upload','/finances','/more']);});
 
 function nodes(element) {if(element===null||element===undefined||typeof element==='boolean')return[];if(Array.isArray(element))return element.flatMap(nodes);if(typeof element!=='object')return[element];return[element,...nodes(element.props?.children)];}
-function uiMocks(h,extra={}) {return {'react':h.react,'@/lib/i18n':i18n,'@/lib/imageQuality':{assessImageQuality:async()=>({ok:true}),assessCanvas:()=>({ok:true})},'@/lib/imageCrop':{autoCropFile:async f=>f,receiptBoxFromCanvas:()=>null},'next/link':'a','@/components/SavingsBlockCard':'savings','@/lib/utils':{cx:(...x)=>x.filter(Boolean).join(' '),formatDate:x=>x,formatMoney:x=>String(x),defaultCurrencyForLocale:()=> 'HUF'},...extra};}
+function uiMocks(h,extra={}) {return {'react':h.react,'@/lib/i18n':i18n,'@/lib/imageQuality':{assessImageQuality:async()=>({ok:true}),assessCanvas:()=>({ok:true})},'@/lib/imageCrop':{autoCropFile:async f=>f,receiptBoxFromCanvas:()=>null},'next/link':'a','@/components/SavingsBlockCard':'savings','@/lib/utils':{cx:(...x)=>x.filter(Boolean).join(' '),formatDate:x=>x,formatMoney:x=>String(x),defaultCurrencyForLocale:()=> 'HUF'},'@/lib/photos':{PHOTOS:{},photoForCategory:()=>({src:'/photos/table.jpg',alt:''}),routePhoto:()=>null},'@/components/PhotoBanner':'photo-banner','@/components/CategoryPhoto':'category-photo','@/components/PhotoStrip':'photo-strip',...extra};}
 test('REQ-UX-01 AC-UX-01 file chooser is a real working button and disabled respects keyboard',()=>{
  const h=hooks();const m=load('components/DropZone.tsx',uiMocks(h,{'@/lib/hooks/useDialogFocus':{useDialogFocus:()=>({current:null})}}));
  const tree=h.render(()=>m.default({onFiles:()=>{}}));const flat=nodes(tree);let clicked=0;
@@ -30,7 +30,7 @@ test('REQ-UX-05 AC-UX-05 retryable session error preserves token while 401 clear
  class ApiError extends Error{constructor(status){super('failed');this.status=status;}}
  let status=503;
  const api={ApiError,resolveSession:async()=>{throw new ApiError(status)}};
- const m=load('components/AppShell.tsx',uiMocks(h,{'next/navigation':{useRouter:()=>({replace:url=>redirects.push(url)})},'@/lib/api':api,'@/lib/auth':{getSessionToken:()=> 'token',clearSessionToken:()=>cleared++},'@/components/Sidebar':()=>null,'@/components/MobileNav':()=>null,'@/components/Topbar':()=>null}));
+ const m=load('components/AppShell.tsx',uiMocks(h,{'next/navigation':{usePathname:()=>'/dashboard',useRouter:()=>({replace:url=>redirects.push(url)})},'@/lib/api':api,'@/lib/auth':{getSessionToken:()=> 'token',clearSessionToken:()=>cleared++},'@/components/Sidebar':()=>null,'@/components/MobileNav':()=>null,'@/components/Topbar':()=>null}));
  h.render(()=>m.default({children:null}));effect();await new Promise(r=>setTimeout(r,0));assert.equal(cleared,0);assert.equal(redirects.length,0);assert.ok(nodes(h.render(()=>m.default({children:null}))).includes('sessionRetryHint'));
  status=401;effect();await new Promise(r=>setTimeout(r,0));assert.equal(cleared,1);assert.deepEqual(redirects,['/login']);
 });
@@ -252,9 +252,9 @@ test('REQ-DESIGN-01 approval copy and waiting time exist in every locale',()=>{
  const source=fs.readFileSync(path.join(__dirname,'..','lib/uxMessages.ts'),'utf8');
  for(const key of ['approvalAwaiting','approvalTitle','approvalSubmitted','approvalPolicyLabel','approvalWaitingDays','approvalWaitingToday']) assert.equal((source.match(new RegExp(key+':','g'))||[]).length,10,key);
 });
-test('REQ-DESIGN-02 Inter is loaded, the accent is teal, and no old blue remains in theme or charts',()=>{
- const layout=fs.readFileSync(path.join(__dirname,'..','app/layout.tsx'),'utf8');assert.match(layout,/family=Inter/);
- const tailwind=fs.readFileSync(path.join(__dirname,'..','tailwind.config.ts'),'utf8');assert.match(tailwind,/#0f766e/);assert.match(tailwind,/fontFamily/);
+test('REQ-DESIGN-02 fonts are self-hosted (Inter + Fraunces), the accent is sage, and no old blue remains in theme or charts',()=>{
+ const layout=fs.readFileSync(path.join(__dirname,'..','app/layout.tsx'),'utf8');assert.match(layout,/from "next\/font\/google"/);assert.match(layout,/Fraunces/);assert.doesNotMatch(layout,/fonts\.googleapis\.com\/css/);
+ const tailwind=fs.readFileSync(path.join(__dirname,'..','tailwind.config.ts'),'utf8');assert.match(tailwind,/#3F7150/);assert.match(tailwind,/fontFamily/);assert.match(tailwind,/--font-display/);
  for(const file of ['app/layout.tsx','app/manifest.ts','components/Charts.tsx','app/globals.css']) assert.doesNotMatch(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),/#1d5ef1/,file);
 });
 test('REQ-DESIGN-03 receipt cards show amount, merchant, date, thumbnail and approval state',()=>{
