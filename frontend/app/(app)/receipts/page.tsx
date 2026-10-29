@@ -7,6 +7,7 @@ import {getApprovals,searchReceipts} from '@/lib/api';
 import type {Approval} from '@/lib/types';
 import ReceiptCard from '@/components/ReceiptCard';
 import EmptyState from '@/components/EmptyState';
+import PhotoBanner from '@/components/PhotoBanner';
 import Pagination from '@/components/Pagination';
 import {SkeletonCard} from '@/components/Skeleton';
 import {categoryLabel} from '@/lib/categories';
@@ -31,7 +32,7 @@ function ReceiptsContent(){
  const hasFilters=Boolean(query||category||status||dateFrom||dateTo);
  const statuses=[['needs_review','statusNeedsReview'],['completed','statusCompleted'],['pending','statusPending'],['approved','statusApproved'],['rejected','statusRejected'],['failed','statusFailed']] as const;
  return <div className="space-y-6">
-  <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold">{t('receipts')}</h1><p className="mt-1 text-sm text-slate-600 dark:text-slate-400" role="status">{data?`${data.total} ${t('receiptsTotalSuffix')}`:t('receiptsSearchHint')}</p></div><Link href="/upload" className="btn-primary">{t('addReceipt')}</Link></div>
+  <PhotoBanner photo="table" title={t('receipts')} subtitle={<span role="status">{data?`${data.total} ${t('receiptsTotalSuffix')}`:t('receiptsSearchHint')}</span>} actions={<Link href="/upload" className="btn-primary bg-white text-slate-900 hover:bg-slate-100 hover:text-slate-900">{t('addReceipt')}</Link>}/>
   <nav aria-label={t('receiptTools')} className="flex flex-wrap gap-2"><Link href="/receipts" className="btn-secondary" aria-current={!status?'page':undefined}>{t('receipts')}</Link><Link href="/receipts?status=needs_review" className="btn-secondary" aria-current={status==='needs_review'?'page':undefined}>{t('needsReview')}</Link><Link href="/duplicates" className="btn-secondary">{t('duplicates')}</Link><Link href="/inbox" className="btn-secondary">{t('inbox')}</Link></nav>
   <section className="card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('filter')}>
    <label className="text-sm font-medium">{t('search')}<input type="search" className="input mt-1" value={searchDraft} placeholder={t('searchByMerchant')} onChange={e=>{setSearchDraft(e.target.value);change('q',e.target.value,true)}}/></label>

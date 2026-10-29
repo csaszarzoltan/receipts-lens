@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { getReceiptImage } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n";
+import type { Photo } from "@/lib/photos";
 
 /**
  * Receipt photo thumbnail. The image is fetched only once the tile scrolls near the
  * viewport, and its object URL is released on unmount. The alt text is empty: the
  * enclosing link already names the receipt.
  */
-export default function ReceiptThumb({ receiptId }: { receiptId: string }) {
+export default function ReceiptThumb({ receiptId, fallback }: { receiptId: string; fallback?: Photo }) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const [src, setSrc] = useState<string | null>(null);
@@ -60,11 +61,16 @@ export default function ReceiptThumb({ receiptId }: { receiptId: string }) {
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
-      ) : (
-        <span className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-slate-500 dark:text-slate-400">
-          {failed ? t("imageUnavailable") : null}
+      ) : fallback ? (
+        // Until the receipt photo arrives, show the category photo instead of a grey tile.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={fallback.src} alt="" aria-hidden="true" loading="lazy" className="h-full w-full object-cover" />
+      ) : null}
+      {!src && failed ? (
+        <span className="absolute inset-x-0 bottom-0 bg-slate-950/70 px-2 py-1 text-center text-xs text-white">
+          {t("imageUnavailable")}
         </span>
-      )}
+      ) : null}
     </div>
   );
 }

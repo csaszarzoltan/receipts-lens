@@ -10,6 +10,7 @@ import ConfidenceBadge from "@/components/ConfidenceBadge";
 import ReceiptThumb from "@/components/ReceiptThumb";
 import { ApprovalPill } from "@/components/ApprovalTimeline";
 import { formatDate } from "@/lib/utils";
+import { photoForCategory } from "@/lib/photos";
 import { useTranslation } from "@/lib/i18n";
 
 interface ReceiptCardProps {
@@ -33,7 +34,7 @@ export default function ReceiptCard({ item, approval }: ReceiptCardProps) {
       href={`/receipts/${receipt_id}`}
       className="card flex h-full flex-col overflow-hidden transition-colors hover:border-slate-300 dark:hover:border-slate-700"
     >
-      <ReceiptThumb receiptId={receipt_id} />
+      <ReceiptThumb receiptId={receipt_id} fallback={photoForCategory(receipt.category)} />
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="min-w-0">
           <h2 className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">

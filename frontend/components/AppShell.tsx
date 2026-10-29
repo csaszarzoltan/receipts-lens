@@ -2,13 +2,15 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import MobileNav from "@/components/MobileNav";
 import Topbar from "@/components/Topbar";
+import PhotoStrip from "@/components/PhotoStrip";
 import { ApiError } from "@/lib/api";
 import { useTranslation } from "@/lib/i18n";
 import { getSessionToken, clearSessionToken } from "@/lib/auth";
+import { routePhoto } from "@/lib/photos";
 
 /**
  * Authenticated application shell — desktop sidebar + mobile bottom tab
@@ -21,6 +23,7 @@ import { getSessionToken, clearSessionToken } from "@/lib/auth";
  */
 export default function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useTranslation();
   const [attempt, setAttempt] = useState(0);
   const [retryableError, setRetryableError] = useState(false);
@@ -72,6 +75,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </div>
     );
   }
+  const stripPhoto = pathname ? routePhoto(pathname) : null;
 
   if (retryableError) return <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center"><p role="alert">{t("sessionRetryHint")}</p><button type="button" className="btn-primary" onClick={() => setAttempt(value => value + 1)}>{t("retry")}</button></main>;
   if (!authed) return null;
@@ -89,7 +93,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <div className="lg:pl-64">
         <Topbar />
         <main id="main-content" tabIndex={-1} className="px-4 pb-24 pt-6 sm:px-6 lg:pb-10">
-          <div className="mx-auto max-w-6xl">{children}</div>
+          <div className="mx-auto max-w-6xl">
+            {stripPhoto ? <PhotoStrip photo={stripPhoto} /> : null}
+            {children}
+          </div>
         </main>
       </div>
     </div>

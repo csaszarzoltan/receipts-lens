@@ -7,6 +7,7 @@ import { API_BASE_URL, googleSsoEnabled, requestMagicLink, verifyMagicLink } fro
 import { setAuthState, setSessionToken } from "@/lib/auth";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useTranslation, SUPPORTED_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n";
+import { PHOTOS } from "@/lib/photos";
 
 /**
  * Login page: an email link or Google SSO. No household or role selector.
@@ -69,11 +70,18 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 to-white px-4 dark:from-brand-950 dark:to-slate-950">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-card dark:bg-slate-900">
+    <main className="grid min-h-screen bg-slate-50 dark:bg-slate-950 lg:grid-cols-2">
+      <aside className="relative hidden overflow-hidden lg:block" aria-hidden="true">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={PHOTOS.hero.src} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/25 to-transparent" />
+        <p className="font-display absolute inset-x-12 bottom-14 text-4xl leading-tight text-white">{t("landingTitle")}</p>
+      </aside>
+      <div className="flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lift dark:bg-slate-900">
         <div className="flex justify-end"><ThemeToggle /></div>
         <div className="text-center">
-          <span className="text-3xl" aria-hidden="true">🔎</span>
+          <span aria-hidden="true" className="mx-auto inline-block h-3 w-3 rounded-full bg-clay-500" />
           <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">ReceiptLens</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {t("loginSubtitle")}
@@ -161,6 +169,7 @@ export default function LoginPage() {
             {t("onboarding")}
           </Link>
         </p>
+      </div>
       </div>
     </main>
   );
