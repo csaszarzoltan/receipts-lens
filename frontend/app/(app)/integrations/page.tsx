@@ -79,7 +79,7 @@ export default function IntegrationsPage() {
         <div className="grid gap-4 p-5 md:grid-cols-3">
           {[['1',t("connectCompany"),t("connectCompanyDesc")],['2',t("validateMapping"),t("validateMappingDesc")],['3',t("exportAndVerify"),t("exportAndVerifyDesc")]].map(([n,title,body])=><div key={n} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-300">{n}</span><h3 className="mt-3 font-semibold">{title}</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{body}</p></div>)}
         </div>
-        <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 px-5 py-4 dark:border-slate-800"><button type="button" onClick={connectQuickBooks} disabled={qboBusy} className="btn-primary text-sm" aria-describedby="qbo-disclosure">{qboBusy ? t("connectingQB") : t("connectQuickBooks")}</button><p id="qbo-disclosure" className="text-xs text-slate-500">{t("sandboxDisclosure")}</p>{qboError ? <p role="alert" className="w-full text-sm text-rose-700">{qboError}</p> : null}</div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 px-5 py-4 dark:border-slate-800"><button type="button" onClick={connectQuickBooks} disabled={qboBusy} className="btn-primary text-sm" aria-describedby="qbo-disclosure">{qboBusy ? t("connectingQB") : t("connectQuickBooks")}</button><p id="qbo-disclosure" className="text-xs text-slate-500 dark:text-slate-400">{t("sandboxDisclosure")}</p>{qboError ? <p role="alert" className="w-full text-sm text-rose-700">{qboError}</p> : null}</div>
       </section>
 
       {isLoading ? (

@@ -77,7 +77,7 @@ export default function TaxPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("taxTitle")}</h1>
-        <p className="text-sm text-slate-500">{t("taxDeduction")}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t("taxDeduction")}</p>
         <div className="flex gap-2">
           <select value={locale} onChange={(e) => setLocale(e.target.value)} className="input w-32" aria-label="locale">
             <option value="US">US</option>
@@ -117,7 +117,7 @@ export default function TaxPage() {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="card p-4">
-          <p className="text-xs uppercase tracking-wide text-slate-500">{t("taxDeduction")}</p>
+          <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{t("taxDeduction")}</p>
           <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">${summary.grand_total.toFixed(2)}</p>
         </div>
         <div className="card p-4 bg-emerald-50 dark:bg-emerald-950">
@@ -129,7 +129,7 @@ export default function TaxPage() {
       <section className="card overflow-hidden" aria-label={t("taxDeduction")}>
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800">
+            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 dark:border-slate-800">
               <th className="px-4 py-3">{t("taxCategory")}</th>
               <th className="px-4 py-3 text-right">Count</th>
               <th className="px-4 py-3 text-right">Total</th>

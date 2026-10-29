@@ -6,12 +6,12 @@ export const metadata: Metadata = {
   title: "Overview",
 };
 
-/** Authenticated shell — wraps every app page with nav + onboarding. */
+/** Authenticated shell — wraps every app page with nav; first-run onboarding sits above the page. */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppShell>
-      {children}
       <Onboarding />
+      {children}
     </AppShell>
   );
 }

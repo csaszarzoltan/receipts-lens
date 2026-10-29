@@ -37,7 +37,7 @@ export default function ConvertedMoney({
     <span>
       <Money amount={amount} currency={source} />
       {v != null ? (
-        <span className="ml-1 text-sm text-slate-500" data-testid="converted-amount">
+        <span className="ml-1 text-sm text-slate-500 dark:text-slate-400" data-testid="converted-amount">
           (~
           <Money amount={v} currency={target} />)
         </span>
