@@ -525,11 +525,11 @@ def purge_expired(current: Actor = Depends(actor)) -> dict[str, Any]:
     except PermissionError: raise HTTPException(403,"Admin role required")
 
 class EraseRequest(BaseModel):
-    confirm_tenant_id: str = Field(min_length=1, max_length=200)
+    confirmation: str = Field(min_length=1, max_length=20)
 
 @router.post("/product/privacy/erase")
 def erase_tenant(body: EraseRequest, current: Actor = Depends(actor)) -> dict[str, Any]:
-    try: return service.erase_tenant(current, body.confirm_tenant_id)
+    try: return service.erase_tenant(current, body.confirmation)
     except PermissionError: raise HTTPException(403,"Admin role required")
     except ValueError as exc: raise HTTPException(422,str(exc)) from exc
 

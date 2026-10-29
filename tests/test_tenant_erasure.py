@@ -35,7 +35,7 @@ def test_erase_removes_every_tenant_row_and_keeps_other_tenants(svc, admin):
     keep = svc.create_receipt(other, parsed(), "b.png")["receipt_id"]
     before_other = tenant_row_count(svc, "tenant-b")
 
-    result = svc.erase_tenant(admin, "tenant-a")
+    result = svc.erase_tenant(admin, "ERASE")
 
     assert result["erased"] is True and result["tenant_id"] == "tenant-a"
     assert sum(result["deleted"].values()) > 0
@@ -52,23 +52,23 @@ def test_erase_covers_receipt_images_stored_as_blobs(svc, admin):
         " VALUES(?,?,?,?,?,?,?,?)",
         (receipt_id, "tenant-a", b"img", "image/png", "a.png", "x", "[]", "2026-07-01T00:00:00+00:00"),
     )
-    svc.erase_tenant(admin, "tenant-a")
+    svc.erase_tenant(admin, "ERASE")
     assert svc._db.execute("SELECT COUNT(*) FROM receipt_assets WHERE tenant_id='tenant-a'").fetchone()[0] == 0
 
 
 def test_erase_requires_admin_role(svc, admin):
     svc.create_receipt(admin, parsed(), "a.png")
     with pytest.raises(PermissionError):
-        svc.erase_tenant(Actor("tenant-a", "reviewer"), "tenant-a")
+        svc.erase_tenant(Actor("tenant-a", "reviewer"), "ERASE")
     assert svc.search_receipts(admin)["total"] == 1
 
 
-def test_erase_requires_exact_tenant_confirmation(svc, admin):
+def test_erase_requires_literal_erase_confirmation(svc, admin):
     svc.create_receipt(admin, parsed(), "a.png")
-    with pytest.raises(ValueError):
-        svc.erase_tenant(admin, "tenant-b")
-    with pytest.raises(ValueError):
-        svc.erase_tenant(admin, "")
+    # The tenant id alone is not confirmation, and neither is a blank or lowercase word.
+    for wrong in ("tenant-a", "", "erase"):
+        with pytest.raises(ValueError):
+            svc.erase_tenant(admin, wrong)
     assert svc.search_receipts(admin)["total"] == 1
 
 
@@ -87,9 +87,9 @@ def test_erase_route_rejects_non_admin_and_bad_confirmation_without_deleting():
     # safe against the default product database.
     client = TestClient(app)
     reviewer = {"X-Tenant-ID": "erase-probe", "X-Role": "reviewer"}
-    assert client.post("/product/privacy/erase", json={"confirm_tenant_id": "erase-probe"},
+    assert client.post("/product/privacy/erase", json={"confirmation": "ERASE"},
                        headers=reviewer).status_code == 403
     admin_headers = {"X-Tenant-ID": "erase-probe", "X-Role": "admin"}
-    assert client.post("/product/privacy/erase", json={"confirm_tenant_id": "someone-else"},
+    assert client.post("/product/privacy/erase", json={"confirmation": "erase-probe"},
                        headers=admin_headers).status_code == 422
     assert client.post("/product/privacy/erase", json={}, headers=admin_headers).status_code == 422

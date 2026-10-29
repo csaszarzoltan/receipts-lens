@@ -981,18 +981,20 @@ class ProductService:
             self._audit(actor.tenant_id,"retention.purged",str(len(ids)))
         return {"purged":len(ids),"retention_days":days,"cutoff":cutoff}
 
-    def erase_tenant(self, actor: Actor, confirm_tenant_id: str) -> dict[str, Any]:
+    ERASE_CONFIRMATION = "ERASE"
+
+    def erase_tenant(self, actor: Actor, confirmation: str) -> dict[str, Any]:
         """Permanently delete every row that belongs to the actor's tenant.
 
-        Admin only. The caller must repeat the tenant id exactly, so an
-        accidental or forged request without it changes nothing. Tables are
-        discovered from the schema (every table with a ``tenant_id`` column),
-        so tenant tables added later are erased without code changes.
+        Admin only. The caller must send the literal ``ERASE`` so an
+        accidental click or a replayed request without intent changes nothing.
+        Tables are discovered from the schema (every table with a ``tenant_id``
+        column), so tenant tables added later are erased without code changes.
         Receipt images live in the database, so no files need removing.
         """
         if actor.role != "admin": raise PermissionError
-        if confirm_tenant_id != actor.tenant_id:
-            raise ValueError("confirmation does not match the tenant id")
+        if confirmation != self.ERASE_CONFIRMATION:
+            raise ValueError(f"type {self.ERASE_CONFIRMATION} to confirm erasure")
         deleted: dict[str, int] = {}
         with self._db:
             for table in self._tenant_tables():
