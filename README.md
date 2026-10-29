@@ -11,9 +11,9 @@ A ReceiptLens nyugtákból készít kereshető vásárlási előzményeket. Ház
 Reference for all goal-cycle reviews. Each goal names the check that proves it.
 
 1. **Trustworthy totals.** A receipt total is shown as a number only when the OCR confidence of its source fields reaches the threshold. Otherwise the total stays empty and the receipt is flagged for review. Check: `pytest tests/test_bug001_confidence.py`.
-2. **Authenticated access in production.** When `RECEIPTLENS_ENV=production`, product and auth endpoints never trust client-supplied `X-Tenant-ID` / `X-Role` headers; they require a session token. Check: `pytest` cases asserting 401 for header-only requests in production mode.
+2. **Authenticated access in production.** When `RECEIPTLENS_ENV=production`, product and auth endpoints never trust client-supplied `X-Tenant-ID` / `X-Role` headers; they require a session token. Check: `pytest tests/test_production_auth_gate.py tests/test_feature_core.py`.
 3. **Household money insight.** The dashboard shows the daily remaining budget, and subscriptions get price-increase alerts. Check: `pytest tests/test_us_023_consumer_dashboard_contract.py` and the subscription-alert tests.
-4. **Full user data control.** A user can export all of their data, purge expired receipts, and erase the whole household account, leaving no tenant rows behind. Check: `pytest tests/test_tenant_erasure.py tests/test_market_features.py`.
+4. **Full user data control.** A user can export all of their data, purge expired receipts, and erase the whole household account, leaving no tenant rows behind. Check: `pytest tests/test_tenant_erasure.py tests/test_market_features.py`. Status: partially met. Erasure and purge work for the household owner, and the export now includes every receipt. The export still covers only receipts and approvals, not budgets, members or subscriptions. Including those needs a decision on which fields are secrets (sessions, tokens), so it is left open.
 5. **Accessible, responsive UI.** Key pages show no WCAG 2.2 AA axe violations and no horizontal scroll at 390 px width. Check: `frontend/e2e/ux-walk.spec.ts` and `frontend/e2e/ux-plan.spec.ts` (Playwright, run locally; not yet part of CI).
 6. **Green delivery gate.** `ruff check app tests`, `pytest`, and `npm run typecheck` all pass on `main`. Check: `.github/workflows/ci.yml`.
 
