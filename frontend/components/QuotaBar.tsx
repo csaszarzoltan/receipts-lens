@@ -27,7 +27,7 @@ export default function QuotaBar({ used, limit, isPro }: QuotaBarProps) {
         <span className="text-slate-600 dark:text-slate-300">
           {t("quotaUsed")}: {used}/{limit}
         </span>
-        <span className={cx("text-xs", remaining === 0 ? "font-semibold text-rose-600" : "text-slate-500")}>
+        <span className={cx("text-xs", remaining === 0 ? "font-semibold text-rose-600" : "text-slate-500 dark:text-slate-400")}>
           {remaining === 0 ? t("upgradeToPro") : `${remaining} ${t("quotaLeftSuffix")}`}
         </span>
       </div>
