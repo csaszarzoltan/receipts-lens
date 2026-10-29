@@ -1,126 +1,70 @@
 import { test, expect, type Page } from "@playwright/test";
-import { E2E_API_BASE, createDevSession, seedSession, tenantHeaders } from "./session";
+import { createDevSession, seedSession, E2E_API_BASE, tenantHeaders } from "./session";
 
 /**
- * F1.5 consumer onboarding E2E — full 3-step journey (plan §4 / F1.5).
+ * First-run onboarding (current single-screen flow).
  *
- * Acceptance coverage:
- *  1. Exactly 3 steps with sticky progress + forward/back, skippable.
- *  2. Step 1 shows the one-sentence positioning promise (§3.1):
- *     "Fotózd le a nyugtát. Mi megmutatjuk, hol folyik el a pénzed — és hol
- *     takaríthatsz meg."
- *  3. Finishing navigates to the consumer dashboard (/dashboard).
- *  4. State persistence: after completion, the flow does not reappear
- *     (onboarding_done persisted via /product/preferences).
+ * /onboarding shows one screen: the start title, a hint, the currency selector,
+ * a drop zone, Skip, and Finish (enabled after the first upload). The dashboard
+ * shows the same flow as an inline card until onboarding is done.
  *
- * The receipt-upload leg of step 3 is exercised by the contract tests +
- * the browser-helper journey (real camera cannot be driven headless); here
- * we verify the full navigation flow, the promise copy and persistence.
+ * Copy is Hungarian (session locale "hu"). Auth is a fresh dev session per test,
+ * so every test starts from a household with onboarding not done.
  */
 
-const ONBOARDING_DONE_KEY = "receiptlens.onboarding.seen"; // local echo only
+const TITLE = "Kezdj egy nyugtával";
+const HINT = "Fotózd le vagy válassz egy képet";
+const SKIP = "Kihagyás";
+const FINISH = "Befejezés";
+const DROP_INPUT = 'input[data-testid="dropzone-input"]';
 
-// The backend the frontend talks to (NEXT_PUBLIC_API_BASE_URL of the dev
-// server under test). Overridable via E2E_API_BASE.
-const API_BASE = E2E_API_BASE;
-
-/** Fresh household session per test, so the flow under test starts from step 1. */
-async function seedAuth(page: Page): Promise<void> {
-  const session = await createDevSession(page.request, `onboarding-${Date.now()}@example.test`);
-  await seedSession(page, session.token, "hu"); // assertions use Hungarian copy
-  // A household may already have onboarding_done=true (which would redirect
-  // /onboarding straight to /dashboard). Reset it for the session's tenant.
-  await page.request.put(`${API_BASE}/product/preferences`, {
+async function freshHousehold(page: Page): Promise<void> {
+  const session = await createDevSession(page.request, `onboarding-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.test`);
+  await seedSession(page, session.token, "hu");
+  await page.request.put(`${E2E_API_BASE}/product/preferences`, {
     headers: tenantHeaders(session.tenantId),
     data: { payload: { onboarding_done: false } },
   });
 }
 
-test("onboarding: 3-step journey with promise, back/forward, dashboard finish and persistence", async ({ page }) => {
-  await seedAuth(page);
-  await page.goto("/onboarding");
-  await page.waitForLoadState("domcontentloaded");
-  await page.waitForTimeout(1500);
+test("onboarding page shows the start screen and Skip lands on the dashboard", async ({ page }) => {
+  await freshHousehold(page);
+  await page.goto("/onboarding", { waitUntil: "load" });
 
-  // --- Step 1: positioning promise (§3.1) ---
-  const h1 = page.locator("h1").first();
-  await expect(h1).toBeVisible({ timeout: 10_000 });
-  await expect(h1).toContainText("Mi ez?");
-  await expect(page.getByText(/Fotózd le a nyugtát/)).toBeVisible();
-  await expect(page.getByText(/1\. lépés a 3 közül/)).toBeVisible();
+  await expect(page.locator("main h1").first()).toHaveText(TITLE);
+  await expect(page.getByText(HINT)).toBeVisible();
+  await expect(page.locator(DROP_INPUT)).toHaveCount(1);
+  await expect(page.getByRole("button", { name: SKIP })).toBeVisible();
 
-  // --- Step 2: camera / upload access ---
-  await page.getByRole("button", { name: "Tovább" }).click();
-  await expect(h1).toContainText("Kamera hozzáférése");
-  await expect(page.getByRole("button", { name: /Fénykép készítése/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Feltöltés az eszközről/ })).toBeVisible();
-  await expect(page.getByText(/2\. lépés a 3 közül/)).toBeVisible();
-
-  // --- Back navigation preserves state (sticky) ---
-  await page.getByRole("button", { name: "Vissza" }).click();
-  await expect(h1).toContainText("Mi ez?");
-  await page.getByRole("button", { name: "Tovább" }).click();
-
-  // --- Step 3: first receipt ---
-  await page.getByRole("button", { name: "Tovább" }).click();
-  await expect(h1).toContainText("Az első nyugtád");
-  await expect(page.getByRole("button", { name: /Nyugta kiválasztása/ })).toBeVisible();
-  await expect(page.getByText(/3\. lépés a 3 közül/)).toBeVisible();
-
-  // --- Finish → consumer dashboard (F1.2 destination) ---
-  await page.getByRole("button", { name: /Áttekintés megnyitása/ }).click();
+  await page.getByRole("button", { name: SKIP }).click();
   await page.waitForURL("**/dashboard", { timeout: 15_000 });
-  await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
-  // The dashboard shell (AppShell) renders — dashboard heading or app shell
-  // must be present; the Onboarding modal must NOT be shown anymore.
-  await expect(page.locator('[role="dialog"][aria-modal="true"]')).toHaveCount(0);
-
-  // --- State persistence: no replay on next visit ---
-  await page.goto("/onboarding");
-  await page.waitForLoadState("domcontentloaded");
-  await page.waitForTimeout(1500);
-  await expect(page.locator('[role="dialog"][aria-modal="true"]')).toHaveCount(0);
+  // Onboarding is now done, so the dashboard must not show the first-run card again.
+  await expect(page.locator("section[aria-labelledby='onboarding-title']")).toHaveCount(0);
 });
 
-test("onboarding: skip is available and lands on dashboard", async ({ page }) => {
-  await seedAuth(page);
-  await page.goto("/onboarding");
-  await page.waitForLoadState("domcontentloaded");
-  await page.waitForTimeout(1500);
+test("first receipt upload enables Finish and opens the saved receipt", async ({ page }) => {
+  await freshHousehold(page);
+  await page.goto("/onboarding", { waitUntil: "load" });
+  await expect(page.locator("main h1").first()).toHaveText(TITLE);
 
-  await expect(page.locator("h1").first()).toContainText("Mi ez?");
-  await page.getByRole("button", { name: "Kihagyás" }).click();
-  await page.waitForURL("**/dashboard", { timeout: 15_000 });
-  await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
+  await page.locator(DROP_INPUT).setInputFiles("e2e/fixtures/test-receipt-coop.jpg");
+
+  const finish = page.getByRole("button", { name: FINISH });
+  await expect(finish).toBeEnabled({ timeout: 90_000 });
+  await finish.click();
+  await page.waitForURL(/\/receipts\/[^/]+$/, { timeout: 20_000 });
 });
 
-test("onboarding: first receipt upload shows the extracted result (step 3)", async ({ page }) => {
-  await seedAuth(page);
-  await page.goto("/onboarding");
-  await page.waitForLoadState("domcontentloaded");
-  await page.waitForTimeout(1500);
+test("dashboard first-run card can be dismissed", async ({ page }) => {
+  await freshHousehold(page);
+  await page.goto("/dashboard", { waitUntil: "load" });
 
-  // Step 1 → 2
-  await page.getByRole("button", { name: "Tovább" }).click();
-  await expect(page.locator("h1").first()).toContainText("Kamera hozzáférése");
-  // Step 2 → 3
-  await page.getByRole("button", { name: "Tovább" }).click();
-  await expect(page.locator("h1").first()).toContainText("Az első nyugtád");
+  const card = page.locator("section[aria-labelledby='onboarding-title']");
+  await expect(card).toBeVisible();
+  await expect(card.locator("#onboarding-title")).toHaveText(TITLE);
+  // No blocking dialog may cover the header while the card is shown.
+  await expect(page.locator("[role='dialog'][aria-modal='true']")).toHaveCount(0);
 
-  // Real file upload through the picker (the page uses uploadReceipt —
-  // the classic OCR pipeline with the F1.4 confidence level — against the
-  // live backend; the AI vision toggle stays on /upload).
-  const fileInput = page.locator('input[data-testid="onboarding-file-input"]');
-  await fileInput.setInputFiles("e2e/fixtures/test-receipt-coop.jpg");
-
-  // Processing state appears, then the extracted result panel.
-  await expect(page.getByText("Feldolgozás…")).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText(/Kész — az első nyugtád feldolgozva/)).toBeVisible({
-    timeout: 60_000,
-  });
-
-  // Finishing navigates to the consumer dashboard.
-  await page.getByRole("button", { name: /Áttekintés megnyitása/ }).click();
-  await page.waitForURL("**/dashboard", { timeout: 15_000 });
-  await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
+  await card.getByRole("button", { name: "Ablak bezárása" }).click();
+  await expect(card).toHaveCount(0);
 });
