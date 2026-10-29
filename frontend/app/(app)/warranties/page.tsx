@@ -51,9 +51,9 @@ function WarrantiesWorkspace() {
       {isLoading ? (
         <SkeletonCard className="h-48" />
       ) : error ? (
-        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
+        <EmptyState title={t("couldNotLoad")} description={t("error")} />
       ) : items.length === 0 && !adding ? (
-        <EmptyState icon="🛡️" title={t("warrantyEmptyTitle")} description={t("warrantyEmptyDesc")} />
+        <EmptyState title={t("warrantyEmptyTitle")} description={t("warrantyEmptyDesc")} />
       ) : (
         <>
           {items.length > 0 ? (

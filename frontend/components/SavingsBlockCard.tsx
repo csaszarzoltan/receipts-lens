@@ -1,6 +1,7 @@
 "use client";
 
 import EmptyState from "@/components/EmptyState";
+import Pill from "@/components/Pill";
 import { useTranslation } from "@/lib/i18n";
 import type { SavingsBlock, SavingsCandidate } from "@/lib/types";
 import { formatMoney } from "@/lib/utils";
@@ -56,7 +57,6 @@ export default function SavingsBlockCard({ savings }: { savings: SavingsBlock })
       ) : (
         <div className="mt-4">
           <EmptyState
-            icon="✅"
             title={t("noSavingsFound")}
             description={t("noSavingsFoundHint")}
           />
@@ -90,10 +90,10 @@ function SavingsCandidateRow({
           {candidate.merchant}
         </p>
         {delta === null ? null : (
-          <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          <Pill>
             {t("deltaVsAverage")} {delta > 0 ? "+" : ""}
             {delta.toFixed(1)}%
-          </span>
+          </Pill>
         )}
       </div>
       <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">

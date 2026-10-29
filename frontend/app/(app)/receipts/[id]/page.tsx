@@ -5,10 +5,11 @@ import { averageConfidence } from "@/lib/confidence";
 import { categoryLabel } from "@/lib/categories";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
-import { getReceipt, getReceiptBoxes, getReceiptHistory, getReceiptImage, updateLineItems, updateMetadata, updateReceiptWorkspace } from "@/lib/api";
-import type { HistoryEntry, LineItem, OCRBox, ReceiptItem } from "@/lib/types";
+import { getApprovals, getReceipt, getReceiptBoxes, getReceiptHistory, getReceiptImage, updateLineItems, updateMetadata, updateReceiptWorkspace } from "@/lib/api";
+import type { Approval, HistoryEntry, LineItem, OCRBox, ReceiptItem } from "@/lib/types";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import StatusBadge from "@/components/StatusBadge";
+import ApprovalTimeline from "@/components/ApprovalTimeline";
 import Money from "@/components/Money";
 import CurrencyField from "@/components/CurrencyField";
 import { Skeleton, SkeletonCard } from "@/components/Skeleton";
@@ -22,6 +23,8 @@ function ReceiptDetailContent({ id }: { id: string }) {
   );
   const { data: boxesData } = useSWR(id ? `/boxes/${id}` : null, () => getReceiptBoxes(id));
   const { data: historyData } = useSWR(id ? `/history/${id}` : null, () => getReceiptHistory(id));
+  // Approvals are optional; a failed read just hides the timeline.
+  const { data: approvalData } = useSWR(id ? `/approvals-for/${id}` : null, () => getApprovals().catch(() => ({ items: [] as Approval[] })));
 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -138,6 +141,9 @@ function ReceiptDetailContent({ id }: { id: string }) {
   const receipt = item.receipt;
   const boxes: OCRBox[] = boxesData?.boxes ?? [];
   const history: HistoryEntry[] = historyData?.items ?? [];
+  const approval: Approval | undefined = (approvalData?.items ?? [])
+    .filter((a) => a.receipt_id === id)
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))[0];
   const avgConfidence = averageConfidence(receipt.confidence);
 
   return (
@@ -171,6 +177,12 @@ function ReceiptDetailContent({ id }: { id: string }) {
           <a href="/receipts" className="btn-secondary">{t("allReceiptsLink")}</a>
         </div>
       </div>
+
+      {approval ? (
+        <div className="card p-5">
+          <ApprovalTimeline approval={approval} />
+        </div>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Receipt image */}

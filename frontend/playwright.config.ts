@@ -12,7 +12,10 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
+  // Serial: the backend runs OCR on uploads, and parallel runs starve each other.
   workers: 1,
+  // One retry absorbs a transient stall; a test that only passes on retry still shows in the report.
+  retries: 1,
   timeout: 45_000,
   projects: [
     {

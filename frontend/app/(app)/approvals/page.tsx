@@ -6,7 +6,7 @@ import { createApprovalPolicy, decideApproval, getApprovals } from "@/lib/api";
 import type { Approval } from "@/lib/types";
 import EmptyState from "@/components/EmptyState";
 import Modal from "@/components/Modal";
-import StatusBadge from "@/components/StatusBadge";
+import { ApprovalPill } from "@/components/ApprovalTimeline";
 import { SkeletonCard } from "@/components/Skeleton";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
@@ -70,10 +70,9 @@ export default function ApprovalsPage() {
           <SkeletonCard className="h-40" />
         </div>
       ) : error ? (
-        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
+        <EmptyState title={t("couldNotLoad")} description={t("error")} />
       ) : items.length === 0 ? (
         <EmptyState
-          icon="🎯"
           title={t("nothingPending")}
           description={t("allClear")}
         />
@@ -90,9 +89,9 @@ export default function ApprovalsPage() {
                     {approval.policy_name ?? approval.policy_id} · {formatDateTime(approval.created_at)}
                   </p>
                 </div>
-                <StatusBadge status={approval.status} />
+                <ApprovalPill approval={approval} />
               </div>
-              <p className="mt-3 text-2xl font-semibold text-slate-900 dark:text-slate-100">
+              <p className="mt-3 text-2xl font-bold tabular-nums text-slate-900 dark:text-slate-100">
                 {formatMoney(approval.total, approval.currency)}
               </p>
               {approval.project ? (

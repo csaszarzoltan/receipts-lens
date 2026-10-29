@@ -71,7 +71,6 @@ export default function UploadPage() {
         </section>
       ) : (
         <EmptyState
-          icon="📤"
           title={t("readyWhenYouAre")}
           description={t("readyWhenYouAreDesc")}
         />

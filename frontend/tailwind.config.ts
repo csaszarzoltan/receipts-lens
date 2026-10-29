@@ -10,29 +10,35 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Accent: teal. 600 is the primary action colour (#0F766E).
         brand: {
-          50: "#eef6ff",
-          100: "#d9ebff",
-          200: "#bcdcff",
-          300: "#8ec6ff",
-          400: "#59a6ff",
-          500: "#3380fc",
-          600: "#1d5ef1",
-          700: "#1548de",
-          800: "#173cb4",
-          900: "#19388d",
-          950: "#142456",
+          50: "#f0fdfa",
+          100: "#ccfbf1",
+          200: "#99f6e4",
+          300: "#5eead4",
+          400: "#2dd4bf",
+          500: "#14b8a6",
+          600: "#0f766e",
+          700: "#115e59",
+          800: "#134e4a",
+          900: "#0f3f3c",
+          950: "#042f2e",
         },
         surface: {
           DEFAULT: "#ffffff",
           dark: "#0f172a",
         },
       },
+      fontFamily: {
+        // Inter is loaded in app/layout.tsx; the system stack is the fallback.
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
       borderRadius: {
-        DEFAULT: "0.625rem",
+        DEFAULT: "0.75rem",
       },
       boxShadow: {
-        card: "0 1px 3px rgba(15, 23, 42, 0.08), 0 4px 14px rgba(15, 23, 42, 0.05)",
+        // Flat: hairline borders carry the structure, shadow only hints at hover.
+        card: "0 1px 2px rgba(16, 24, 40, 0.04)",
       },
       keyframes: {
         "fade-in": {

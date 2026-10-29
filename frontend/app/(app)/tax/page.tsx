@@ -69,7 +69,7 @@ export default function TaxPage() {
         </div>
       );
     }
-    return <EmptyState icon="⚠️" title="Error" description={msg} />;
+    return <EmptyState title="Error" description={msg} />;
   }
 
   const summary = data;
@@ -92,7 +92,7 @@ export default function TaxPage() {
             {t("upgradeToPro")} {t("taxProWhy")}
           </p>
         ) : null}
-        <EmptyState icon="📄" title={t("taxDeduction")} description="No categorized receipts yet." />
+        <EmptyState title={t("taxDeduction")} description="No categorized receipts yet." />
       </div>
     );
   }

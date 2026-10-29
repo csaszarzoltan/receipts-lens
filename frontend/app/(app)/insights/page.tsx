@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import useSWR from "swr";
+import Pill from "@/components/Pill";
 import {
   evaluateInsights,
   getInsightCards,
@@ -102,12 +103,11 @@ export default function InsightsPage() {
       ) : null}
 
       {failure ? (
-        <EmptyState icon="⚠️" title={t("error")} description={failure} />
+        <EmptyState title={t("error")} description={failure} />
       ) : null}
 
       {!failure && cards.length === 0 ? (
         <EmptyState
-          icon="💡"
           title={t("noInsightsTitle")}
           description={t("noInsightsHint")}
         />
@@ -120,12 +120,9 @@ export default function InsightsPage() {
               <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                 {card.title}
               </h2>
-              <span
-                className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                title={t("confidence")}
-              >
+              <Pill className="shrink-0" title={t("confidence")}>
                 {Math.round(card.confidence * 100)}%
-              </span>
+              </Pill>
             </div>
             <p className="text-sm text-slate-600 dark:text-slate-300">
               {card.explanation}

@@ -60,3 +60,7 @@ frontend/.prod-smoke/
 # Private UX release preparation: database backups and isolated source/builds.
 /backups/ux-release-*/
 /releases/ux-prep-*/
+
+# SQLite write-ahead log and shared memory (WAL mode)
+*.db-wal
+*.db-shm

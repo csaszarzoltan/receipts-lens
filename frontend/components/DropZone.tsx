@@ -217,7 +217,10 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
           }}
           className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-xl px-6 py-10 text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
         >
-          <span className="text-4xl" aria-hidden="true">🧾</span>
+          <svg className="h-10 w-10 text-slate-400 dark:text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
+            <path d="M9 8h6M9 12h6" />
+          </svg>
           <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">{dropLabel}</p>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{t("dropFormats")}</p>
         </div>
@@ -234,7 +237,7 @@ export default function DropZone({ onFiles, disabled, label }: DropZoneProps) {
             onClick={openCamera}
             className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
           >
-            📷 {t(cameraPending ? "dropCameraOpening" : "dropTakePhoto")}
+            {t(cameraPending ? "dropCameraOpening" : "dropTakePhoto")}
           </button>
           {cameraPending ? <button type="button" onClick={stopCamera} className="btn-secondary">{t("dropCancel")}</button> : null}
         </div>

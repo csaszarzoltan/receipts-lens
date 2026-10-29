@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
+import Pill from "@/components/Pill";
 import {
   getCancelGuide,
   getPreferences,
@@ -132,13 +133,11 @@ export default function SubscriptionsPage() {
         </div>
       ) : error ? (
         <EmptyState
-          icon="⚠️"
           title={t("couldNotLoad")}
           description={t("error")}
         />
       ) : items.length === 0 ? (
         <EmptyState
-          icon="🔄"
           title={t("noSubscriptionsDetectedTitle")}
           description={t("noSubscriptionsDetectedDesc")}
         />
@@ -185,9 +184,9 @@ export default function SubscriptionsPage() {
                       <h3 className="font-medium text-slate-900 dark:text-slate-100">
                         {s.merchant}
                       </h3>
-                      <span className="inline-flex rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                      <Pill tone="accent">
                         {daysLabel(daysUntil(s.renewal_date), t)}
-                      </span>
+                      </Pill>
                     </div>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                       {formatDate(s.renewal_date)} ·{" "}
@@ -214,9 +213,9 @@ export default function SubscriptionsPage() {
                       <h3 className="font-medium text-slate-900 dark:text-slate-100">
                         {s.merchant}
                       </h3>
-                      <span className="inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-950 dark:text-rose-300">
+                      <Pill tone="bad">
                         {t("priceIncreasedBadge")}
-                      </span>
+                      </Pill>
                     </div>
                     <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                       Now {amountIn(s.amount, s.currency)} ·{" "}

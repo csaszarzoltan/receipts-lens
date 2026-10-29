@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
+import Pill from "@/components/Pill";
 import { createRule, getRules, previewRule } from "@/lib/api";
 import type { AutomationRule } from "@/lib/types";
 import EmptyState from "@/components/EmptyState";
@@ -61,10 +62,9 @@ export default function AutomationsPage() {
           <SkeletonCard className="h-32" />
         </div>
       ) : error ? (
-        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
+        <EmptyState title={t("couldNotLoad")} description={t("error")} />
       ) : rules.length === 0 ? (
         <EmptyState
-          icon="⚡"
           title={t("noRules")}
           description={t("noRules")}
         />
@@ -74,15 +74,9 @@ export default function AutomationsPage() {
             <li key={rule.rule_id} className="card p-5">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="font-semibold text-slate-900 dark:text-slate-100">{rule.name}</h2>
-                <span
-                  className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                    rule.active
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                  }`}
-                >
+                <Pill tone={rule.active ? "ok" : "neutral"}>
                   {rule.active ? t("activeLabel") : t("inactiveLabel")}
-                </span>
+                </Pill>
               </div>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {t("priorityLabel")} {rule.priority} · {t("conditionsLabel")}{" "}

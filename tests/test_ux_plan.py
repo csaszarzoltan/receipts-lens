@@ -1,6 +1,5 @@
 """REQ-UX-04/06/19; AC-UX-04/06/19 behavior regressions."""
 
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from tempfile import SpooledTemporaryFile
@@ -120,14 +119,14 @@ def test_req_ux06_ac_ux06_http_replay_does_not_repeat_ocr():
     w = AdvancedWorkspace(s)
     actor = Actor("http-ux", "admin")
 
-    async def upload(data=b"image"):
+    def upload(data=b"image"):
         with SpooledTemporaryFile() as stream:
             stream.write(data)
             stream.seek(0)
             file = UploadFile(
                 stream, filename="same.png", headers=Headers({"content-type": "image/png"})
             )
-            return await product_api.upload_receipt(
+            return product_api.upload_receipt(
                 file=file, ai_scan=None, current=actor, idempotency_key="http-replay"
             )
 
@@ -136,12 +135,12 @@ def test_req_ux06_ac_ux06_http_replay_does_not_repeat_ocr():
         patch.object(product_api, "advanced", w),
         patch("app.product_api.parse_receipt_with_confidence", return_value=receipt()) as ocr,
     ):
-        first = asyncio.run(upload())
-        replay = asyncio.run(upload())
+        first = upload()
+        replay = upload()
         assert first["receipt_id"] == replay["receipt_id"]
         assert ocr.call_count == 1
         with pytest.raises(HTTPException) as exc:
-            asyncio.run(upload(b"other"))
+            upload(b"other")
         assert exc.value.status_code == 409
 
 

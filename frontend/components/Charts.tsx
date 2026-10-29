@@ -42,7 +42,7 @@ export function SpendingChart({
           cursor={{ fill: "currentColor", opacity: 0.06 }}
           formatter={(value) => [formatMoney(Number(value), currency), "Spend"]}
         />
-        <Bar dataKey="amount" fill="var(--chart-primary, #1d5ef1)" radius={[6, 6, 0, 0]} maxBarSize={42} />
+        <Bar dataKey="amount" fill="var(--chart-primary, #0f766e)" radius={[6, 6, 0, 0]} maxBarSize={42} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -79,7 +79,7 @@ export function ForecastChart({
           cursor={{ fill: "currentColor", opacity: 0.06 }}
           formatter={(value) => formatMoney(Number(value), currency)}
         />
-        <Bar dataKey="projected" name="Projected" fill="var(--chart-primary, #1d5ef1)" radius={[4, 4, 0, 0]} maxBarSize={42} />
+        <Bar dataKey="projected" name="Projected" fill="var(--chart-primary, #0f766e)" radius={[4, 4, 0, 0]} maxBarSize={42} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -102,7 +102,7 @@ export function VarianceChart({
   height?: number;
   currency?: string;
 }) {
-  const STATUS_COLORS = ["#1d5ef1", "#0f9d58", "#d97706", "#dc2626"];
+  const STATUS_COLORS = ["#0f766e", "#0f9d58", "#d97706", "#dc2626"];
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>

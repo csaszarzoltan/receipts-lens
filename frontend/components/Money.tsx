@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMoney } from "@/lib/utils";
+import { cx, formatMoney } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
 interface MoneyProps {
@@ -25,5 +25,5 @@ export default function Money({ amount, currency, className }: MoneyProps) {
       </span>
     );
   }
-  return <span data-testid="money-amount" className={className}>{formatMoney(amount, currency)}</span>;
+  return <span data-testid="money-amount" className={cx("tabular-nums", className)}>{formatMoney(amount, currency)}</span>;
 }

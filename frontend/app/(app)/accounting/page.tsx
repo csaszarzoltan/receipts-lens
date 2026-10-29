@@ -35,9 +35,9 @@ export default function AccountingPage() {
       {isLoading ? (
         <SkeletonCard className="h-64" />
       ) : error ? (
-        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
+        <EmptyState title={t("couldNotLoad")} description={t("error")} />
       ) : items.length === 0 ? (
-        <EmptyState icon="📄" title={t("noReceipts")} description={t("noReceiptsHint")} action={{ label: t("uploadFirst"), href: "/upload" }} />
+        <EmptyState title={t("noReceipts")} description={t("noReceiptsHint")} action={{ label: t("uploadFirst"), href: "/upload" }} />
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="card overflow-x-auto" aria-label={t("receipts")}>

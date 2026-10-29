@@ -5,6 +5,7 @@ import Link from "next/link";
 import { deleteWarranty, updateWarranty } from "@/lib/api";
 import { useTranslation, type MessageKey } from "@/lib/i18n";
 import type { Warranty, WarrantyStatus } from "@/lib/types";
+import Pill from "@/components/Pill";
 import { cx, formatDate } from "@/lib/utils";
 
 const DAY_MS = 86_400_000;
@@ -106,16 +107,9 @@ export default function WarrantyCard({ item, onChanged }: { item: Warranty; onCh
             </p>
           </div>
           {!open || item.due_soon ? (
-            <span
-              className={cx(
-                "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium",
-                open
-                  ? "bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                  : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-              )}
-            >
+            <Pill tone={open ? "wait" : "neutral"} className="shrink-0">
               {open ? t("warrantySummaryDue") : t(STATUS_LABEL[item.status])}
-            </span>
+            </Pill>
           ) : null}
         </div>
 

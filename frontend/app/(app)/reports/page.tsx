@@ -65,10 +65,10 @@ export default function ReportsPage() {
       {receiptsLoading ? (
         <SkeletonCard className="h-72" />
       ) : receiptsError ? (
-        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
+        <EmptyState title={t("couldNotLoad")} description={t("error")} />
       ) : trend.length === 0 ? (
         <div className="space-y-2">
-          <EmptyState icon="📊" title={t("notEnoughData")} description={t("reportsEmptyDesc")} action={{ label: t("uploadReceiptsAction"), href: "/upload" }} />
+          <EmptyState title={t("notEnoughData")} description={t("reportsEmptyDesc")} action={{ label: t("uploadReceiptsAction"), href: "/upload" }} />
           <UnpricedNote count={unpriced} />
         </div>
       ) : (

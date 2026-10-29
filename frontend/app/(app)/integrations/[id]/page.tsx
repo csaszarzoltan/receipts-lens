@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
+import Pill from "@/components/Pill";
 import Link from "next/link";
 import {
   disconnectProviderConnection,
@@ -88,15 +89,9 @@ export default function ConnectionDetailPage({ params }: { params: { id: string 
             {connection.provider_company_name || connection.provider}
           </h1>
         </div>
-        <span
-          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-            healthy
-              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-              : "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-          }`}
-        >
+        <Pill tone={healthy ? "ok" : "wait"}>
           {healthy ? t("healthyStatus") : connection.reauthorization_required ? t("reauthRequired") : connection.health}
-        </span>
+        </Pill>
       </div>
 
       <dl className="card grid gap-4 p-5 sm:grid-cols-2">
@@ -133,7 +128,7 @@ export default function ConnectionDetailPage({ params }: { params: { id: string 
         {runsLoading ? (
           <SkeletonCard className="h-24" />
         ) : runs.length === 0 ? (
-          <EmptyState icon="📦" title={t("noExportsYet")} description={t("noExportsHint")} />
+          <EmptyState title={t("noExportsYet")} description={t("noExportsHint")} />
         ) : (
           <ul className="card divide-y divide-slate-100 dark:divide-slate-800">
             {runs

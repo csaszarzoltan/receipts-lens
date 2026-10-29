@@ -1,5 +1,4 @@
 """I3: OCR runs outside the write lock; a failed or repeated upload costs one quota unit at most."""
-import asyncio
 import threading
 from tempfile import SpooledTemporaryFile
 from unittest.mock import patch
@@ -94,13 +93,13 @@ def _receipt():
 
 
 def _upload(actor, key, data=b"image"):
-    async def go():
+    def go():
         with SpooledTemporaryFile() as stream:
             stream.write(data)
             stream.seek(0)
             file = UploadFile(stream, filename="a.png", headers=Headers({"content-type": "image/png"}))
-            return await product_api.upload_receipt(file=file, ai_scan=None, current=actor, idempotency_key=key)
-    return asyncio.run(go())
+            return product_api.upload_receipt(file=file, ai_scan=None, current=actor, idempotency_key=key)
+    return go()
 
 
 def test_http_failed_ocr_and_replay_cost_at_most_one_quota_unit():

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Pill from "@/components/Pill";
 import useSWR from "swr";
 import { createConnection, getProviderConnections, startQuickBooksOAuth, testConnection } from "@/lib/api";
 import type { Connection, ProviderConnection } from "@/lib/types";
@@ -72,7 +73,7 @@ export default function IntegrationsPage() {
         <div className="border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-cyan-50 p-5 dark:border-slate-800 dark:from-emerald-950/40 dark:to-cyan-950/30">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div><p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">{t("recommendedNextStep")}</p><h2 id="qbo-heading" className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{t("qboSandboxTitle")}</h2><p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-300">{t("qboSandboxDesc")}</p></div>
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">{t("notConnectedBadge")}</span>
+            <Pill>{t("notConnectedBadge")}</Pill>
           </div>
         </div>
         <div className="grid gap-4 p-5 md:grid-cols-3">
@@ -87,9 +88,9 @@ export default function IntegrationsPage() {
           <SkeletonCard className="h-32" />
         </div>
       ) : error ? (
-        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
+        <EmptyState title={t("couldNotLoad")} description={t("error")} />
       ) : connections.length === 0 ? (
-        <EmptyState icon="🔌" title={t("noIntegrationsYet")} description={t("noIntegrationsHint")} />
+        <EmptyState title={t("noIntegrationsYet")} description={t("noIntegrationsHint")} />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Integrations">
           {connections.map((connection) => (
@@ -104,15 +105,12 @@ export default function IntegrationsPage() {
                     <p className="text-sm capitalize text-slate-500 dark:text-slate-400">{connection.provider}</p>
                   </div>
                 </div>
-                <span
-                  className={`mt-3 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                    connection.health === "healthy" && !connection.reauthorization_required
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                      : "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-                  }`}
+                <Pill
+                  tone={connection.health === "healthy" && !connection.reauthorization_required ? "ok" : "wait"}
+                  className="mt-3"
                 >
                   {connection.reauthorization_required ? t("reauthRequired") : connection.health}
-                </span>
+                </Pill>
               </Link>
               <button
                 type="button"

@@ -147,8 +147,11 @@ class ProductService:
     def __init__(self, database: str | Path = ":memory:") -> None:
         self._db = sqlite3.connect(str(database), check_same_thread=False, factory=ProductConnection)
         # Wait briefly for a concurrent writer rather than failing instantly.
-        # Journal mode is left at sqlite's default, unchanged.
         self._db.execute(f"PRAGMA busy_timeout = {self._BUSY_TIMEOUT_MS}")
+        if str(database) != ":memory:":
+            # WAL lets the feature store (its own connection to the same file) read while
+            # the product connection writes; the setting persists in the database file.
+            self._db.execute("PRAGMA journal_mode = WAL")
         self._db.row_factory = sqlite3.Row
         self._lock = self._db.transaction_lock
         self._create_schema()

@@ -17,7 +17,7 @@ export default function PermissionsSettingsPage() {
   if (isLoading) return <SkeletonCard className="h-64" />;
 
   if (error || !data) {
-    return <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />;
+    return <EmptyState title={t("couldNotLoad")} description={t("error")} />;
   }
 
   const matrix = data;

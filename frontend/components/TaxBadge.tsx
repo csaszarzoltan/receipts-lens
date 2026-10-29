@@ -1,45 +1,34 @@
 "use client";
 
-import { cx } from "@/lib/utils";
+import Pill, { type PillTone } from "@/components/Pill";
 
 interface TaxBadgeProps {
   category: string | null | undefined;
 }
 
-const TONE: Record<string, string> = {
-  "Meals": "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  "Travel": "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
-  "Transportation": "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  "Office": "bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
-  "Rent": "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  "Advertising": "bg-pink-50 text-pink-700 dark:bg-pink-950 dark:text-pink-300",
-  "Groceries": "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+// Tax categories share the six app tones, so no extra colour family is added.
+const TONE: Record<string, PillTone> = {
+  "Meals": "wait",
+  "Travel": "check",
+  "Transportation": "accent",
+  "Office": "neutral",
+  "Rent": "neutral",
+  "Advertising": "neutral",
+  "Groceries": "ok",
 };
 
-function tone(category: string): string {
-  for (const [key, cls] of Object.entries(TONE)) {
-    if (category.startsWith(key) || category.includes(key)) return cls;
+function tone(category: string): PillTone {
+  for (const [key, value] of Object.entries(TONE)) {
+    if (category.startsWith(key) || category.includes(key)) return value;
   }
-  return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
+  return "neutral";
 }
 
 export default function TaxBadge({ category }: TaxBadgeProps) {
-  if (!category) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-400 dark:bg-slate-800">
-        —
-      </span>
-    );
-  }
+  if (!category) return <Pill>—</Pill>;
   return (
-    <span
-      className={cx(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-        tone(category),
-      )}
-      title={category}
-    >
+    <Pill tone={tone(category)} title={category}>
       {category}
-    </span>
+    </Pill>
   );
 }

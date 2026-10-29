@@ -114,7 +114,6 @@ function ReviewWorkspace() {
   if (error) {
     return (
       <EmptyState
-        icon="⚠️"
         title={t("couldNotLoad")}
         description={t("error")}
       />
@@ -124,7 +123,6 @@ function ReviewWorkspace() {
   if (items.length === 0) {
     return (
       <EmptyState
-        icon="✅"
         title={bulkDone ? `${bulkDone} ${t("reviewConfirmedSuffix")}` : t("allClearTitle")}
         description={t("allClearDesc")}
       />
@@ -393,6 +391,7 @@ function ReviewCard({ item, reading, onDone }: { item: ReviewItem; reading: bool
 
           <div className="flex flex-wrap items-start gap-x-3 gap-y-2 text-sm text-slate-600 dark:text-slate-400">
             <ConfidenceBadge
+              compact
               value={
                 Object.values(item.receipt.confidence ?? {}).length
                   ? Object.values(item.receipt.confidence ?? {}).reduce((a, b) => a + b, 0) /

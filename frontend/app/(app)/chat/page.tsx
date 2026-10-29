@@ -87,12 +87,11 @@ function ChatBody() {
       {loading ? <SkeletonCard className="h-48" /> : null}
 
       {errorMsg ? (
-        <EmptyState icon="⚠️" title={t("error")} description={errorMsg} />
+        <EmptyState title={t("error")} description={errorMsg} />
       ) : null}
 
       {!loading && !errorMsg && !answer ? (
         <EmptyState
-          icon="💬"
           title={t("chatEmptyTitle")}
           description={t("chatEmptyHint")}
         />

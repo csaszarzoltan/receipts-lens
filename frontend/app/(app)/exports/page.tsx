@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
+import Pill from "@/components/Pill";
 import { createConnection, getConnections, getExportRuns, testConnection } from "@/lib/api";
 import type { Connection, ExportRun } from "@/lib/types";
 import EmptyState from "@/components/EmptyState";
@@ -60,9 +61,9 @@ export default function ExportsPage() {
         {connectionsLoading ? (
           <SkeletonCard className="h-32" />
         ) : connectionsError ? (
-          <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
+          <EmptyState title={t("couldNotLoad")} description={t("error")} />
         ) : connections.length === 0 ? (
-          <EmptyState icon="🔌" title={t("noRules")} description={t("createConnectionDesc")} />
+          <EmptyState title={t("noRules")} description={t("createConnectionDesc")} />
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2" aria-label={t("integrations")}>
             {connections.map((connection) => (
@@ -72,15 +73,9 @@ export default function ExportsPage() {
                     <h3 className="font-semibold text-slate-900 dark:text-slate-100">{connection.name}</h3>
                     <p className="text-sm capitalize text-slate-500 dark:text-slate-400">{connection.provider}</p>
                   </div>
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                      connection.active
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                    }`}
-                  >
+                  <Pill tone={connection.active ? "ok" : "neutral"}>
                     {connection.active ? t("activeLabel") : t("inactiveLabel")}
-                  </span>
+                  </Pill>
                 </div>
                 <button
                   type="button"
@@ -99,7 +94,7 @@ export default function ExportsPage() {
       <section aria-label={t("exports")}>
         <h2 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">{t("exports")}</h2>
         {runs.length === 0 ? (
-          <EmptyState icon="📦" title={t("notEnoughData")} description={t("exportsEmptyDesc")} />
+          <EmptyState title={t("notEnoughData")} description={t("exportsEmptyDesc")} />
         ) : (
           <ul className="card divide-y divide-slate-100 dark:divide-slate-800">
             {runs.map((run) => (

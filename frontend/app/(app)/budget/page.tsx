@@ -35,7 +35,7 @@ export default function BudgetPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("budget")}</h1>
-        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
+        <EmptyState title={t("couldNotLoad")} description={t("error")} />
       </div>
     );
   }
@@ -55,7 +55,6 @@ export default function BudgetPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("budget")}</h1>
         <EmptyState
-          icon="🎯"
           title={t("noBudgetSet")}
           description={t("createBudgetHint")}
         />

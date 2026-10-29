@@ -4,8 +4,11 @@ Produces structured receipt data from raw image bytes via Tesseract.
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
+import threading
+from collections import OrderedDict
 from difflib import SequenceMatcher
 from functools import lru_cache
 from dataclasses import dataclass, field
@@ -196,6 +199,63 @@ def _extract_merchant(text: str) -> str | None:
     return None
 
 
+# Per-image caches. One upload runs preprocessing and the same Tesseract passes several
+# times (parse, confidence, language check); the image bytes are the cache key, so each
+# unique pass runs once. Bounded LRU keeps memory flat on a small server.
+_CACHE_LOCK = threading.Lock()
+_CACHE_SIZE = 4
+_PREPROCESS_CACHE: "OrderedDict[str, Any]" = OrderedDict()
+_TESS_CACHE: "OrderedDict[tuple, Any]" = OrderedDict()
+
+
+def _cache_get(cache: "OrderedDict[Any, Any]", key: Any) -> Any:
+    with _CACHE_LOCK:
+        if key in cache:
+            cache.move_to_end(key)
+            return cache[key]
+    return None
+
+
+def _cache_put(cache: "OrderedDict[Any, Any]", key: Any, value: Any) -> None:
+    with _CACHE_LOCK:
+        cache[key] = value
+        cache.move_to_end(key)
+        while len(cache) > _CACHE_SIZE:
+            cache.popitem(last=False)
+
+
+def _preprocessed(image_bytes: bytes) -> Any:
+    key = hashlib.sha256(image_bytes).hexdigest()
+    hit = _cache_get(_PREPROCESS_CACHE, key)
+    if hit is not None:
+        return hit
+    image = preprocess_image(image_bytes)
+    _cache_put(_PREPROCESS_CACHE, key, image)
+    return image
+
+
+def _ocr_text(image_bytes: bytes, *, lang: str = "eng", config: str = "--oem 3 --psm 6") -> str:
+    key = (hashlib.sha256(image_bytes).hexdigest(), "string", lang, config)
+    hit = _cache_get(_TESS_CACHE, key)
+    if hit is not None:
+        return hit
+    kwargs = {"config": config, "lang": lang}
+    text = pytesseract.image_to_string(_preprocessed(image_bytes), **kwargs)
+    _cache_put(_TESS_CACHE, key, text)
+    return text
+
+
+def _ocr_data(image_bytes: bytes, *, lang: str = "eng", config: str = "--oem 3 --psm 6") -> dict:
+    key = (hashlib.sha256(image_bytes).hexdigest(), "data", lang, config)
+    hit = _cache_get(_TESS_CACHE, key)
+    if hit is not None:
+        return hit
+    kwargs = {"config": config, "lang": lang, "output_type": pytesseract.Output.DICT}
+    data = pytesseract.image_to_data(_preprocessed(image_bytes), **kwargs)
+    _cache_put(_TESS_CACHE, key, data)
+    return data
+
+
 def detect_language(image_bytes: bytes) -> str:
     """Auto-detect the primary language of a receipt image.
 
@@ -205,16 +265,14 @@ def detect_language(image_bytes: bytes) -> str:
     if not image_bytes:
         raise ValueError("image_bytes must not be empty")
     try:
-        image = preprocess_image(image_bytes)
+        _preprocessed(image_bytes)
     except Exception:
         return "eng"
     best_lang = "eng"
     best_conf = -1.0
     for lang in SUPPORTED_LANGUAGES:
         try:
-            data = pytesseract.image_to_data(
-                image, lang=lang, config="--oem 3 --psm 6", output_type=pytesseract.Output.DICT
-            )
+            data = _ocr_data(image_bytes, lang=lang)
             confs = [c for c in data.get("conf", []) if isinstance(c, (int, float)) and c > 0]
             avg = sum(confs) / len(confs) if confs else 0.0
             if avg > best_conf:
@@ -345,10 +403,7 @@ def _confidence_from_data(image_bytes: bytes) -> dict[str, float | None]:
     Missing keys default to ``None``.
     """
     try:
-        image = preprocess_image(image_bytes)
-        data = pytesseract.image_to_data(
-            image, config="--oem 3 --psm 6", output_type=pytesseract.Output.DICT
-        )
+        data = _ocr_data(image_bytes)
     except Exception:
         return {
             "vendor": None,
@@ -374,9 +429,7 @@ def _confidence_from_data(image_bytes: bytes) -> dict[str, float | None]:
     min_conf = min(confs) / 100.0 if confs else 0.0
     weighted = (avg_conf + min_conf) / 2.0
 
-    clean_text = _clean_text(pytesseract.image_to_string(
-        image, config="--oem 3 --psm 6"
-    ))
+    clean_text = _clean_text(_ocr_text(image_bytes))
 
     # Per-field confidence: check if the field value was actually found.
     total_val = _find_first(_TOTAL_RE, clean_text)
@@ -626,10 +679,10 @@ def extract_text(image_bytes: bytes, *, lang: str = "eng") -> str:
     # A requested pack that is not installed falls back to English (never fails the request).
     effective_lang = "+".join(resolve_ocr_language(code) for code in lang_codes)
     try:
-        image = preprocess_image(image_bytes)
+        _preprocessed(image_bytes)
     except ValueError as exc:
         raise InvalidImageError(str(exc)) from exc
-    return pytesseract.image_to_string(image, lang=effective_lang, config="--oem 3 --psm 6")
+    return _ocr_text(image_bytes, lang=effective_lang)
 
 
 def parse_receipt(image_bytes: bytes, *, lang: str | None = None) -> ParsedReceipt:

@@ -1,6 +1,8 @@
 /** Copy introduced by the household UX refresh. Existing catalog stays intact. */
 export const uxMessages = {
   en: {
+    approvalAwaiting: 'Awaiting approval', approvalTitle: 'Approval', approvalSubmitted: 'Submitted', approvalPolicyLabel: 'Policy',
+    approvalWaitingDays: 'Waiting {n} days', approvalWaitingToday: 'Waiting since today',
     dropCameraOpening: 'Opening camera…',
     dropCaptureFailed: 'Could not capture the photo. Try again.',
     qualityTitle: 'This photo may be hard to read', qualityBlurry: 'The photo looks blurry.', qualityDark: 'The photo looks too dark.',
@@ -38,6 +40,8 @@ export const uxMessages = {
     applyFilters: 'Apply filters', reviewCount: 'receipts need checking',
   },
   hu: {
+    approvalAwaiting: 'Jóváhagyásra vár', approvalTitle: 'Jóváhagyás', approvalSubmitted: 'Beküldve', approvalPolicyLabel: 'Szabály',
+    approvalWaitingDays: 'Várakozik {n} napja', approvalWaitingToday: 'Várakozik: ma',
     dropCameraOpening: 'Kamera megnyitása…',
     dropCaptureFailed: 'Nem sikerült elkészíteni a fotót. Próbáld újra.',
     qualityTitle: 'Ez a fotó nehezen olvasható lehet', qualityBlurry: 'A fotó elmosódottnak tűnik.', qualityDark: 'A fotó túl sötétnek tűnik.',
@@ -73,5 +77,37 @@ export const uxMessages = {
     onboardingStart: 'Kezdj egy nyugtával', onboardingSaveError: 'Nem sikerült menteni a választásodat. Próbáld újra.',
     filterDates: 'Vásárlás dátuma', filtersInvalid: 'A kezdődátum nem lehet későbbi a záródátumnál.',
     applyFilters: 'Szűrés alkalmazása', reviewCount: 'nyugta vár ellenőrzésre',
+  },
+  de: {
+    approvalAwaiting: 'Wartet auf Freigabe', approvalTitle: 'Freigabe', approvalSubmitted: 'Eingereicht', approvalPolicyLabel: 'Regel',
+    approvalWaitingDays: 'Wartet seit {n} Tagen', approvalWaitingToday: 'Wartet seit heute',
+  },
+  fr: {
+    approvalAwaiting: 'En attente d’approbation', approvalTitle: 'Approbation', approvalSubmitted: 'Soumis', approvalPolicyLabel: 'Règle',
+    approvalWaitingDays: 'En attente depuis {n} jours', approvalWaitingToday: 'En attente depuis aujourd’hui',
+  },
+  es: {
+    approvalAwaiting: 'Pendiente de aprobación', approvalTitle: 'Aprobación', approvalSubmitted: 'Enviado', approvalPolicyLabel: 'Regla',
+    approvalWaitingDays: 'Esperando desde hace {n} días', approvalWaitingToday: 'Esperando desde hoy',
+  },
+  it: {
+    approvalAwaiting: 'In attesa di approvazione', approvalTitle: 'Approvazione', approvalSubmitted: 'Inviato', approvalPolicyLabel: 'Regola',
+    approvalWaitingDays: 'In attesa da {n} giorni', approvalWaitingToday: 'In attesa da oggi',
+  },
+  pt: {
+    approvalAwaiting: 'Aguardando aprovação', approvalTitle: 'Aprovação', approvalSubmitted: 'Enviado', approvalPolicyLabel: 'Regra',
+    approvalWaitingDays: 'Aguardando há {n} dias', approvalWaitingToday: 'Aguardando desde hoje',
+  },
+  nl: {
+    approvalAwaiting: 'Wacht op goedkeuring', approvalTitle: 'Goedkeuring', approvalSubmitted: 'Ingediend', approvalPolicyLabel: 'Regel',
+    approvalWaitingDays: 'Wacht al {n} dagen', approvalWaitingToday: 'Wacht sinds vandaag',
+  },
+  pl: {
+    approvalAwaiting: 'Oczekuje na zatwierdzenie', approvalTitle: 'Zatwierdzenie', approvalSubmitted: 'Wysłano', approvalPolicyLabel: 'Reguła',
+    approvalWaitingDays: 'Oczekuje od {n} dni', approvalWaitingToday: 'Oczekuje od dzisiaj',
+  },
+  ro: {
+    approvalAwaiting: 'Așteaptă aprobarea', approvalTitle: 'Aprobare', approvalSubmitted: 'Trimis', approvalPolicyLabel: 'Regulă',
+    approvalWaitingDays: 'Așteaptă de {n} zile', approvalWaitingToday: 'Așteaptă din azi',
   },
 } as const;

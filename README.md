@@ -74,7 +74,7 @@ A backend **FastAPI + SQLite + Tesseract**, a felület **Next.js + React + TypeS
 
 | Beállítás | Mire szolgál? |
 |---|---|
-| `RECEIPTLENS_PRODUCT_DB` | Tartós adatbázis helye. Beállítás nélkül a product-adatok memóriában maradnak. |
+| `RECEIPTLENS_PRODUCT_DB` | Tartós adatbázis helye. Beállítás nélkül a repó gyökerében lévő `receiptlens-product.db` fájlba íródik, így újraindítás után is megmarad. Éles környezetben írható, perzisztens tárolóra állítsd. |
 | `NEXT_PUBLIC_API_BASE_URL` | A frontend által használt API-cím. |
 | `RECEIPTLENS_ALLOWED_ORIGINS` | A backendhez kapcsolódó engedélyezett frontend-címek. |
 | `RECEIPTLENS_ENV=production` | Éles környezet; az e-mailes belépéshez SMTP-beállítás is kell. |

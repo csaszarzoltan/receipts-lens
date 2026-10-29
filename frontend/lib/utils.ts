@@ -33,10 +33,12 @@ function currentIntlLocale(): string {
 
 /** The currency a new household most likely uses, from its language. */
 export function defaultCurrencyForLocale(locale: string): string {
+  // HUF only for Hungarian. Other locales get their country's currency; where the language is
+  // spoken in several currency areas (English) or the locale is unknown, EUR.
   const byLocale: Record<string, string> = {
     hu: "HUF", de: "EUR", fr: "EUR", es: "EUR", it: "EUR", pt: "EUR", nl: "EUR", pl: "PLN", ro: "RON",
   };
-  return byLocale[locale] ?? "USD";
+  return byLocale[locale] ?? "EUR";
 }
 
 /**

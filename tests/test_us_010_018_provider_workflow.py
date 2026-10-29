@@ -10,7 +10,7 @@ from app.connection_service import ConnectionService
 from app.credential_store import CredentialStore
 from app.product_service import Actor, ProductService
 from app.provider_export_service import ProviderExportService
-from app.reconciliation_service import ReconciliationService
+from app.provider_reconciliation import ProviderReconciliation
 
 
 class FakeProvider:
@@ -63,7 +63,7 @@ def test_us_013_014_replay_safe_export_retry_and_redaction(tmp_path):
 def test_us_015_reconciliation_match_mismatch_missing(tmp_path):
  s=ProductService(tmp_path/'db.sqlite');a=Actor('t','admin');p=FakeProvider();e=ProviderExportService(s,p);rid=s.create_receipt(a,parsed(10),'r')['receipt_id']
  run=e.create_run(a,'c','p',[(rid,1,{'date':'2026-08-01','total':10,'currency':'EUR'})],1,'k');e.process_run(a,run['run_id']);item=e.items(a,run['run_id'])[0]
- r=ReconciliationService(s,p);assert r.verify(a,item,{'date':'2026-08-01','total':10,'currency':'EUR'})['status']=='verified'
+ r=ProviderReconciliation(s,p);assert r.verify(a,item,{'date':'2026-08-01','total':10,'currency':'EUR'})['status']=='verified'
  p.created[0]['total']=12;assert r.verify(a,item,{'date':'2026-08-01','total':10,'currency':'EUR'})['status']=='needs_reconciliation'
  p.created.clear();assert r.verify(a,item,{'date':'2026-08-01','total':10,'currency':'EUR'})['status']=='missing_remote'
 

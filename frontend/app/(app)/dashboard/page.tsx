@@ -1,6 +1,7 @@
 "use client";
 import Link from 'next/link';
 import useSWR from 'swr';
+import Pill from '@/components/Pill';
 import {getConsumerDashboard,searchReceipts,getPreferences} from '@/lib/api';
 import type {ConsumerDashboard,HouseholdStatus} from '@/lib/types';
 import {useTranslation} from '@/lib/i18n';
@@ -107,9 +108,9 @@ function HouseholdBlock({ household }: { household: HouseholdStatus }) {
               <span className="truncate text-slate-700 dark:text-slate-300">
                 {member.email}
               </span>
-              <span className="ml-3 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              <Pill className="ml-3 shrink-0">
                 {member.role_label}
-              </span>
+              </Pill>
             </li>
           ))}
         </ul>

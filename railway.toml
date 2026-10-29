@@ -6,6 +6,7 @@
 #   CORS_ORIGINS       — Comma-separated allowed origins
 #   AUTH_TOKEN         — Bearer token for API auth
 #   TESSDATA_PREFIX    — Tesseract data path (usually auto-detected)
+#   RECEIPTLENS_PRODUCT_DB — SQLite file on a mounted volume, so data survives redeploys
 # =============================================================================
 
 [build]

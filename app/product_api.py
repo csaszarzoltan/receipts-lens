@@ -4,6 +4,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
+import threading
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -13,6 +15,7 @@ from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.accounting_projection import AccountingProjectionService
+from app.feature_core import init_hub
 from app.accounting_workspace import AccountingWorkspace
 from app.advanced_workspace import AdvancedWorkspace, extract_ocr_boxes
 from app.automation_service import AutomationService
@@ -39,7 +42,13 @@ from app.statement_check import check as check_statement
 from app.vision_ocr import SOURCE_TESSERACT, SOURCE_VISION, parse_receipt_with_vision
 
 router = APIRouter()
-service = ProductService(os.getenv("RECEIPTLENS_PRODUCT_DB", ":memory:"))
+# Data lives in a file by default so it survives a restart. Tests (pytest loaded) use memory.
+_PRODUCT_DB = os.getenv("RECEIPTLENS_PRODUCT_DB") or (
+    ":memory:" if "pytest" in sys.modules else str(Path(__file__).resolve().parent.parent / "receiptlens-product.db")
+)
+service = ProductService(_PRODUCT_DB)
+# v2 feature store shares the product database (receipts are read from the same tables).
+init_hub(service._db, path=_PRODUCT_DB, resolve_session=service.resolve_session, is_production=is_production)
 advanced = AdvancedWorkspace(service)
 warranties = HouseholdWarranties(service)
 
@@ -136,8 +145,19 @@ def workspace_asset(asset_name: str) -> FileResponse:
     return FileResponse(Path(__file__).parent / "static" / asset_name)
 
 
+# OCR is CPU-heavy. The upload endpoint is a plain `def`, so FastAPI runs it in the thread pool
+# and the event loop stays free; this semaphore caps how many OCR jobs run at once
+# (RECEIPTLENS_OCR_CONCURRENCY, default 1, suits a small server).
+_OCR_SLOTS = threading.BoundedSemaphore(max(1, int(os.getenv("RECEIPTLENS_OCR_CONCURRENCY", "1"))))
+
+
+def _ocr_slot(fn, data: bytes):
+    with _OCR_SLOTS:
+        return fn(data)
+
+
 @router.post("/product/receipts/upload", status_code=201)
-async def upload_receipt(
+def upload_receipt(
     file: UploadFile = File(...),
     ai_scan: str | None = Form(default=None, description="Enable AI-mode OCR (vision LLM with Tesseract fallback)"),
     current: Actor = Depends(actor),
@@ -147,7 +167,7 @@ async def upload_receipt(
         raise HTTPException(403, "Read-only role cannot upload receipts")
     if file.content_type and not file.content_type.startswith("image/"):
         raise HTTPException(415, "An image file is required")
-    data = await file.read()
+    data = file.file.read()
     if not data:
         raise HTTPException(422, "The uploaded file is empty")
     if len(data) > 20 * 1024 * 1024:
@@ -181,22 +201,22 @@ async def upload_receipt(
                 )
             try:
                 if ai_mode:
-                    parsed = parse_receipt_with_vision(data)
+                    parsed = _ocr_slot(parse_receipt_with_vision, data)
                 else:
-                    parsed = parse_receipt_with_confidence(data)
+                    parsed = _ocr_slot(parse_receipt_with_confidence, data)
             except Exception as exc:
                 if not ai_mode:
                     raise HTTPException(422, "Receipt processing failed") from exc
                 # Vision path raised unexpectedly; fall back to the classic pipeline so
                 # the user still gets an extraction (frontend shows the friendly notice).
                 try:
-                    parsed = parse_receipt_with_confidence(data)
+                    parsed = _ocr_slot(parse_receipt_with_confidence, data)
                 except Exception as fallback_exc:
                     raise HTTPException(422, "Receipt processing failed") from fallback_exc
             tesseract = None
             if ai_mode and str((parsed.confidence or {}).get("source") or SOURCE_TESSERACT) == SOURCE_VISION:
                 try:
-                    tesseract = _ai_extraction(parse_receipt_with_confidence(data))
+                    tesseract = _ai_extraction(_ocr_slot(parse_receipt_with_confidence, data))
                 except Exception:  # noqa: BLE001 - comparison OCR is best-effort
                     tesseract = None
             return {"parsed": parsed, "boxes": extract_ocr_boxes(data), "tesseract": tesseract}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
+import Pill from "@/components/Pill";
 import { createInvite, getMembers } from "@/lib/api";
 import type { HouseholdRole, Member } from "@/lib/types";
 import { householdRoleLabel } from "@/lib/roles";
@@ -48,24 +49,18 @@ export default function MembersSettingsPage() {
       {isLoading ? (
         <SkeletonCard className="h-40" />
       ) : error ? (
-        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
+        <EmptyState title={t("couldNotLoad")} description={t("error")} />
       ) : members.length === 0 ? (
-        <EmptyState icon="👥" title={t("noMembersYetTitle")} description={t("noMembersYetDesc")} />
+        <EmptyState title={t("noMembersYetTitle")} description={t("noMembersYetDesc")} />
       ) : (
         <ul className="card divide-y divide-slate-100 dark:divide-slate-800" aria-label="Members">
           {members.map((member) => (
             <li key={member.member_id} className="flex items-center justify-between gap-3 px-5 py-3">
               <span className="font-medium text-slate-800 dark:text-slate-100">{member.email}</span>
               <span className="text-sm text-slate-500 dark:text-slate-400">{householdRoleLabel(member.role, getLocale())}</span>
-              <span
-                className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                  member.active
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                }`}
-              >
+              <Pill tone={member.active ? "ok" : "neutral"}>
                 {member.active ? t("active") : t("inactive")}
-              </span>
+              </Pill>
             </li>
           ))}
         </ul>

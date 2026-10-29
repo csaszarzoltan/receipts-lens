@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import useSWR from "swr";
+import Pill from "@/components/Pill";
 import { getInboundEmails, tenantRequest } from "@/lib/api";
 import EmptyState from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
@@ -65,8 +66,7 @@ export default function InboxPage() {
         </div>
       ) : !data?.items.length ? (
         <EmptyState
-          icon="📧"
-          title="No emails received"
+          title={t("noEmails")}
           description={t("inboxEmptyDesc")}
         />
       ) : (
@@ -78,9 +78,9 @@ export default function InboxPage() {
                   <h2 className="font-semibold">{email.subject}</h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{t("fromLabel")} {email.sender}</p>
                 </div>
-                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-semibold">
+                <Pill>
                   {email.status}
-                </span>
+                </Pill>
               </div>
               <ul className="mt-4 space-y-2">
                 {email.attachments.map((a) => (

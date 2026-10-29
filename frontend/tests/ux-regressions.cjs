@@ -22,7 +22,7 @@ test('REQ-UX-07/11/18 AC-UX-07/11/18 queue uses translated copy and review desti
 });
 test('REQ-UX-09/13/19 AC-UX-09/13/19 empty dashboard focuses on first receipt; missing currency is explicit',()=>{
  const h=hooks();const data={monthly_by_category:{month:'2026-10',total_spent:0,currency:null,categories:[]},daily_remaining:null,recent_receipts:[],price_alerts:[],cancellable_subscriptions:[]};
- const m=load('app/(app)/dashboard/page.tsx',uiMocks(h,{'swr':key=>({data:key==='/api/v1/consumer/dashboard'?data:key==='dashboard-receipt-count'?{total:0}:undefined}), '@/lib/api':{},'@/lib/categories':{categoryLabel:(_,name)=>name},'@/components/Skeleton':{PageSkeleton:()=>null},'@/components/Money':()=>null,'@/components/UnpricedNote':()=>null,'@/components/CurrencySelector':()=>null,'@/components/SampleReceipt':()=>null,'@/components/DeadlinesCard':()=>null,'@/components/StatusBadge':()=>null}));
+ const m=load('app/(app)/dashboard/page.tsx',uiMocks(h,{'swr':key=>({data:key==='/api/v1/consumer/dashboard'?data:key==='dashboard-receipt-count'?{total:0}:undefined}), '@/lib/api':{},'@/lib/categories':{categoryLabel:(_,name)=>name},'@/components/Skeleton':{PageSkeleton:()=>null},'@/components/Money':()=>null,'@/components/UnpricedNote':()=>null,'@/components/CurrencySelector':()=>null,'@/components/SampleReceipt':()=>null,'@/components/DeadlinesCard':()=>null,'@/components/Pill':()=>null,'@/components/StatusBadge':()=>null}));
  const all=nodes(h.render(m.default));assert.ok(all.includes('firstReceiptTitle'));assert.ok(all.includes('chooseCurrency'));assert.ok(!all.includes('noBudgetSet'));assert.ok(!all.some(x=>x?.type==='savings'||typeof x?.type==='function'&&x.type.name==='HouseholdBlock'));assert.equal(all.filter(x=>x?.props?.href==='/upload').length,1);
 });
 test('REQ-UX-05 AC-UX-05 retryable session error preserves token while 401 clears it',async()=>{
@@ -61,7 +61,7 @@ test('REQ-UX-10 AC-UX-10 shared onboarding saves currency and never switches to 
 });
 test('REQ-UX-14 AC-UX-14 category/date filters reach API and status labels remain distinct',()=>{
  const h=hooks(),searches=[],destinations=[],params=new URLSearchParams('category=Food&date_from=2026-10-01');
- const m=load('app/(app)/receipts/page.tsx',uiMocks(h,{'next/navigation':{useSearchParams:()=>params,useRouter:()=>({push:url=>destinations.push(url),replace:url=>destinations.push(url)})},'swr':(key,fetcher)=>{fetcher();return{data:{items:[],total:0,categories:['Food']}}},'@/lib/api':{searchReceipts:args=>searches.push(args)},'@/components/ReceiptCard':()=>null,'@/components/EmptyState':()=>null,'@/components/Pagination':()=>null,'@/components/Skeleton':{SkeletonCard:()=>null},'@/lib/categories':{categoryLabel:(_,x)=>x}}));
+ const m=load('app/(app)/receipts/page.tsx',uiMocks(h,{'next/navigation':{useSearchParams:()=>params,useRouter:()=>({push:url=>destinations.push(url),replace:url=>destinations.push(url)})},'swr':(key,fetcher)=>{fetcher();return{data:{items:[],total:0,categories:['Food']}}},'@/lib/api':{searchReceipts:args=>searches.push(args),getApprovals:()=>Promise.resolve({items:[]})},'@/components/ReceiptCard':()=>null,'@/components/EmptyState':()=>null,'@/components/Pagination':()=>null,'@/components/Skeleton':{SkeletonCard:()=>null},'@/lib/categories':{categoryLabel:(_,x)=>x}}));
  const shell=h.render(m.default);const tree=h.render(()=>shell.props.children.type());const all=nodes(tree);
  assert.equal(searches[0].category,'Food');assert.equal(searches[0].date_from,'2026-10-01');assert.ok(all.includes('statusCompleted'));assert.ok(all.includes('statusApproved'));assert.ok(all.includes('statusRejected'));
  const select=all.find(x=>x?.type==='select'&&x.props.value==='Food');select.props.onChange({target:{value:'Other'}});assert.ok(destinations[0].includes('category=Other'));assert.ok(destinations[0].includes('date_from=2026-10-01'));
@@ -73,7 +73,7 @@ test('REQ-UX-15 AC-UX-15 primary navigation uses five translated destinations wi
 
 test('REQ-UX-13 AC-UX-13 incomplete monthly and daily totals visibly keep missing counts',()=>{
  const h=hooks();const data={monthly_by_category:{month:'2026-10',total_spent:0,currency:'HUF',categories:[],unpriced_receipts:2},daily_remaining:{daily_remaining:100,remaining_this_month:2000,currency:'HUF',unpriced_receipts:2},recent_receipts:[{receipt_id:'r',merchant:'Shop',total:null,currency:null,status:'needs_review'}],price_alerts:[],cancellable_subscriptions:[]};
- const m=load('app/(app)/dashboard/page.tsx',uiMocks(h,{'swr':key=>({data:key==='/api/v1/consumer/dashboard'?data:key==='dashboard-receipt-count'?{total:1}:undefined}),'@/lib/api':{},'@/lib/categories':{categoryLabel:(_,name)=>name},'@/components/Skeleton':{PageSkeleton:()=>null},'@/components/Money':'money','@/components/UnpricedNote':'unpriced','@/components/CurrencySelector':'select','@/components/SampleReceipt':()=>null,'@/components/DeadlinesCard':()=>null,'@/components/StatusBadge':'status'}));
+ const m=load('app/(app)/dashboard/page.tsx',uiMocks(h,{'swr':key=>({data:key==='/api/v1/consumer/dashboard'?data:key==='dashboard-receipt-count'?{total:1}:undefined}),'@/lib/api':{},'@/lib/categories':{categoryLabel:(_,name)=>name},'@/components/Skeleton':{PageSkeleton:()=>null},'@/components/Money':'money','@/components/UnpricedNote':'unpriced','@/components/CurrencySelector':'select','@/components/SampleReceipt':()=>null,'@/components/DeadlinesCard':()=>null,'@/components/Pill':()=>null,'@/components/StatusBadge':'status'}));
  const all=nodes(h.render(m.default));assert.equal(all.filter(x=>x?.type==='unpriced'&&x.props.count===2).length,2);assert.ok(all.some(x=>x?.type==='money'&&x.props.amount===null));assert.ok(all.includes('recordedSpendingHint'));assert.ok(all.includes('incompleteDailyHint'));
 });
 test('REQ-UX-17 AC-UX-17 notifications deep-link to exact receipt and expose write failure',async()=>{
@@ -175,7 +175,7 @@ test('REQ-UX-09/13 dashboard preserves household and savings for existing receip
  const household={shared_budget:1000,spent:250,remaining:750,currency:'HUF',members:[{member_id:'m1',email:'member@example.test',role_label:'Felnőtt tag'}],unpriced_receipts:0,spent_other_currencies:{EUR:10}};
  const savings={period:'2026-10',potential_saving:50,total_spent:250,currency:'HUF',avg_by_category:{},top_candidates:[{merchant:'Bolt',potential_saving:50,delta_pct:5}]};
  const data={monthly_by_category:{month:'2026-10',total_spent:250,currency:'HUF',categories:[]},daily_remaining:null,recent_receipts:[{receipt_id:'r1',merchant:'Bolt',total:250,currency:'HUF'}],price_alerts:[],cancellable_subscriptions:[],household,savings};
- const m=load('app/(app)/dashboard/page.tsx',uiMocks(h,{'swr':key=>({data:key==='/api/v1/consumer/dashboard'?data:key==='dashboard-receipt-count'?{total:1}:undefined}),'@/lib/api':{},'@/lib/categories':{categoryLabel:(_,name)=>name},'@/components/Skeleton':{PageSkeleton:()=>null},'@/components/Money':'money','@/components/UnpricedNote':'unpriced','@/components/CurrencySelector':'select','@/components/SampleReceipt':()=>null,'@/components/DeadlinesCard':()=>null,'@/components/StatusBadge':'status','@/components/SavingsBlockCard':'savings'}));
+ const m=load('app/(app)/dashboard/page.tsx',uiMocks(h,{'swr':key=>({data:key==='/api/v1/consumer/dashboard'?data:key==='dashboard-receipt-count'?{total:1}:undefined}),'@/lib/api':{},'@/lib/categories':{categoryLabel:(_,name)=>name},'@/components/Skeleton':{PageSkeleton:()=>null},'@/components/Money':'money','@/components/UnpricedNote':'unpriced','@/components/CurrencySelector':'select','@/components/SampleReceipt':()=>null,'@/components/DeadlinesCard':()=>null,'@/components/Pill':()=>null,'@/components/StatusBadge':'status','@/components/SavingsBlockCard':'savings'}));
  const all=nodes(h.render(m.default));
  const block=all.find(x=>typeof x?.type==='function'&&x.type.name==='HouseholdBlock');assert.ok(block,'household data remains visible');
  const rendered=nodes(h.render(()=>block.type(block.props)));assert.ok(rendered.includes('member@example.test'));
@@ -243,4 +243,44 @@ test('REQ-I10 AC4 duplicates page says why a pair was offered, and every locale 
  const page=fs.readFileSync(path.join(__dirname,'..','app/(app)/duplicates/page.tsx'),'utf8');assert.match(page,/data-testid="duplicate-reason"/);
  const source=fs.readFileSync(path.join(__dirname,'..','lib/i18n.ts'),'utf8');
  for(const key of ['duplicateUploadNotice','duplicateReasonSameFile','duplicateReasonCandidateTotal']) assert.equal((source.match(new RegExp(key+':','g'))||[]).length,10,key);
+});
+test('REQ-DESIGN-01 approval copy and waiting time exist in every locale',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'..','lib/uxMessages.ts'),'utf8');
+ for(const key of ['approvalAwaiting','approvalTitle','approvalSubmitted','approvalPolicyLabel','approvalWaitingDays','approvalWaitingToday']) assert.equal((source.match(new RegExp(key+':','g'))||[]).length,10,key);
+});
+test('REQ-DESIGN-02 Inter is loaded, the accent is teal, and no old blue remains in theme or charts',()=>{
+ const layout=fs.readFileSync(path.join(__dirname,'..','app/layout.tsx'),'utf8');assert.match(layout,/family=Inter/);
+ const tailwind=fs.readFileSync(path.join(__dirname,'..','tailwind.config.ts'),'utf8');assert.match(tailwind,/#0f766e/);assert.match(tailwind,/fontFamily/);
+ for(const file of ['app/layout.tsx','app/manifest.ts','components/Charts.tsx','app/globals.css']) assert.doesNotMatch(fs.readFileSync(path.join(__dirname,'..',file),'utf8'),/#1d5ef1/,file);
+});
+test('REQ-DESIGN-03 receipt cards show amount, merchant, date, thumbnail and approval state',()=>{
+ const card=fs.readFileSync(path.join(__dirname,'..','components/ReceiptCard.tsx'),'utf8');
+ assert.match(card,/<ReceiptThumb/);assert.match(card,/text-xl font-bold/);assert.match(card,/ApprovalPill/);
+ const list=fs.readFileSync(path.join(__dirname,'..','app/(app)/receipts/page.tsx'),'utf8');assert.match(list,/approval=\{latestApproval\.get\(item\.receipt_id\)\}/);
+});
+test('REQ-FORMAT-01 every status pill uses the shared Pill component',()=>{
+ const roots=['app','components'];const offenders=[];
+ const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).forEach(e=>{const p=path.join(dir,e.name);if(e.isDirectory())walk(p);else if(/\.tsx$/.test(e.name)&&e.name!=='Pill.tsx'){if(/rounded-full px-2(\.5)? py-0\.5/.test(fs.readFileSync(p,'utf8')))offenders.push(p)}});
+ roots.forEach(r=>walk(path.join(__dirname,'..',r)));
+ assert.deepEqual(offenders.map(p=>path.relative(path.join(__dirname,'..'),p)),[]);
+});
+test('REQ-FEAT-01 every v2 feature page is a real workbench with the e2e test ids',()=>{
+ const configs=fs.readFileSync(path.join(__dirname,'..','lib/featureConfigs.ts'),'utf8');
+ for(const id of ['reconciliation','missing_receipts','refunds','cost_splits','savings_goals','price_tracking','data_quality','period_close','offline_sync','mobile_receipts']) assert.match(configs,new RegExp(`testId: "${id}"`),id);
+ for(const route of ['reconciliation','reconciliation/refunds','missing-receipts','cost-splits','savings-goals','price-tracking','quality-inbox','accounting/period-close','receipts/offline','receipts/capture']) {
+  const page=fs.readFileSync(path.join(__dirname,'..',`app/(app)/${route}/page.tsx`),'utf8');
+  assert.match(page,/FeatureWorkbench/,route);
+ }
+ const scaffold=['Új művelet','Újrapróbálás'];
+ const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(dir,e.name)):[path.join(dir,e.name)]);
+ for(const file of [...walk(path.join(__dirname,'..','app')),...walk(path.join(__dirname,'..','components'))].filter(f=>/\.tsx$/.test(f))) {
+  const src=fs.readFileSync(file,'utf8');for(const s of scaffold) assert.ok(!src.includes(s),`${file} still has ${s}`);
+ }
+});
+test('REQ-FEAT-02 every feature copy key has a Hungarian translation',()=>{
+ const locales=load('lib/featureI18nLocales.ts');const m=load('lib/featureI18n.ts',{'./featureI18nLocales':locales});
+ for(const loc of m.FEATURE_LOCALES){assert.equal(m.missingFeatureKeys(loc).length,0,loc+': '+m.missingFeatureKeys(loc).join(', '));}
+ assert.equal(m.FEATURE_LOCALES.length,10);
+ assert.equal(m.ft('status.CONFIRMED','hu'),'Megerősítve');
+ assert.equal(m.ft('ui.missing','en',{fields:'Card ID'}),'Needs: Card ID');
 });

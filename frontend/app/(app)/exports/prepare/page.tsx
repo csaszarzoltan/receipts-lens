@@ -52,9 +52,9 @@ export default function ExportPreparePage() {
       {isLoading ? (
         <SkeletonCard className="h-64" />
       ) : error ? (
-        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
+        <EmptyState title={t("couldNotLoad")} description={t("error")} />
       ) : items.length === 0 ? (
-        <EmptyState icon="📄" title={t("noReceipts")} description={t("prepareEmptyDesc")} action={{ label: t("uploadReceiptLabel"), href: "/upload" }} />
+        <EmptyState title={t("noReceipts")} description={t("prepareEmptyDesc")} action={{ label: t("uploadReceiptLabel"), href: "/upload" }} />
       ) : (
         <>
           <ul className="card divide-y divide-slate-100 dark:divide-slate-800" aria-label={t("receiptListLabel")}>

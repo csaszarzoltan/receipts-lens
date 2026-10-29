@@ -48,7 +48,7 @@ export default function ForecastPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("forecast")}</h1>
-        <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />
+        <EmptyState title={t("couldNotLoad")} description={t("error")} />
       </div>
     );
   }
@@ -58,7 +58,6 @@ export default function ForecastPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t("forecast")}</h1>
         <EmptyState
-          icon="📊"
           title={t("notEnoughData")}
           description={t("notEnoughDataHint")}
           action={{ label: t("uploadFirst"), href: "/upload" }}

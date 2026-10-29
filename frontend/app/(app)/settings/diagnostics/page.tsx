@@ -24,7 +24,7 @@ export default function DiagnosticsSettingsPage() {
   if (isLoading) return <SkeletonCard className="h-48" />;
 
   if (error || !data) {
-    return <EmptyState icon="⚠️" title={t("couldNotLoad")} description={t("error")} />;
+    return <EmptyState title={t("couldNotLoad")} description={t("error")} />;
   }
 
   const rows: Array<[string, string | number | boolean]> = [

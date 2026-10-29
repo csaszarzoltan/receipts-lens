@@ -1,7 +1,8 @@
 "use client";
 
 import ConfidenceBadge from "@/components/ConfidenceBadge";
-import { cx, formatDate, formatMoney } from "@/lib/utils";
+import Pill from "@/components/Pill";
+import { formatDate, formatMoney } from "@/lib/utils";
 import type { AiExtraction, AiScanUploadResponse } from "@/lib/types";
 
 interface AiResultPanelProps {
@@ -82,18 +83,9 @@ export default function AiResultPanel({ result }: AiResultPanelProps) {
         <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
           <span aria-hidden="true">✨</span> AI Scan results
         </h2>
-        <span
-          className={cx(
-            "inline-flex min-h-6 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold",
-            isVision
-              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-          )}
-          title={`Extracted by ${result.source}`}
-        >
-          <span aria-hidden="true">{isVision ? "👁️" : "📄"}</span>
+        <Pill tone={isVision ? "ok" : "neutral"} title={`Extracted by ${result.source}`}>
           {isVision ? "Vision AI" : "OCR"}
-        </span>
+        </Pill>
       </div>
 
       {/* Friendly fallback notice when Tesseract was used */}
@@ -102,9 +94,6 @@ export default function AiResultPanel({ result }: AiResultPanelProps) {
           role="status"
           className="mx-5 mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/50"
         >
-          <span className="text-lg" aria-hidden="true">
-            ⚠️
-          </span>
           <div>
             <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
               AI vision wasn&apos;t available — showing classic OCR results.
@@ -170,14 +159,14 @@ export default function AiResultPanel({ result }: AiResultPanelProps) {
             </p>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
               <span className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
-                <span aria-hidden="true">👁️</span>
+                <span className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">AI</span>
                 {formatMoney(result.ai_result.total, result.ai_result.currency)}
                 {result.ai_result.confidence.total !== undefined ? (
                   <ConfidenceBadge value={result.ai_result.confidence.total} label="AI total" />
                 ) : null}
               </span>
               <span className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
-                <span aria-hidden="true">📄</span>
+                <span className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">OCR</span>
                 {formatMoney(result.tesseract_result.total, result.tesseract_result.currency)}
                 {result.tesseract_result.confidence.total !== undefined ? (
                   <ConfidenceBadge value={result.tesseract_result.confidence.total} label="OCR total" />
