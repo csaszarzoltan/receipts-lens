@@ -23,17 +23,17 @@ const THEME_KEY = "receiptlens.theme";
 // the dev server). Overridable via E2E_API_BASE.
 const API_BASE = E2E_API_BASE;
 
+// Blocks the dashboard renders for a household with one budget and one receipt.
+// Sections with an aria-label are checked by label; the rest by heading.
+// Price-alert and subscription sections only render when there is data for them,
+// so they are not asserted here.
 const BLOCK_LABELS = [
-  "Napi maradékkeret", // block 1 — Mennyit költhetek még ma?
-  "Havi költés kategóriánként", // block 2 — Mire ment el a pénzem?
-  "Drágulás-figyelmeztetések", // block 3
-  "Lemondható előfizetések", // block 4
-  "Legutóbbi nyugták", // block 6
+  "Mire ment el a pénzem?", // spending by category
+  "Ezt így tudnád megtakarítani", // savings
 ];
 
-// Block 5 (Családi keret-státusz) lives inside the block-1 section which is
-// aria-labelled "Napi maradékkeret" — assert it by heading text instead.
-const BLOCK_HEADINGS = ["Családi keret-státusz"];
+// Headings: daily remaining, recent receipts, household budget status.
+const BLOCK_HEADINGS = ["Mennyit költhetek még ma?", "Legutóbbi nyugták", "Családi keret-státusz"];
 
 /** Log in a fresh household session and return its tenant for the seeding calls. */
 async function seedAuth(page: Page, dark = false): Promise<string> {
@@ -54,22 +54,8 @@ async function seedAuth(page: Page, dark = false): Promise<string> {
   return session.tenantId;
 }
 
-async function expectNoErrorOverlay(page: Page): Promise<void> {
-  const overlayGone = await page.evaluate(() => {
-    const portal = document.querySelector("nextjs-portal");
-    if (!portal?.shadowRoot) return true;
-    return !portal.shadowRoot.textContent?.includes(
-      "Unhandled Runtime Error",
-    );
-  });
-  expect(overlayGone, "Unhandled Runtime Error overlay detected").toBe(true);
-}
-
-test("dashboard renders all six consumer blocks with live data", async ({
-  page,
-}) => {
-  const tenantId = await seedAuth(page);
-
+/** One monthly budget and one receipt through the real API, so the blocks show live numbers. */
+async function seedLiveData(page: Page, tenantId: string): Promise<void> {
   // Seed live data through the real backend: a monthly household budget
   // (block 1 + 5) and a receipt uploaded through the REAL /product/receipts/
   // upload path (blocks 2 + 6) so the blocks render concrete numbers that
@@ -97,6 +83,25 @@ test("dashboard renders all six consumer blocks with live data", async ({
     },
   );
   expect(upload.status(), "receipt upload via real path must succeed").toBe(201);
+}
+
+async function expectNoErrorOverlay(page: Page): Promise<void> {
+  const overlayGone = await page.evaluate(() => {
+    const portal = document.querySelector("nextjs-portal");
+    if (!portal?.shadowRoot) return true;
+    return !portal.shadowRoot.textContent?.includes(
+      "Unhandled Runtime Error",
+    );
+  });
+  expect(overlayGone, "Unhandled Runtime Error overlay detected").toBe(true);
+}
+
+test("dashboard renders the consumer blocks with live data", async ({
+  page,
+}) => {
+  const tenantId = await seedAuth(page);
+
+  await seedLiveData(page, tenantId);
 
   await page.goto("/dashboard");
   await page.waitForLoadState("domcontentloaded");
@@ -114,7 +119,7 @@ test("dashboard renders all six consumer blocks with live data", async ({
     page.getByRole("link", { name: "Nyugta hozzáadása" }).first(),
   ).toBeVisible();
 
-  // All six blocks present — aria-labels are set on each section.
+  // Blocks present: labelled sections and headed sections.
   for (const label of BLOCK_LABELS) {
     const section = page.getByLabel(label).first();
     await expect(section).toBeVisible({ timeout: 10_000 });
@@ -133,7 +138,8 @@ test("dashboard renders all six consumer blocks with live data", async ({
 });
 
 test("dashboard dark mode does not break", async ({ page }) => {
-  await seedAuth(page, true);
+  const tenantId = await seedAuth(page, true);
+  await seedLiveData(page, tenantId);
   await page.goto("/dashboard");
   await page.waitForLoadState("domcontentloaded");
 

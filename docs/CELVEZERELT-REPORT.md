@@ -172,3 +172,11 @@ Tests, second round:
 **Test bugs found and fixed along the way (not app defects):** the theme seed ran on every navigation and undid the stored choice on reload. Measuring `<body>` gave transparent backgrounds, which were read as dark. A stale server on the port served a half-rebuilt `.next`. The mobile nav selector matched the hidden desktop link.
 
 **Deploy status:** PR #3 is **not merged**. The merge was blocked by the permission check ("Merge Without Review"). Live still runs the previous build, so the new-household header problem persists on live until PR #3 is merged. The fix is frontend-only: once merged, rebuild the frontend in an isolated worktree, swap `.next`, and restart `receipts-lens-frontend.service`. The API does not need a restart.
+
+## Follow-up: PR #3 merged and deployed; stale e2e specs fixed
+
+- **PR #3** (theme switch and onboarding card, dark-mode contrast, GUI suite) was merged with explicit approval, as `3ed0851`. The frontend was rebuilt from `main` in an isolated worktree, swapped in, and `receipts-lens-frontend.service` restarted. Live: `/`, `/health`, `/login`, `/settings/privacy` return 200. The new onboarding markup is in the served bundle. The header theme switch on `/login` works (dark → light → dark, stored). The first-run card on `/dashboard` was not checked live, because it needs a logged-in household and a live magic-link send was avoided.
+- **Stale e2e specs fixed** (branch `fix/e2e-stale-specs`):
+  - `onboarding.spec.ts`: the spec described a three-step wizard that no longer exists. Rewritten for the current single screen (title, hint, currency, drop zone, Skip, Finish, and the dashboard first-run card). **3/3** on a local production build.
+  - `consumer-dashboard.spec.ts`: the old block labels (Napi maradékkeret, Havi költés kategóriánként, ...) are gone. Now checks the labels and headings the dashboard really renders. Both tests seed the same live data. **2/2** on a local production build.
+- Not in this change: the full GUI suite (`gui-full.spec.ts`) and the other e2e specs were not re-run here. Playwright is still not in CI.
