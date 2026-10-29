@@ -7,18 +7,18 @@
    Charts read these CSS variables so they follow dark mode automatically.
 --------------------------------------------------------------------------- */
 :root {
-  --chart-primary: #0f766e;
-  --chart-accent: #0f9d58;
-  --chart-warning: #d97706;
-  --chart-danger: #dc2626;
+  --chart-primary: #3f7150;
+  --chart-accent: #be6446;
+  --chart-warning: #b7791f;
+  --chart-danger: #b91c1c;
   color-scheme: light;
 }
 
 .dark {
-  --chart-primary: #2dd4bf;
-  --chart-accent: #4ade80;
-  --chart-warning: #fbbf24;
-  --chart-danger: #f87171;
+  --chart-primary: #9ec3a7;
+  --chart-accent: #e0a38a;
+  --chart-warning: #f6c86a;
+  --chart-danger: #f09a9a;
   color-scheme: dark;
 }
 
@@ -30,6 +30,11 @@
   body {
     font-size: 16px;
     @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+  }
+
+  /* Page titles use the serif display face: the editorial, cookbook-like tone. */
+  h1 {
+    @apply font-display font-semibold tracking-tight;
   }
 
   /* Respect users who prefer reduced motion. */
@@ -46,11 +51,11 @@
 
 @layer components {
   .card {
-    @apply rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900;
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900;
   }
 
   .btn-primary {
-    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-50 dark:focus-visible:ring-offset-slate-950;
+    @apply inline-flex min-h-11 items-center justify-center rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-50 dark:focus-visible:ring-offset-slate-950;
   }
 
   .btn-secondary {
@@ -63,6 +68,6 @@
 }
 
 @layer base {
-  a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #0f766e; outline-offset: 3px; }
-  .dark a:focus-visible, .dark button:focus-visible, .dark select:focus-visible, .dark input:focus-visible { outline-color: #2dd4bf; }
+  a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #3f7150; outline-offset: 3px; }
+  .dark a:focus-visible, .dark button:focus-visible, .dark select:focus-visible, .dark input:focus-visible { outline-color: #9ec3a7; }
 }

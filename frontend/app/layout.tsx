@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
+
+// Self-hosted by next/font: no runtime request to Google, so the CSP stays strict.
+const sans = Inter({ subsets: ["latin", "latin-ext"], variable: "--font-sans", display: "swap" });
+const display = Fraunces({ subsets: ["latin", "latin-ext"], variable: "--font-display", display: "swap" });
 
 export const metadata: Metadata = {
   title: {
@@ -18,8 +23,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0f766e" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
+    { media: "(prefers-color-scheme: light)", color: "#3F7150" },
+    { media: "(prefers-color-scheme: dark)", color: "#17120F" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -42,14 +47,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${sans.variable} ${display.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-        />
         <script
           dangerouslySetInnerHTML={{
             __html: LOCALE_INIT_SCRIPT,
