@@ -63,6 +63,28 @@ def test_erase_requires_admin_role(svc, admin):
     assert svc.search_receipts(admin)["total"] == 1
 
 
+def test_household_owner_can_erase_and_manage_privacy(svc):
+    # Magic-link sessions carry role "owner"; the owner is the tenant's administrator.
+    owner = Actor("tenant-a", "owner")
+    svc.create_receipt(owner, parsed(), "a.png")
+    svc.set_retention(owner, 60)
+    assert svc.purge_expired(owner)["retention_days"] == 60
+    assert svc.erase_tenant(owner, "ERASE")["erased"] is True
+    assert svc.search_receipts(owner)["total"] == 0
+
+
+def test_adult_member_cannot_erase_or_change_privacy(svc, admin):
+    svc.create_receipt(admin, parsed(), "a.png")
+    adult = Actor("tenant-a", "adult")
+    with pytest.raises(PermissionError):
+        svc.erase_tenant(adult, "ERASE")
+    with pytest.raises(PermissionError):
+        svc.set_retention(adult, 60)
+    with pytest.raises(PermissionError):
+        svc.purge_expired(adult)
+    assert svc.search_receipts(admin)["total"] == 1
+
+
 def test_erase_requires_literal_erase_confirmation(svc, admin):
     svc.create_receipt(admin, parsed(), "a.png")
     # The tenant id alone is not confirmation, and neither is a blank or lowercase word.

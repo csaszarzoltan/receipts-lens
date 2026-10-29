@@ -82,6 +82,8 @@ class Actor:
 ZERO_DECIMAL_CURRENCIES = {"HUF", "JPY"}
 HOUSEHOLD_ROLES = {"owner", "adult", "child", "view_only"}
 WRITE_ROLES = {"owner", "adult"}
+# Household owners are the tenant's administrators; magic-link sessions carry "owner", not "admin".
+PRIVACY_ROLES = {"admin", "owner"}
 LEGACY_HEADER_ROLES = {"admin", "reviewer", "integrator"}
 MAGIC_LINK_TTL_SECONDS = 15 * 60
 INVITE_TTL_SECONDS = 7 * 24 * 60 * 60
@@ -945,7 +947,7 @@ class ProductService:
                 "note":note,"decided_at":now}
 
     def set_retention(self, actor: Actor, retention_days: int) -> dict[str, Any]:
-        if actor.role != "admin": raise PermissionError
+        if actor.role not in PRIVACY_ROLES: raise PermissionError
         if not 1 <= retention_days <= 3650: raise ValueError("retention_days must be 1..3650")
         with self._db:
             self._db.execute("INSERT OR REPLACE INTO retention_settings VALUES(?,?,?)",
@@ -954,7 +956,7 @@ class ProductService:
         return {"retention_days":retention_days}
 
     def purge_expired(self, actor: Actor, now: datetime | None = None) -> dict[str, Any]:
-        if actor.role != "admin": raise PermissionError
+        if actor.role not in PRIVACY_ROLES: raise PermissionError
         setting=self._db.execute("SELECT retention_days FROM retention_settings WHERE tenant_id=?",
                                  (actor.tenant_id,)).fetchone()
         days=setting[0] if setting else 30
@@ -986,13 +988,13 @@ class ProductService:
     def erase_tenant(self, actor: Actor, confirmation: str) -> dict[str, Any]:
         """Permanently delete every row that belongs to the actor's tenant.
 
-        Admin only. The caller must send the literal ``ERASE`` so an
+        Owner or admin only. The caller must send the literal ``ERASE`` so an
         accidental click or a replayed request without intent changes nothing.
         Tables are discovered from the schema (every table with a ``tenant_id``
         column), so tenant tables added later are erased without code changes.
         Receipt images live in the database, so no files need removing.
         """
-        if actor.role != "admin": raise PermissionError
+        if actor.role not in PRIVACY_ROLES: raise PermissionError
         if confirmation != self.ERASE_CONFIRMATION:
             raise ValueError(f"type {self.ERASE_CONFIRMATION} to confirm erasure")
         deleted: dict[str, int] = {}
