@@ -106,11 +106,20 @@ def _build_subscriptions(tenant: str) -> list[dict[str, Any]]:
 def list_subscriptions(current: Actor = Depends(_actor)) -> dict[str, Any]:
     """List active subscriptions with renewal dates and price-change trends."""
     subscriptions = _build_subscriptions(current.tenant_id)
+    # Monthly cost per currency: amounts in different currencies are never added.
+    by_currency: dict[str, float] = defaultdict(float)
+    for sub in subscriptions:
+        by_currency[sub.get("currency") or ""] += sub["monthly_cost"]
+    primary = max(by_currency, key=lambda c: by_currency[c]) if by_currency else ""
     return {
         "subscriptions": subscriptions,
         "summary": {
             "total": len(subscriptions),
-            "monthly_total": round(sum(s["monthly_cost"] for s in subscriptions), 2),
+            "monthly_total": round(by_currency.get(primary, 0.0), 2),
+            "currency": primary or None,
+            "other_currency_totals": {
+                c or "?": round(v, 2) for c, v in by_currency.items() if c != primary
+            },
         },
     }
 

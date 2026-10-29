@@ -646,6 +646,7 @@ def build_subscriptions(tenant: str = "demo") -> list[dict[str, Any]]:
                 "trend": "up" if price_increase else "stable",
                 "price_increase": price_increase,
                 "likely_subscription": bool(record.get("likely_subscription")),
+                "currency": record.get("currency"),
                 "baseline": baseline,
                 "email_alert_enabled": True,
             }
