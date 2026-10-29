@@ -4,9 +4,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sqlite3
 import sys
 import threading
-import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -14,8 +14,8 @@ from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
+from app import ocr
 from app.accounting_projection import AccountingProjectionService
-from app.feature_core import init_hub
 from app.accounting_workspace import AccountingWorkspace
 from app.advanced_workspace import AdvancedWorkspace, extract_ocr_boxes
 from app.automation_service import AutomationService
@@ -24,6 +24,7 @@ from app.credential_store import CredentialStore
 from app.enyugta_import import MAX_BYTES as ENYUGTA_MAX_BYTES
 from app.enyugta_import import EnyugtaError, parse_export
 from app.export_workflow import ExportWorkflow
+from app.feature_core import init_hub
 from app.household_warranties import HouseholdWarranties
 from app.inbox_service import InboxService
 from app.intuit_oauth import OAuthConfigError
@@ -523,6 +524,18 @@ def set_retention(body: RetentionRequest,current: Actor = Depends(actor)) -> dic
 def purge_expired(current: Actor = Depends(actor)) -> dict[str, Any]:
     try: return service.purge_expired(current)
     except PermissionError: raise HTTPException(403,"Admin role required")
+
+class EraseRequest(BaseModel):
+    confirmation: str = Field(min_length=1, max_length=20)
+
+@router.post("/product/privacy/erase")
+def erase_tenant(body: EraseRequest, current: Actor = Depends(actor)) -> dict[str, Any]:
+    try: result = service.erase_tenant(current, body.confirmation)
+    except PermissionError: raise HTTPException(403,"Admin role required")
+    except ValueError as exc: raise HTTPException(422,str(exc)) from exc
+    # Image-derived OCR caches are process memory, not tables, so the erase must clear them too.
+    ocr.clear_caches()
+    return result
 
 @router.get("/product/privacy/export")
 def portability_export(current: Actor = Depends(actor)) -> dict[str, Any]:

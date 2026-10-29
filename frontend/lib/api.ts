@@ -820,6 +820,14 @@ export async function purgeExpired(): Promise<{ purged: number }> {
   });
 }
 
+/** Permanently erase all tenant data. Admin only; `confirmation` must be "ERASE". */
+export async function eraseTenantData(confirmation: string): Promise<{ erased: boolean }> {
+  return tenantRequest<{ erased: boolean }>("/product/privacy/erase", {
+    method: "POST",
+    body: JSON.stringify({ confirmation }),
+  });
+}
+
 /** Everything stored for the account (GDPR-style portability export). */
 export async function getPortabilityExport(): Promise<Record<string, unknown>> {
   return tenantRequest<Record<string, unknown>>("/product/privacy/export");

@@ -6,6 +6,17 @@ A ReceiptLens nyugtákból készít kereshető vásárlási előzményeket. Ház
 
 **[Megnyitom az alkalmazást](https://receipts.allthezoo.com)** · [Helyi indítás](#helyi-indítás) · [Dokumentáció](#dokumentáció) · [Hibajelzés](https://github.com/csaszarzoltan/receipts-lens/issues)
 
+## Goals
+
+Reference for all goal-cycle reviews. Each goal names the check that proves it.
+
+1. **Trustworthy totals.** A receipt total is shown as a number only when the OCR confidence of its source fields reaches the threshold. Otherwise the total stays empty and the receipt is flagged for review. Check: `pytest tests/test_bug001_confidence.py`.
+2. **Authenticated access in production.** When `RECEIPTLENS_ENV=production`, product and auth endpoints never trust client-supplied `X-Tenant-ID` / `X-Role` headers; they require a session token. Check: `pytest tests/test_production_auth_gate.py tests/test_feature_core.py`.
+3. **Household money insight.** The dashboard shows the daily remaining budget, and subscriptions get price-increase alerts. Check: `pytest tests/test_us_023_consumer_dashboard_contract.py` and the subscription-alert tests.
+4. **Full user data control.** A user can export all of their data, purge expired receipts, and erase the whole household account, leaving no tenant rows behind. Check: `pytest tests/test_tenant_erasure.py tests/test_market_features.py tests/test_export_completeness.py`. Status: partially met. Erasure, purge and the export of all tenant data (excluding credentials and binary images) work for the household owner. Receipt images are not in the export yet: they are binary and need a separate download, which is left open.
+5. **Accessible, responsive UI.** Key pages show no WCAG 2.2 AA axe violations and no horizontal scroll at 390 px width. Check: `frontend/e2e/smoke.spec.ts` (axe on the main routes, 18/18 passing against a local stack) and `frontend/e2e/ux-walk.spec.ts`, `frontend/e2e/ux-plan.spec.ts` (Playwright, run locally; not yet part of CI).
+6. **Green delivery gate.** `ruff check app tests`, `pytest`, and `npm run typecheck` all pass on `main`. Check: `.github/workflows/ci.yml`.
+
 ## Mire használhatod?
 
 | Feladat | Amit a ReceiptLens ad hozzá |

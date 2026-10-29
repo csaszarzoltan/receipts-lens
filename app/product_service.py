@@ -82,6 +82,8 @@ class Actor:
 ZERO_DECIMAL_CURRENCIES = {"HUF", "JPY"}
 HOUSEHOLD_ROLES = {"owner", "adult", "child", "view_only"}
 WRITE_ROLES = {"owner", "adult"}
+# Household owners are the tenant's administrators; magic-link sessions carry "owner", not "admin".
+PRIVACY_ROLES = {"admin", "owner"}
 LEGACY_HEADER_ROLES = {"admin", "reviewer", "integrator"}
 MAGIC_LINK_TTL_SECONDS = 15 * 60
 INVITE_TTL_SECONDS = 7 * 24 * 60 * 60
@@ -945,7 +947,7 @@ class ProductService:
                 "note":note,"decided_at":now}
 
     def set_retention(self, actor: Actor, retention_days: int) -> dict[str, Any]:
-        if actor.role != "admin": raise PermissionError
+        if actor.role not in PRIVACY_ROLES: raise PermissionError
         if not 1 <= retention_days <= 3650: raise ValueError("retention_days must be 1..3650")
         with self._db:
             self._db.execute("INSERT OR REPLACE INTO retention_settings VALUES(?,?,?)",
@@ -954,7 +956,7 @@ class ProductService:
         return {"retention_days":retention_days}
 
     def purge_expired(self, actor: Actor, now: datetime | None = None) -> dict[str, Any]:
-        if actor.role != "admin": raise PermissionError
+        if actor.role not in PRIVACY_ROLES: raise PermissionError
         setting=self._db.execute("SELECT retention_days FROM retention_settings WHERE tenant_id=?",
                                  (actor.tenant_id,)).fetchone()
         days=setting[0] if setting else 30
@@ -981,15 +983,78 @@ class ProductService:
             self._audit(actor.tenant_id,"retention.purged",str(len(ids)))
         return {"purged":len(ids),"retention_days":days,"cutoff":cutoff}
 
+    ERASE_CONFIRMATION = "ERASE"
+
+    def erase_tenant(self, actor: Actor, confirmation: str) -> dict[str, Any]:
+        """Permanently delete every row that belongs to the actor's tenant.
+
+        Owner or admin only. The caller must send the literal ``ERASE`` so an
+        accidental click or a replayed request without intent changes nothing.
+        Tables are discovered from the schema (every table with a ``tenant_id``
+        column), so tenant tables added later are erased without code changes.
+        Receipt images live in the database, so no files need removing.
+        """
+        if actor.role not in PRIVACY_ROLES: raise PermissionError
+        if confirmation != self.ERASE_CONFIRMATION:
+            raise ValueError(f"type {self.ERASE_CONFIRMATION} to confirm erasure")
+        deleted: dict[str, int] = {}
+        with self._db:
+            for table in self._tenant_tables():
+                cursor = self._db.execute(f'DELETE FROM "{table}" WHERE tenant_id=?', (actor.tenant_id,))
+                if cursor.rowcount:
+                    deleted[table] = cursor.rowcount
+        return {"tenant_id": actor.tenant_id, "erased": True, "deleted": deleted}
+
+    def _tenant_tables(self) -> list[str]:
+        names = [row[0] for row in self._db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+        return sorted(name for name in names
+                      if any(col[1] == "tenant_id" for col in self._db.execute(f'PRAGMA table_info("{name}")')))
+
     def portability_export(self, actor: Actor) -> dict[str, Any]:
         """Return a deterministic, tenant-scoped machine-readable data export."""
-        receipts=self.search_receipts(actor,limit=200)["items"]
+        receipts: list[dict[str, Any]] = []
+        offset = 0
+        while True:  # page through every receipt; a single page is capped at 200
+            page = self.search_receipts(actor, limit=200, offset=offset)
+            receipts.extend(page["items"])
+            offset += len(page["items"])
+            if not page["items"] or offset >= page["total"]:
+                break
         approvals=[dict(r) for r in self._db.execute(
             "SELECT approval_id,receipt_id,policy_id,status,decided_by,note,created_at,decided_at "
             "FROM approvals WHERE tenant_id=? ORDER BY created_at",(actor.tenant_id,)).fetchall()]
+        tables=self._export_tables(actor)
         self._audit(actor.tenant_id,"portability.exported",actor.tenant_id)
         return {"schema_version":1,"tenant_id":actor.tenant_id,"exported_at":self._now(),
-                "receipts":receipts,"approvals":approvals}
+                "receipts":receipts,"approvals":approvals,"tables":tables}
+
+    # Columns holding credentials or digests are never exported. Matching is by name,
+    # so a new secret column is excluded by default.
+    EXPORT_SECRET_COLUMN = re.compile(r"token|secret|hash|ciphertext|verifier|password|idem_key|digest", re.IGNORECASE)
+    # Exported above in normalized form, or operational state rather than the user's data
+    # (login sessions, one-time tokens, idempotency records).
+    EXPORT_SKIPPED_TABLES = frozenset({
+        "receipts", "approvals", "product_migrations",
+        "sessions", "auth_tokens", "oauth_states", "upload_commands", "feature_idempotency",
+    })
+
+    def _export_tables(self, actor: Actor) -> dict[str, list[dict[str, Any]]]:
+        """Every other tenant table, row by row, without secret columns or binary blobs."""
+        tables: dict[str, list[dict[str, Any]]] = {}
+        for table in self._tenant_tables():
+            if table in self.EXPORT_SKIPPED_TABLES:
+                continue
+            columns = [col[1] for col in self._db.execute(f'PRAGMA table_info("{table}")')]
+            keep = [col for col in columns if not self.EXPORT_SECRET_COLUMN.search(col)]
+            if not keep:
+                continue
+            rows = self._db.execute(
+                f'SELECT * FROM "{table}" WHERE tenant_id=? ORDER BY rowid', (actor.tenant_id,)).fetchall()
+            tables[table] = [
+                {col: row[col] for col in keep if not isinstance(row[col], bytes)} for row in rows
+            ]
+        return tables
 
     @staticmethod
     def _clean_line_items(line_items: list[dict[str, Any]]) -> list[dict[str, Any]]:

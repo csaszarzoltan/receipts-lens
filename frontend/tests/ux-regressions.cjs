@@ -235,6 +235,10 @@ test('REQ-I6 AC-I6 unverified currency shows an amber badge and an editable curr
 test('REQ-I6 AC-I6 every locale has the unverified-currency message',()=>{
  const source=fs.readFileSync(path.join(__dirname,'..','lib/i18n.ts'),'utf8');assert.equal((source.match(/currencyAssumedUnverified:/g)||[]).length,10);
 });
+test('REQ-GOAL-4 AC erase-all copy exists in every locale',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'..','lib/i18n.ts'),'utf8');
+ for(const key of ['eraseTitle','eraseHint','eraseConfirmLabel','eraseButton','eraseFailed']) assert.equal((source.match(new RegExp(`^    ${key}:`,'gm'))||[]).length,10,key);
+});
 test('REQ-I10 AC4 upload queue links to the earlier receipt when the same file was uploaded before',()=>{
  const source=fs.readFileSync(path.join(__dirname,'..','components/UploadQueue.tsx'),'utf8');
  assert.match(source,/entry\.result\?\.duplicate_of&&/);assert.match(source,/data-testid="duplicate-notice"/);assert.match(source,/\/receipts\/\$\{entry\.result\.duplicate_of\}/);
