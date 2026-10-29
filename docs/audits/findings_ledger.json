@@ -312,11 +312,13 @@
     "closed_at": "2026-09-27"
   },
   "API2-7": {
-    "file": "app/api.py:1379 update budget",
+    "file": "app/api.py:1448-1474 update_budget_route",
     "severity": "high",
-    "verified": "code-read (compares raw x_tenant_id, skips _resolve_tenant_from_auth used by get/delete/create)",
+    "verified": "reproduced before fix; regression test confirms the authenticated tenant is authoritative",
     "finding": "PUT /api/v1/budgets/{id} tenant check bypassable via header spoof - inconsistent with siblings",
-    "status": "confirmed-code"
+    "status": "closed",
+    "note": "update_budget_route now resolves tenant from the bearer session before checking ownership; tests/test_tenant_isolation_analytics.py TEST-TENANT-006",
+    "closed_at": "2026-10-20"
   },
   "API2-8": {
     "file": "app/api.py:1219 generate_report filter",

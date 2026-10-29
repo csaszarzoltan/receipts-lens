@@ -98,6 +98,54 @@ def test_budget_analytics_requires_auth() -> None:
     )
 
 
+@pytest.mark.test_id("TEST-TENANT-006")
+@pytest.mark.requirements("REQ-012-02", "REQ-012-06")
+@pytest.mark.scenario("AC-012-02: a költségkeret módosítása a munkamenet tenantjához kötött")
+def test_budget_update_ignores_spoofed_tenant_header(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A bearer session identity must win over a caller-supplied tenant header."""
+    from app.budgets import BudgetStore
+
+    tenant_a = "tenant-budget-update-a"
+    tenant_b = "tenant-budget-update-b"
+    isolated_store = BudgetStore()
+    victim_budget = isolated_store.create(
+        category="Groceries",
+        amount=250.0,
+        currency="HUF",
+        tenant_id=tenant_b,
+    )
+    monkeypatch.setattr(api, "budget_store", isolated_store)
+    monkeypatch.setattr(api, "_is_production", True)
+    monkeypatch.setattr(
+        api.service,
+        "resolve_session",
+        lambda _token: {"tenant_id": tenant_a, "role": "owner"},
+    )
+
+    response = TestClient(api.app).put(
+        f"/api/v1/budgets/{victim_budget.budget_id}",
+        json={"amount": 1.0},
+        headers={
+            "Authorization": "Bearer valid-session-for-tenant-a",
+            "X-Tenant-ID": tenant_b,
+        },
+    )
+
+    assert response.status_code == 404
+    assert isolated_store.get(victim_budget.budget_id).amount == 250.0
+
+    anonymous_response = TestClient(api.app).put(
+        f"/api/v1/budgets/{victim_budget.budget_id}",
+        json={"amount": 2.0},
+        headers={"X-Tenant-ID": tenant_b, "X-Role": "admin"},
+    )
+
+    assert anonymous_response.status_code == 401
+    assert isolated_store.get(victim_budget.budget_id).amount == 250.0
+
+
 # ---------------------------------------------------------------------------
 # API2-4/5: alerts — auth nelkul 401, idegen alert 404
 # ---------------------------------------------------------------------------

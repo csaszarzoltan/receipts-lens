@@ -1453,6 +1453,7 @@ def update_budget_route(
     x_role: str | None = Header(default=None, alias="X-Role"),
 ) -> dict:
     """Update fields on an existing budget (tenant-scoped: 404 for others)."""
+    tenant_id = _resolve_tenant_from_auth(authorization, x_tenant_id, x_role)
     kwargs = {}
     if body.category is not None:
         kwargs["category"] = body.category
@@ -1466,7 +1467,7 @@ def update_budget_route(
         kwargs["alert_threshold"] = body.alert_threshold
 
     existing = budget_store.get(id)
-    if existing is None or existing.tenant_id != (x_tenant_id or "").strip():
+    if existing is None or existing.tenant_id != tenant_id:
         raise HTTPException(status_code=404, detail="Budget not found")
 
     try:
