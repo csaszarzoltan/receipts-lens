@@ -100,7 +100,7 @@ function ChatBody() {
       {!loading && !errorMsg && answer ? (
         <section className="card space-y-4 p-5" aria-label={t("answerLabel")}>
           <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               {t("answerLabel")}
             </h2>
             <p className="mt-1 text-slate-900 dark:text-slate-100">
@@ -109,7 +109,7 @@ function ChatBody() {
           </div>
           {answer.sources.length > 0 ? (
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 {t("sourcesLabel")} ({answer.sources.length})
               </h3>
               <ul className="mt-2 space-y-2">

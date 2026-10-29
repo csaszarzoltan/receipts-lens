@@ -139,7 +139,7 @@ function MagicLinkInner() {
 
 export default function MagicLinkPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-sm text-slate-500">Loading…</p></div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p></div>}>
       <MagicLinkInner />
     </Suspense>
   );
