@@ -4,9 +4,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sqlite3
 import sys
 import threading
-import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +15,6 @@ from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.accounting_projection import AccountingProjectionService
-from app.feature_core import init_hub
 from app.accounting_workspace import AccountingWorkspace
 from app.advanced_workspace import AdvancedWorkspace, extract_ocr_boxes
 from app.automation_service import AutomationService
@@ -24,6 +23,7 @@ from app.credential_store import CredentialStore
 from app.enyugta_import import MAX_BYTES as ENYUGTA_MAX_BYTES
 from app.enyugta_import import EnyugtaError, parse_export
 from app.export_workflow import ExportWorkflow
+from app.feature_core import init_hub
 from app.household_warranties import HouseholdWarranties
 from app.inbox_service import InboxService
 from app.intuit_oauth import OAuthConfigError

@@ -204,11 +204,11 @@ def _extract_merchant(text: str) -> str | None:
 # unique pass runs once. Bounded LRU keeps memory flat on a small server.
 _CACHE_LOCK = threading.Lock()
 _CACHE_SIZE = 4
-_PREPROCESS_CACHE: "OrderedDict[str, Any]" = OrderedDict()
-_TESS_CACHE: "OrderedDict[tuple, Any]" = OrderedDict()
+_PREPROCESS_CACHE: OrderedDict[str, Any] = OrderedDict()
+_TESS_CACHE: OrderedDict[tuple, Any] = OrderedDict()
 
 
-def _cache_get(cache: "OrderedDict[Any, Any]", key: Any) -> Any:
+def _cache_get(cache: OrderedDict[Any, Any], key: Any) -> Any:
     with _CACHE_LOCK:
         if key in cache:
             cache.move_to_end(key)
@@ -216,7 +216,7 @@ def _cache_get(cache: "OrderedDict[Any, Any]", key: Any) -> Any:
     return None
 
 
-def _cache_put(cache: "OrderedDict[Any, Any]", key: Any, value: Any) -> None:
+def _cache_put(cache: OrderedDict[Any, Any], key: Any, value: Any) -> None:
     with _CACHE_LOCK:
         cache[key] = value
         cache.move_to_end(key)

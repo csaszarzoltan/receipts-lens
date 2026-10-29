@@ -9,7 +9,15 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app import feature_core
-from app.feature_core import CommandRequest, CreateRequest, DomainError, FeatureService, Hub, init_hub, make_router
+from app.feature_core import (
+    CommandRequest,
+    CreateRequest,
+    DomainError,
+    FeatureService,
+    Hub,
+    init_hub,
+    make_router,
+)
 from app.feature_specs import SPECS, split_shares
 
 TENANT = "tenant-a"

@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import sqlite3
 import threading
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Callable
+from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import JSONResponse
@@ -276,7 +278,7 @@ def _parse_numbers(spec: FeatureSpec, payload: dict[str, Any]) -> dict[str, Any]
         except (TypeError, ValueError):
             bad.append(f"{key} must be a number")
             continue
-        if value != value or value in (float("inf"), float("-inf")):
+        if not math.isfinite(value):
             bad.append(f"{key} must be a finite number")
             continue
         out[key] = round(value, 2)
