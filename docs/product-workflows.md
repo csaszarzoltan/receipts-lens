@@ -63,7 +63,8 @@ Without the variable, the product service uses an in-memory database suitable fo
 - `POST /product/approvals/{approval_id}/decision`: reviewer/admin approval or rejection with an optional note.
 - `PUT /product/privacy/retention`: set retention from 1 to 3,650 days.
 - `POST /product/privacy/purge`: remove expired tenant data and dependent rows transactionally.
-- `GET /product/privacy/export`: export versioned tenant JSON with receipt metadata and approvals.
+- `GET /product/privacy/export`: export versioned tenant JSON with every receipt (paged internally) and approvals.
+- `POST /product/privacy/erase`: admin only. Permanently deletes every row of the tenant, across all tables that have a `tenant_id` column, including receipt images, sessions and the audit trail. The body must be `{"confirmation": "ERASE"}`. This cannot be undone. Export first if you need a copy. Erasure is not itself audited, because the audit table is erased too.
 
 All operations are tenant-scoped. Approval policy and retention changes require `admin`; decisions require `admin` or `reviewer`. See `docs/research/MARKET_RESEARCH_2026.md` for the evidence, specifications, roadmap, and validation plan.
 

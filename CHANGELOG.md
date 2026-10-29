@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased] - 2026-10-29 (goal-cycle: privacy completeness and CI gate)
+
+### Added
+- `POST /product/privacy/erase`: admin-only permanent erasure of all tenant data. Requires body `{"confirmation": "ERASE"}`. Tables are discovered from the schema. Erase-all control on the privacy settings page (all 10 locales).
+- CI `frontend` job: `npm run typecheck` and `npm run test:ux`.
+- README `## Goals` section with six measurable goals.
+
+### Fixed
+- `GET /product/privacy/export` returned at most 200 receipts. It now pages through every receipt.
+- Ruff lint errors (8) that failed the CI lint gate.
+
+### Verification
+- `tests/test_tenant_erasure.py` (6 tests), `tests/test_market_features.py` (+1 export test over the page boundary), `frontend/tests/ux-regressions.cjs` (38 tests, +1 erase copy test).
+
 ## [Unreleased] - 2026-08-26 (Google SSO + tartós session — G1-G5, t_3945fe93)
 
 ### Added
