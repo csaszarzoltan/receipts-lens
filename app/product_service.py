@@ -1009,7 +1009,14 @@ class ProductService:
 
     def portability_export(self, actor: Actor) -> dict[str, Any]:
         """Return a deterministic, tenant-scoped machine-readable data export."""
-        receipts=self.search_receipts(actor,limit=200)["items"]
+        receipts: list[dict[str, Any]] = []
+        offset = 0
+        while True:  # page through every receipt; a single page is capped at 200
+            page = self.search_receipts(actor, limit=200, offset=offset)
+            receipts.extend(page["items"])
+            offset += len(page["items"])
+            if not page["items"] or offset >= page["total"]:
+                break
         approvals=[dict(r) for r in self._db.execute(
             "SELECT approval_id,receipt_id,policy_id,status,decided_by,note,created_at,decided_at "
             "FROM approvals WHERE tenant_id=? ORDER BY created_at",(actor.tenant_id,)).fetchall()]

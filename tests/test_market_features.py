@@ -93,6 +93,13 @@ def test_portability_export_is_scoped_and_versioned(svc,admin):
     assert export["schema_version"]==1 and export["tenant_id"]=="tenant-a"
     assert len(export["receipts"])==1
 
+def test_portability_export_includes_every_receipt_beyond_one_page(svc, admin):
+    for index in range(205):
+        svc.create_receipt(admin, parsed(f"Shop {index}"), f"r{index}.png")
+    export = svc.portability_export(admin)
+    assert len(export["receipts"]) == 205
+    assert len({r["receipt_id"] for r in export["receipts"]}) == 205
+
 def test_new_routes_are_registered():
     paths = get_all_paths(app)
     assert {"/product/receipts","/product/approval-policies","/product/privacy/export"} <= paths
