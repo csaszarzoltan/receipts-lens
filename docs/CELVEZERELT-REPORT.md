@@ -122,3 +122,27 @@ Tests, second round:
 | `npm run test:ux` | 38/38 |
 | `npx playwright test smoke.spec.ts` (scratch config, own dev server on 3011 and API on 8078) | 18/18 passed |
 | `npx playwright test onboarding.spec.ts consumer-dashboard.spec.ts` | 5 failed. Auth now works; failures are copy and flow drift (see R6) |
+
+## Deploy and incident (live site)
+
+**Incident (cause found and fixed):** `https://receipts.allthezoo.com` returned 200 for `/` and `/health`, but every `/_next/static` chunk returned 500. The production build in `frontend/.next` had been overwritten by a `next dev` run in the live frontend directory (`receipts-lens-frontend.service` serves that directory with `next start`). The `.next` folder had no `BUILD_ID`. The dev run was mine, from the review session, so the incident is mine too.
+
+**Restore (done):** the production frontend was rebuilt from `origin/main` (`1d3d926`) in a separate worktree with `NEXT_PUBLIC_API_BASE_URL=https://receipts.allthezoo.com/api`, then swapped into the live directory. `receipts-lens-frontend.service` was restarted (BUILD_ID `3M9OZM6mbsjDgfPaoL_-3`). Checks after restore: `/health` 200, `/` 200, `/login` 200, sampled chunks 200, `/api/docs` 404 (production), and a headless load of `/login` showed the email form and no JavaScript errors. The broken `.next` was kept as evidence outside the repo.
+
+**Not changed:** the API service (`receipts-lens-api.service`) is healthy but still runs the code it loaded at 09:31. The production DB was not written to. No migration was run, and this branch adds no schema changes.
+
+**New work is not live.** PR #2 (`feat/goal-cycle-20261029`) is green on CI (`test` and `frontend`, after the packaging and CI fixes below). The merge into `main` was blocked by the permission check ("Merge Without Review"), so it was not merged or bypassed.
+
+**CI fixes in this round:**
+- `pyproject.toml`: package discovery is limited to `app*`. Flat-layout discovery found several top-level directories and failed `pip install -e ".[dev]"`. `main`'s CI was already failing for this reason.
+- `ci.yml`: the test job installs `tesseract-ocr` and `tesseract-ocr-eng`, and fetches full history.
+- `tests/test_price_alert_delivery_proof.py`: probes that need the live product DB skip with a reason when it's absent. Locally they still run against the real DB (4 passed).
+
+**To put the new work live (needs your go-ahead):**
+1. Merge PR #2 into `main`, or allow me to merge it.
+2. Take a fresh DB backup with `scripts/backup-sqlite.sh`.
+3. `git checkout main` in the working tree, so the API loads the new code. Then `sudo systemctl restart receipts-lens-api.service`.
+4. Rebuild the frontend in place with the production env, then `sudo systemctl restart receipts-lens-frontend.service`.
+5. Verify `/health`, the chunks, and a magic-link login to a test address.
+
+**Open, cosmetic:** the live CSP (Caddy) blocks the Google Fonts stylesheet. The font falls back. Fixing it means editing the Caddy config and reloading, so it is out of scope for this round.
