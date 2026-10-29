@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { getPortabilityExport, purgeExpired, setRetention } from "@/lib/api";
+import { eraseTenantData, getPortabilityExport, purgeExpired, setRetention } from "@/lib/api";
+import { clearSessionToken } from "@/lib/auth";
 import { useTranslation } from "@/lib/i18n";
 
 export default function PrivacySettingsPage() {
@@ -11,6 +12,8 @@ export default function PrivacySettingsPage() {
   const [purgeResult, setPurgeResult] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [exportError, setExportError] = useState(false);
+  const [eraseText, setEraseText] = useState("");
+  const [eraseError, setEraseError] = useState(false);
 
   async function saveRetention() {
     setBusy(true);
@@ -47,6 +50,21 @@ export default function PrivacySettingsPage() {
     try {
       const result = await purgeExpired();
       setPurgeResult(`${t("purgedPrefix")}${result.purged}${t("purgedSuffix")}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function eraseAll() {
+    setBusy(true);
+    setEraseError(false);
+    try {
+      await eraseTenantData(eraseText);
+      // The server deleted every session for this household, so end the local one too.
+      clearSessionToken();
+      window.location.assign("/");
+    } catch {
+      setEraseError(true);
     } finally {
       setBusy(false);
     }
@@ -105,6 +123,33 @@ export default function PrivacySettingsPage() {
         </button>
         {purgeResult ? (
           <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400" role="status">{purgeResult}</p>
+        ) : null}
+      </section>
+
+      <section className="card max-w-lg border-rose-300 p-5 dark:border-rose-800">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("eraseTitle")}</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("eraseHint")}</p>
+        <label htmlFor="erase-confirm" className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          {t("eraseConfirmLabel")}
+        </label>
+        <input
+          id="erase-confirm"
+          type="text"
+          autoComplete="off"
+          className="input mt-2 w-40"
+          value={eraseText}
+          onChange={(event) => setEraseText(event.target.value)}
+        />
+        <button
+          type="button"
+          onClick={eraseAll}
+          disabled={busy || eraseText !== "ERASE"}
+          className="btn-secondary mt-4 text-sm text-rose-700 dark:text-rose-400"
+        >
+          {t("eraseButton")}
+        </button>
+        {eraseError ? (
+          <p className="mt-3 text-sm text-rose-700 dark:text-rose-400" role="alert">{t("eraseFailed")}</p>
         ) : null}
       </section>
     </div>
